@@ -19,6 +19,9 @@ SpaceTabs is a tab and workspace manager that organizes your browsing into dedic
 - 🔒 **Local-First & Private:** Everything is stored locally in IndexedDB via Dexie. No tracking, no 5-space paywalls.
 
 ---
+<img width="1917" height="1016" alt="image" src="https://github.com/user-attachments/assets/ceb00445-3644-43b5-818a-c3c220c450e0" />
+
+---
 
 ## 🛠️ Tech Stack
 
