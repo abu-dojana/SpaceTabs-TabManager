@@ -52,6 +52,63 @@ cd SpaceTabs-TabManager
 # Install dependencies
 npm install
 ```
+>Note: If you face This error:
+ ```
+ \SpaceTabs-TabManager> npm install
+ npm : File C:\Program Files\nodejs\npm.ps1 cannot be loaded because running scripts is disabled on this system. For more information, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170.At line:1 char:1
+ + npm install
+ + ~~~
+
+    + CategoryInfo          : SecurityError: (:) [], PSSecurityException
+
+    + FullyQualifiedErrorId : UnauthorizedAccess
+```
+This error occurs because Windows PowerShell's default security setting (`Restricted`) blocks `.ps1` scripts—including the wrapper script that runs `npm`—from executing.
+
+### Method 1: Allow Local Scripts in PowerShell (Recommended)
+
+Update your user account's execution policy so local CLI tools like `npm`, `npx`, and `wxt` run normally in the future without needing administrator privileges.
+
+1. **Update the execution policy for your user account.** Run this command right in your current PowerShell window:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+```
+
+
+*Verification:* If prompted to confirm the change, type `Y` and press **Enter**; the prompt will return without any red error text.
+2. **Verify the policy update.** Check that the setting took effect:
+```powershell
+Get-ExecutionPolicy -Scope CurrentUser
+
+```
+
+
+*Verification:* The terminal outputs `RemoteSigned`.
+3. **Install your project dependencies.** Run your install command again:
+```powershell
+npm install
+
+```
+
+
+*Verification:* `npm` begins downloading packages and generates a `node_modules` folder in `E:\SpaceTabs-TabManager`.
+
+---
+
+### Method 2: Bypass PowerShell Using the Command Prompt Wrapper
+
+If you do not want to change your PowerShell execution policy, you can call the standard Windows Command Prompt version of `npm` (`npm.cmd`) directly from PowerShell.
+
+1. **Run `npm.cmd` instead of `npm`:**
+```powershell
+npm.cmd install
+
+```
+
+
+*Verification:* The installation starts immediately without triggering the `PSSecurityException` error.
+
 
 ### 2. Development & Build
 
