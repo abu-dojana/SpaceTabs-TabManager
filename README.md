@@ -1,25 +1,28 @@
 # SpaceTabs 🚀
 
 > **The local-first, memory-saver alternative to Workona and Tablerone.**  
-> Built for Google Chrome, Brave, and Microsoft Edge (Manifest V3).
+> Built for Google Chrome, Brave, Microsoft Edge, and Chromium browsers (Manifest V3).
 
-SpaceTabs is a tab and workspace manager that organizes your browsing into dedicated **Spaces**, frees up gigabytes of RAM using on-demand tab suspension and native discard APIs, and keeps your private data strictly local on your device.
+SpaceTabs is a modern tab and workspace manager that organizes your browsing into dedicated **Spaces**, frees up gigabytes of RAM using on-demand tab suspension and native discard APIs, and keeps your browsing data strictly private on your device.
+
+---
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/ceb00445-3644-43b5-818a-c3c220c450e0" alt="SpaceTabs Dashboard" width="100%" />
+</p>
 
 ---
 
 ## ✨ Features
 
-- 📂 **Workspaces & Spaces:** Organize tabs into project spaces with custom icons and names. Switching spaces closes previous tabs and opens the target space's tabs seamlessly.
+- 📂 **Workspaces & Spaces:** Organize tabs into project spaces with custom icons and names. Switching spaces closes previous tabs and opens the target space's tabs cleanly.
 - ⚡ **Zero-RAM Cold Restores:** Restoring a space with 50 tabs opens dormant lightweight placeholder tabs (`suspended.html`) consuming only ~1–2 MB each and zero network bandwidth until clicked.
-- 🧹 **Native Chrome Memory Saver:** Periodically discards idle tabs using `chrome.tabs.discard()` without losing tab position, favicon, or navigation history.
-- 🎯 **Drag & Drop to Spaces:** Drag any tab (or multi-select tabs) from the canvas directly onto any Space or the Unsaved session in the sidebar to move it.
-- 📌 **Always-Accessible Dashboard:** An auto-pinned Index Tab at Tab 0 that never gets lost or closed accidentally, accessible with `Alt+Shift+W`.
+- 🧹 **Native Chrome Memory Saver:** Automatically discards idle tabs using `chrome.tabs.discard()` without losing tab strip position, favicon, or navigation history.
+- 🎯 **Drag & Drop to Spaces:** Drag any tab (or batch of selected tabs) from the canvas directly onto any Space or the Unsaved session in the sidebar.
+- 📌 **Always-Accessible Dashboard:** An auto-pinned Index Tab at Tab 0 that never gets lost or closed accidentally, accessible anytime via `Alt+Shift+W`.
 - 📝 **Inline Quick-Save:** Click "Unsaved" in the header to instantly name and convert your open browsing session into a permanent Space.
 - 🌐 **Browser Internal Tabs:** Full support for `chrome://extensions`, `chrome://settings`, `chrome://newtab`, etc., with custom category SVG icons.
-- 🔒 **Local-First & Private:** Everything is stored locally in IndexedDB via Dexie. No tracking, no 5-space paywalls.
-
----
-<img width="1917" height="1016" alt="image" src="https://github.com/user-attachments/assets/ceb00445-3644-43b5-818a-c3c220c450e0" />
+- 🔒 **Local-First & Private:** Everything is stored locally in IndexedDB via Dexie. No cloud tracking, no 5-space paywalls.
 
 ---
 
@@ -33,14 +36,14 @@ SpaceTabs is a tab and workspace manager that organizes your browsing into dedic
 
 ---
 
-## 🚀 Getting Started — Install for beta testing
+## 🚀 Getting Started — Install for Beta Testing
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v18 or newer)
 - npm or pnpm
 
-### 1. Installation
+### 1. Clone & Install
 
 ```bash
 # Clone the repository
@@ -52,49 +55,29 @@ cd SpaceTabs-TabManager
 # Install dependencies
 npm install
 ```
->Note: If you face This error:
- ```
- \SpaceTabs-TabManager> npm install
- npm : File C:\Program Files\nodejs\npm.ps1 cannot be loaded because running scripts is disabled on this system. For more information, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170.At line:1 char:1
- + npm install
- + ~~~
 
-    + CategoryInfo          : SecurityError: (:) [], PSSecurityException
+<details>
+<summary><b>⚠️ Windows Troubleshooting: Fix <code>PSSecurityException</code> on <code>npm install</code></b></summary>
 
-    + FullyQualifiedErrorId : UnauthorizedAccess
-```
-```
-> Solution:
- This error occurs because Windows PowerShell's default security setting   (`Restricted`) blocks `.ps1` scripts—including the wrapper script that runs `npm`—from executing.
- ### Method 1: Allow Local Scripts in PowerShell (Recommended)
- Update your user account's execution policy so local CLI tools like `npm`, `npx`, and `wxt` run normally in the future without needing administrator privileges.
- 1. **Update the execution policy for your user account.** Run this command right in your current PowerShell window:
- ```powershell
- Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
- ```
- *Verification:* If prompted to confirm the change, type `Y` and press **Enter**; the prompt will return without any red error text.
- 2. **Verify the policy update.** Check that the setting took effect:
- ```powershell
- Get-ExecutionPolicy -Scope CurrentUser
- ```
- *Verification:* The terminal outputs `RemoteSigned`.
- 3. **Install your project dependencies.** Run your install command again:
- ```powershell
- npm install
- ```
- *Verification:* `npm` begins downloading packages and generates a `node_modules` folder in `E:\SpaceTabs-TabManager`.
- ---
- ### Method 2: Bypass PowerShell Using the Command Prompt Wrapper
- If you do not want to change your PowerShell execution policy, you can call the standard Windows Command Prompt version of `npm` (`npm.cmd`) directly from PowerShell.
- 1. **Run `npm.cmd` instead of `npm`:**
- ```powershell
- npm.cmd install
- ```
- *Verification:* The installation starts immediately without triggering the `PSSecurityException` error.
- ```
-```
+<br />
 
-### 2. Development & Build
+If PowerShell blocks `npm install` with the error `File npm.ps1 cannot be loaded because running scripts is disabled on this system`:
+
+#### Method 1: Allow Local Scripts (Recommended)
+Run this command in PowerShell to allow locally installed CLI tools:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+Then run `npm install` again.
+
+#### Method 2: Call `npm.cmd` Directly
+If you don't want to change execution policy, invoke the Windows Command wrapper:
+```powershell
+npm.cmd install
+```
+</details>
+
+### 2. Build the Extension
 
 ```bash
 # Compile and build the extension
@@ -108,8 +91,16 @@ The compiled extension is output to `.output/chrome-mv3` and mirrored into `dist
 1. Open your browser and navigate to `chrome://extensions/` (or `brave://extensions/`, `edge://extensions/`).
 2. Toggle on **Developer mode** in the top-right corner.
 3. Click **Load unpacked**.
-4. Select the `dist` (or `C:/Users/Username/Downloads/SpaceTabs-TabManager/dist`) folder.
-5. SpaceTabs is now installed and will automatically pin the dashboard tab!
+4. Select the `dist` folder inside your project directory (e.g. `D:\tab-manager\dist` or wherever you cloned the repo).
+5. **SpaceTabs** is now installed and will automatically pin the dashboard tab at Tab 0!
+
+---
+
+## ⌨️ Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Alt + Shift + W` | Focus or open the pinned SpaceTabs Dashboard |
 
 ---
 
