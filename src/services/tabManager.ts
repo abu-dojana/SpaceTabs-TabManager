@@ -233,6 +233,13 @@ export async function switchWindowToSpace(
     const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
     const allTabs = await chrome.tabs.query({ windowId });
 
+    // Explicitly identify the pinned dashboard tab
+    const dashboardTab = allTabs.find((t) => t.url?.startsWith(dashboardUrl));
+    if (dashboardTab?.id) {
+      // Focus dashboard first so closing other tabs doesn't trigger random tab focus handover
+      await chrome.tabs.update(dashboardTab.id, { active: true });
+    }
+
     // 1. Identify open tabs to save and close
     const tabsToClose = allTabs.filter((t) => {
       if (t.pinned) return false;
@@ -289,6 +296,11 @@ export async function switchWindowToSpace(
       await chrome.tabs.remove(tabIdsToClose);
     }
 
+    // Re-assert focus on dashboard tab after closing previous tabs
+    if (dashboardTab?.id) {
+      await chrome.tabs.update(dashboardTab.id, { active: true });
+    }
+
     // 3. Set the new active space for this window
     await setWindowActiveSpaceId(windowId, targetSpaceId);
 
@@ -298,7 +310,7 @@ export async function switchWindowToSpace(
       .equals(normalizedTarget)
       .sortBy('order');
 
-    // 5. Open target tabs
+    // 5. Open target tabs dormant in the background
     for (let i = 0; i < targetTabs.length; i++) {
       const tabRecord = targetTabs[i];
       const isInternalUrl =
@@ -324,6 +336,11 @@ export async function switchWindowToSpace(
           updatedAt: Date.now(),
         });
       }
+    }
+
+    // 6. Guarantee that focus remains locked to the dashboard tab
+    if (dashboardTab?.id) {
+      await chrome.tabs.update(dashboardTab.id, { active: true });
     }
   } catch (err) {
     console.error('Error switching space:', err);

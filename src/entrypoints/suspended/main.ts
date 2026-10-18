@@ -21,12 +21,33 @@ if (realUrl) {
   }
 }
 
-// Restore destination on click or tab focus
+// Track when this page was initialized
+const initTime = Date.now();
+let isRestoring = false;
+
 function restore() {
+  if (isRestoring) return;
   if (realUrl && realUrl.startsWith('http')) {
+    isRestoring = true;
     window.location.replace(realUrl);
   }
 }
 
+// 1. Explicit user click anywhere on the page restores immediately
 window.addEventListener('click', restore);
-window.addEventListener('focus', restore);
+
+// 2. Tab visibility change: restore ONLY when the user actively selects this tab
+// and only after an initial 800ms grace period so background creation never triggers it
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Date.now() - initTime > 800) {
+    restore();
+  }
+});
+
+// 3. Tab focus event: only restore if actually visible and after grace period
+window.addEventListener('focus', () => {
+  if (document.visibilityState === 'visible' && Date.now() - initTime > 800) {
+    restore();
+  }
+});
+
