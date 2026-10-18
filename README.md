@@ -41,10 +41,10 @@ SpaceTabs is a tab and workspace manager that organizes your browsing into dedic
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/spacetabs.git
+git clone https://github.com/abu-dojana/SpaceTabs-TabManager.git
 
 # Go into the project directory
-cd spacetabs
+cd SpaceTabs-TabManager
 
 # Install dependencies
 npm install
@@ -64,7 +64,7 @@ The compiled extension is output to `.output/chrome-mv3` and mirrored into `dist
 1. Open your browser and navigate to `chrome://extensions/` (or `brave://extensions/`, `edge://extensions/`).
 2. Toggle on **Developer mode** in the top-right corner.
 3. Click **Load unpacked**.
-4. Select the `dist` (or `D:\tab-manager\dist`) folder.
+4. Select the `dist` (or `C:/Users/Username/Downloads/SpaceTabs-TabManager/dist`) folder.
 5. SpaceTabs is now installed and will automatically pin the dashboard tab!
 
 ---
