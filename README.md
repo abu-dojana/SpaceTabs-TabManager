@@ -30,7 +30,7 @@ SpaceTabs is a tab and workspace manager that organizes your browsing into dedic
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started — Install for beta testing
 
 ### Prerequisites
 
