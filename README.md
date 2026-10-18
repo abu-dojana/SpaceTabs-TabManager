@@ -63,6 +63,7 @@ npm install
 
     + FullyQualifiedErrorId : UnauthorizedAccess
 ```
+```
 > Solution:
  This error occurs because Windows PowerShell's default security setting   (`Restricted`) blocks `.ps1` scripts—including the wrapper script that runs `npm`—from executing.
  ### Method 1: Allow Local Scripts in PowerShell (Recommended)
@@ -90,7 +91,8 @@ npm install
  npm.cmd install
  ```
  *Verification:* The installation starts immediately without triggering the `PSSecurityException` error.
-
+ ```
+```
 
 ### 2. Development & Build
 
