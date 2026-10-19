@@ -17,6 +17,8 @@ export interface UserSettings {
   defaultOpenInNewWindow: boolean;
   discardOnSpaceSwitch: boolean;
   showTabFavicons: boolean;
+  sidebarTheme: 'dark' | 'light';
+  dashboardTheme: 'dark' | 'light';
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -25,6 +27,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   defaultOpenInNewWindow: false,
   discardOnSpaceSwitch: true,
   showTabFavicons: true,
+  sidebarTheme: 'dark',
+  dashboardTheme: 'dark',
 };
 
 const SETTINGS_STORAGE_KEY = 'spacetabs_user_settings';

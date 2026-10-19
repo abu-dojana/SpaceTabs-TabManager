@@ -9,6 +9,7 @@ import { CreateSpaceModal } from '@/components/modals/CreateSpaceModal';
 import { MoveToSectionModal } from '@/components/modals/MoveToSectionModal';
 import { useUIStore } from '@/store/uiStore';
 import { getWindowActiveSpaceId } from '@/services/tabManager';
+import { getUserSettings } from '@/services/settings';
 import { Bookmark, FileText, CheckSquare, AlertTriangle } from 'lucide-react';
 
 interface ErrorBoundaryProps {
@@ -57,9 +58,21 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 }
 
 export default function App() {
-  const { activeView, setActiveSpaceId } = useUIStore();
+  const {
+    activeView,
+    setActiveSpaceId,
+    sidebarTheme,
+    dashboardTheme,
+    setSidebarTheme,
+    setDashboardTheme,
+  } = useUIStore();
 
   React.useEffect(() => {
+    getUserSettings().then((settings) => {
+      if (settings.sidebarTheme) setSidebarTheme(settings.sidebarTheme);
+      if (settings.dashboardTheme) setDashboardTheme(settings.dashboardTheme);
+    });
+
     async function syncActiveSpaceFromWindow() {
       try {
         const currentWin = await chrome.windows.getCurrent();
@@ -82,16 +95,25 @@ export default function App() {
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, [setActiveSpaceId]);
+  }, [setActiveSpaceId, setSidebarTheme, setDashboardTheme]);
 
   return (
     <ErrorBoundary>
-      <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans">
+      <div
+        className={`flex h-screen w-screen overflow-hidden font-sans transition-colors duration-150 ${
+          dashboardTheme === 'light' && sidebarTheme === 'light' ? 'bg-slate-50' : 'bg-slate-950'
+        }`}
+      >
         {/* Left Sidebar */}
-        <Sidebar />
+        <div data-sidebar-theme={sidebarTheme} className="h-full flex flex-col flex-shrink-0">
+          <Sidebar />
+        </div>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-900/40">
+        <main
+          data-dashboard-theme={dashboardTheme}
+          className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-900/40 transition-colors duration-150"
+        >
           <Header />
 
           <div className="flex-1 overflow-y-auto">

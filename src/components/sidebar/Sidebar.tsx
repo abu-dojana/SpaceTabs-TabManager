@@ -37,6 +37,7 @@ import {
   Upload,
   Keyboard,
   Sparkles,
+  Palette,
 } from 'lucide-react';
 import { SettingsModal } from '@/components/modals/SettingsModal';
 import {
@@ -84,7 +85,7 @@ export const Sidebar: React.FC = () => {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = React.useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
   const [settingsModalTab, setSettingsModalTab] = React.useState<
-    'general' | 'suspension' | 'backup' | 'shortcuts' | 'about'
+    'general' | 'appearance' | 'suspension' | 'backup' | 'shortcuts' | 'about'
   >('general');
   const [settingsToast, setSettingsToast] = React.useState<string | null>(null);
   const settingsMenuRef = React.useRef<HTMLDivElement>(null);
@@ -1087,9 +1088,10 @@ export const Sidebar: React.FC = () => {
             <span className="font-semibold text-slate-300 group-hover:text-white">Settings</span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono tracking-tight font-medium">
-              No Limit
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-500 flex items-center gap-1 text-[11px] font-medium">
+              <CheckCircle2 className="w-3 h-3" />
+              Ready
             </span>
             <ChevronUp
               className={`w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition-transform duration-200 ${
@@ -1112,6 +1114,22 @@ export const Sidebar: React.FC = () => {
             </div>
 
             <div className="py-1 space-y-0.5">
+              {/* Appearance & Themes trigger */}
+              <button
+                onClick={() => {
+                  setIsSettingsMenuOpen(false);
+                  setSettingsModalTab('appearance');
+                  setIsSettingsModalOpen(true);
+                }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
+              >
+                <Palette className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-medium">Appearance & Themes</div>
+                  <div className="text-[10px] text-slate-500">Sidebar & dashboard light/dark modes</div>
+                </div>
+              </button>
+
               {/* Preferences / Settings Modal trigger */}
               <button
                 onClick={() => {
