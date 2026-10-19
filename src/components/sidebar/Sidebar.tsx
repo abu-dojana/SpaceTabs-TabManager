@@ -1180,20 +1180,20 @@ export const Sidebar: React.FC = () => {
 
       {/* Settings & Support Footer Trigger */}
       <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 flex-shrink-0 space-y-1">
-        {/* Support on Patreon Button */}
-        <a
-          href={patreonUrl || 'https://www.patreon.com/abudojana'}
-          target="_blank"
-          rel="noopener noreferrer"
+        {/* Support Creator Button */}
+        <button
+          onClick={() => setSettingsOpen(true, 'contact')}
           className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition group border border-transparent text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 cursor-pointer"
-          title="Support SpaceTabs independent development on Patreon"
+          title="Support Abu Dojana (SupportKori, bKash, Patreon, Ko-fi)"
         >
           <div className="flex items-center gap-2.5">
             <Heart className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform fill-rose-500/20 group-hover:fill-rose-500" />
-            <span className="font-semibold text-slate-300 group-hover:text-rose-300">Support on Patreon</span>
+            <span className="font-semibold text-slate-300 group-hover:text-rose-300">Support Creator</span>
           </div>
-          <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-rose-400 opacity-60 group-hover:opacity-100 transition-opacity" />
-        </a>
+          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+            Donate
+          </span>
+        </button>
 
         {/* Settings Button */}
         <button

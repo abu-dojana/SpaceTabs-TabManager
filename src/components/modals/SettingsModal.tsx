@@ -67,12 +67,16 @@ import {
   Linkedin,
   Mail,
   MessageCircle,
+  User,
+  Copy,
+  Coffee,
+  HeartHandshake,
 } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about';
+  initialTab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact';
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -81,7 +85,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   initialTab = 'general',
 }) => {
   const [activeTab, setActiveTab] = React.useState<
-    'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about'
+    'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact'
   >(initialTab);
 
   const {
@@ -248,6 +252,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const updated = await updateUserSettings({ patreonUrl: trimmed });
     setSettings(updated);
     showToast('Patreon link updated');
+  };
+
+  const handleCopyBkash = () => {
+    navigator.clipboard.writeText('+8801521566157');
+    showToast('bKash number copied (+8801521566157)!');
   };
 
   const handleInstantSuspend = async () => {
@@ -530,7 +539,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('about')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${activeTab === 'about'
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left cursor-pointer ${activeTab === 'about'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
                 : isLight
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
@@ -539,6 +548,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               <Info className="w-4 h-4 text-cyan-400" />
               <span>About SpaceTabs</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('contact')}
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left cursor-pointer ${activeTab === 'contact'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : isLight
+                  ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+            >
+              <User className="w-4 h-4 text-emerald-400" />
+              <span>Credits & Contact</span>
             </button>
           </nav>
 
@@ -1895,6 +1917,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
             {/* TAB: ABOUT */}
+            {/* TAB: ABOUT */}
             {activeTab === 'about' && (
               <div className="space-y-5 animate-in fade-in duration-100">
                 <div
@@ -1907,7 +1930,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Layers className="w-7 h-7" />
                   </div>
                   <h3 className={`text-lg font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                    SpaceTabs
+                    SpaceTabs — Tab Manager
                   </h3>
                   <p className="text-xs text-blue-500 font-mono mt-0.5 font-bold">
                     Version 1.0.0 • Manifest V3
@@ -1918,49 +1941,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
-                {/* Support & Donations Card (Prominently on top) */}
+                {/* Support Creator Quick Callout */}
                 <div
-                  className={`p-5 rounded-2xl border ${
+                  className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
                     isLight
-                      ? 'bg-rose-50/70 border-rose-200 shadow-sm'
-                      : 'bg-rose-950/20 border-rose-900/60'
+                      ? 'bg-rose-50/80 border-rose-200 text-slate-800'
+                      : 'bg-rose-950/20 border-rose-900/60 text-slate-200'
                   }`}
                 >
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/20 flex-shrink-0">
-                      <Heart className="w-5 h-5 fill-white" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow flex-shrink-0">
+                      <Heart className="w-4 h-4 fill-white" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className={`text-sm font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                        <span>Support SpaceTabs on Patreon</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-500/15 text-rose-500 border border-rose-500/20">
-                          Creator Support
-                        </span>
-                      </h4>
-                      <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                        SpaceTabs is 100% free with no paid subscriptions, artificial limits, or data selling.
-                        If SpaceTabs saves you time and tabs, consider supporting independent development on Patreon!
-                      </p>
-
-                      <div className="mt-3.5 pt-3 border-t border-rose-500/20">
-                        <a
-                          href="https://www.patreon.com/abudojana"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white shadow-lg shadow-rose-600/25 transition cursor-pointer"
-                        >
-                          <Heart className="w-4 h-4 fill-white" />
-                          <span>Become a Patron on Patreon</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
+                    <div>
+                      <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        Support Independent Development
+                      </div>
+                      <div className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                        SpaceTabs is 100% free with zero paywalls. Support via SupportKori, bKash, Patreon, or Ko-fi!
                       </div>
                     </div>
                   </div>
+
+                  <button
+                    onClick={() => setActiveTab('contact')}
+                    className="flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <HeartHandshake className="w-3.5 h-3.5" />
+                    <span>Support & Credits →</span>
+                  </button>
                 </div>
 
                 <div className={`space-y-3 text-xs leading-relaxed ${isLight ? 'text-slate-800 font-medium' : 'text-slate-200 font-medium'}`}>
                   <p className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                    SpaceTabs is a fast, private, and completely free workspace & tab manager.
+                    SpaceTabs — Tab Manager is a fast, private, and completely free workspace & tab manager.
                   </p>
                   <ul className="list-disc pl-5 space-y-2 text-xs">
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>No Artificial Space Limits:</strong> Create unlimited spaces, sections, tabs, and resources.</li>
@@ -1968,51 +1982,247 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>100% Local Privacy:</strong> All data resides on your machine in IndexedDB. Zero cloud telemetry.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Native Chromium Memory Saver:</strong> Background tabs are safely suspended using Chrome's native discard engine to save up to 80% RAM.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Full Workspace Productivity:</strong> Integrated Tabs, Resources, Notes, and Tasks for each space.</li>
+                    <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Google Drive Cloud Backup:</strong> Optionally sync spaces across multiple machines seamlessly.</li>
                   </ul>
                 </div>
+              </div>
+            )}
 
-                {/* Developer Credits & Contact Card */}
+            {/* TAB: CREDITS & CONTACT */}
+            {activeTab === 'contact' && (
+              <div className="space-y-6 animate-in fade-in duration-100">
+                {/* Developer Profile Header */}
                 <div
                   className={`p-5 rounded-2xl border ${
                     isLight
-                      ? 'bg-slate-50 border-slate-200 shadow-sm'
-                      : 'bg-slate-950/70 border-slate-800'
+                      ? 'bg-gradient-to-r from-slate-50 via-blue-50/40 to-slate-50 border-slate-200 shadow-sm'
+                      : 'bg-gradient-to-r from-slate-950/80 via-blue-950/30 to-slate-950/80 border-slate-800'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0">
-                        AD
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-500/20 flex-shrink-0">
+                      AD
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          Abu Dojana Tahmid
+                        </h3>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-500/15 text-blue-500 border border-blue-500/25">
+                          Creator & Developer
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-500/15 text-purple-400 border border-purple-500/25">
+                          SpaceTabs — Tab Manager
+                        </span>
                       </div>
+                      <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                        Hi there! I designed and built SpaceTabs to give power users a clean, fast, privacy-first workspace manager with zero paywalls. If SpaceTabs helps you declutter your browser and saves you time, your support helps me continue actively developing and maintaining this project!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Support & Donations */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-rose-500 fill-rose-500/30" />
+                      <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        Support & Donations
+                      </h4>
+                    </div>
+                    <span className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      International & Bangladesh local payment options
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* 1. SupportKori (Bangladesh - bKash/Nagad/Rocket/Cards) */}
+                    <div
+                      className={`p-4 rounded-xl border flex flex-col justify-between transition ${
+                        isLight
+                          ? 'bg-rose-50/60 hover:bg-rose-50 border-rose-200'
+                          : 'bg-rose-950/20 hover:bg-rose-950/30 border-rose-900/60'
+                      }`}
+                    >
                       <div>
-                        <h4 className={`text-sm font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                          <span>Abu Dojana Tahmid</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                            Creator & Developer
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2 font-bold text-xs text-rose-500">
+                            <HeartHandshake className="w-4 h-4" />
+                            <span>SupportKori (Bangladesh)</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 border border-rose-500/20">
+                            bKash / Nagad / Rocket
                           </span>
-                        </h4>
-                        <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                          Full-stack software developer & open-source builder
+                        </div>
+                        <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                          Ideal for supporters in Bangladesh. Easily tip or donate using bKash, Nagad, Rocket, or local debit/credit cards.
                         </p>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-rose-500/15">
+                        <a
+                          href="https://www.supportkori.com/abudojana"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition cursor-pointer"
+                        >
+                          <span>Donate on SupportKori</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* 2. bKash Personal Direct (Bangladesh) */}
+                    <div
+                      className={`p-4 rounded-xl border flex flex-col justify-between transition ${
+                        isLight
+                          ? 'bg-pink-50/60 hover:bg-pink-50 border-pink-200'
+                          : 'bg-pink-950/20 hover:bg-pink-950/30 border-pink-900/60'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2 font-bold text-xs text-pink-500">
+                            <span className="w-4 h-4 rounded-full bg-pink-500 text-white flex items-center justify-center text-[10px] font-extrabold">
+                              ৳
+                            </span>
+                            <span>bKash Personal Direct</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-500/15 text-pink-500 border border-pink-500/20">
+                            Direct Transfer
+                          </span>
+                        </div>
+                        <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                          Send Money or Cash In directly to personal bKash number:
+                        </p>
+                        <div className={`mt-2 font-mono text-xs font-bold px-2.5 py-1.5 rounded-lg border flex items-center justify-between ${
+                          isLight ? 'bg-white border-pink-200 text-pink-700' : 'bg-slate-900 border-pink-800 text-pink-300'
+                        }`}>
+                          <span>+8801521566157</span>
+                          <span className="text-[10px] text-pink-500 font-sans font-normal">Personal</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-pink-500/15">
+                        <button
+                          onClick={handleCopyBkash}
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs bg-pink-600 hover:bg-pink-500 text-white shadow-sm transition cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy bKash Number</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. Patreon (International / Monthly & One-time) */}
+                    <div
+                      className={`p-4 rounded-xl border flex flex-col justify-between transition ${
+                        isLight
+                          ? 'bg-amber-50/60 hover:bg-amber-50 border-amber-200'
+                          : 'bg-amber-950/20 hover:bg-amber-950/30 border-amber-900/60'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2 font-bold text-xs text-amber-500">
+                            <Heart className="w-4 h-4 fill-amber-500/40" />
+                            <span>Patreon</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/20">
+                            International / Payoneer
+                          </span>
+                        </div>
+                        <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                          Support monthly or one-time via international credit/debit cards. Deposits directly via Payoneer.
+                        </p>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-amber-500/15">
+                        <a
+                          href="https://patreon.com/abudojana"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white shadow-sm transition cursor-pointer"
+                        >
+                          <span>Support on Patreon</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* 4. Ko-fi (International) */}
+                    <div
+                      className={`p-4 rounded-xl border flex flex-col justify-between transition ${
+                        isLight
+                          ? 'bg-sky-50/60 hover:bg-sky-50 border-sky-200'
+                          : 'bg-sky-950/20 hover:bg-sky-950/30 border-sky-900/60'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2 font-bold text-xs text-sky-500">
+                            <Coffee className="w-4 h-4" />
+                            <span>Ko-fi</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-500 border border-sky-500/20">
+                            Tip & Coffee
+                          </span>
+                        </div>
+                        <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                          Buy me a coffee or leave a quick tip without signing up for monthly subscriptions.
+                        </p>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-sky-500/15">
+                        <a
+                          href="https://ko-fi.com/abudojana"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition cursor-pointer"
+                        >
+                          <span>Support on Ko-fi</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                {/* Section: Connect & Socials */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-blue-500" />
+                      <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        Connect & Contact
+                      </h4>
+                    </div>
+                    <span className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      Feedback, feature requests & collaborations
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {/* GitHub */}
                     <a
                       href="https://github.com/abu-dojana"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                      className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition group ${
                         isLight
                           ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
                           : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <Github className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
-                        <span>GitHub</span>
+                        <div>
+                          <div>GitHub</div>
+                          <div className={`text-[10px] font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            github.com/abu-dojana
+                          </div>
+                        </div>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </a>
@@ -2022,15 +2232,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       href="https://www.linkedin.com/in/abu-dojana/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                      className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition group ${
                         isLight
                           ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
                           : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <Linkedin className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
-                        <span>LinkedIn</span>
+                        <div>
+                          <div>LinkedIn</div>
+                          <div className={`text-[10px] font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            linkedin.com/in/abu-dojana
+                          </div>
+                        </div>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </a>
@@ -2040,15 +2255,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       href="https://www.youtube.com/@abuDojanaTahmid"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                      className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition group ${
                         isLight
                           ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
                           : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <Youtube className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform" />
-                        <span>YouTube</span>
+                        <div>
+                          <div>YouTube</div>
+                          <div className={`text-[10px] font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            youtube.com/@abuDojanaTahmid
+                          </div>
+                        </div>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </a>
@@ -2058,16 +2278,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       href="https://wa.me/8801521566157"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                      className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition group ${
                         isLight
                           ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
                           : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
                       }`}
-                      title="+880 1521-566157"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <MessageCircle className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-                        <span>WhatsApp (+880 1521-566157)</span>
+                        <div>
+                          <div>WhatsApp</div>
+                          <div className={`text-[10px] font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            +880 1521-566157
+                          </div>
+                        </div>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </a>
@@ -2075,15 +2299,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Primary Email */}
                     <a
                       href="mailto:abudojana2001@gmail.com"
-                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                      className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition group ${
                         isLight
                           ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
                           : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <Mail className="w-4 h-4 text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                        <span className="truncate">abudojana2001@gmail.com</span>
+                        <div className="min-w-0">
+                          <div>Personal Email</div>
+                          <div className={`text-[10px] font-normal truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            abudojana2001@gmail.com
+                          </div>
+                        </div>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1" />
                     </a>
@@ -2091,15 +2320,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Secondary Email */}
                     <a
                       href="mailto:abudojanatahmid@gmail.com"
-                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                      className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition group ${
                         isLight
                           ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
                           : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <Mail className="w-4 h-4 text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                        <span className="truncate">abudojanatahmid@gmail.com</span>
+                        <div className="min-w-0">
+                          <div>Direct Email</div>
+                          <div className={`text-[10px] font-normal truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            abudojanatahmid@gmail.com
+                          </div>
+                        </div>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1" />
                     </a>

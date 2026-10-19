@@ -15,7 +15,7 @@ interface UIState {
   sidebarWidth: number;
   patreonUrl: string;
   isSettingsOpen: boolean;
-  settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about';
+  settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact';
   setActiveSpaceId: (id: string | null) => void;
   setActiveView: (view: 'tabs' | 'resources' | 'notes' | 'tasks') => void;
   setSearchQuery: (query: string) => void;
@@ -33,7 +33,7 @@ interface UIState {
   setPatreonUrl: (url: string) => void;
   setSettingsOpen: (
     open: boolean,
-    tab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about'
+    tab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact'
   ) => void;
 }
 
