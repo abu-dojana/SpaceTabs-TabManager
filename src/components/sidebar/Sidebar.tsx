@@ -29,6 +29,7 @@ import {
   Check,
   X,
   AlertTriangle,
+  Download,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -391,6 +392,70 @@ export const Sidebar: React.FC = () => {
     }
   };
 
+  // Export Space
+  const handleExportSidebarSpace = async (space: Space) => {
+    setActiveMenuSpaceId(null);
+    const spaceTabs = await db.tabs.where('spaceId').equals(space.id).sortBy('order');
+    const notes = await db.notes.where('spaceId').equals(space.id).toArray();
+    const tasks = await db.tasks.where('spaceId').equals(space.id).sortBy('order');
+    const sections = await db.resourceSections.where('spaceId').equals(space.id).sortBy('order');
+
+    const resourcesData = [];
+    for (const sec of sections) {
+      const items = await db.resourceItems.where('sectionId').equals(sec.id).toArray();
+      resourcesData.push({
+        title: sec.title,
+        order: sec.order,
+        items: items.map((it) => ({
+          title: it.title,
+          url: it.url,
+          type: it.type,
+        })),
+      });
+    }
+
+    const exportPayload = {
+      app: 'SpaceTabs',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      space: {
+        name: space.name,
+        icon: space.icon,
+        description: space.description,
+        section: space.section,
+      },
+      tabs: spaceTabs.map((t) => ({
+        title: t.title,
+        url: t.url,
+        favIconUrl: t.favIconUrl,
+        order: t.order,
+      })),
+      notes: notes.map((n) => ({
+        title: n.title,
+        content: n.content,
+      })),
+      tasks: tasks.map((tk) => ({
+        text: tk.text,
+        completed: tk.completed,
+        order: tk.order,
+        dueDate: tk.dueDate,
+      })),
+      resources: resourcesData,
+    };
+
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${space.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}-space.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // 6. Archive Space
   const handleArchiveSpace = async (space: Space) => {
     setActiveMenuSpaceId(null);
@@ -624,7 +689,16 @@ export const Sidebar: React.FC = () => {
               <span>{space.description ? 'Edit description' : 'Add description'}</span>
             </button>
 
-            {/* 6. Archive */}
+            {/* 6. Export Space */}
+            <button
+              onClick={() => handleExportSidebarSpace(space)}
+              className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-400" />
+              <span>Export space</span>
+            </button>
+
+            {/* 7. Archive */}
             <button
               onClick={() => handleArchiveSpace(space)}
               className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"

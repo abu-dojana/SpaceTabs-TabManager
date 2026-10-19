@@ -1,9 +1,10 @@
 import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
-import { UNSAVED_SPACE_ID } from '@/db/schema';
+import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
 import { focusOrOpenTab, moveTabsToSpace, locateOrOpenTab, closeTabs } from '@/services/tabManager';
+import { decodeRealUrl, extractDomain } from '@/utils/urlFilter';
 import {
   Folder,
   MoreVertical,
@@ -23,6 +24,13 @@ import {
   Compass,
   Globe,
   X,
+  Link2,
+  ArrowDownAZ,
+  CheckSquare,
+  PauseCircle,
+  RotateCw,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
 
 export const TabsView: React.FC = () => {
@@ -59,12 +67,23 @@ export const TabsView: React.FC = () => {
     return list.filter((s) => !s.isArchived);
   });
 
+  const activeSpace = useLiveQuery(
+    () => (activeSpaceId ? db.spaces.get(activeSpaceId) : undefined),
+    [activeSpaceId]
+  );
+
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [moveDropdownTabId, setMoveDropdownTabId] = React.useState<string | null>(null);
   const [draggingTabId, setDraggingTabId] = React.useState<string | null>(null);
   const [currentWindowId, setCurrentWindowId] = React.useState<number | null>(null);
   const [liveTabsMap, setLiveTabsMap] = React.useState<Map<number, number>>(new Map()); // chromeTabId -> windowId
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Tabs 3-Dot Options Menu State
+  const [isTabsMenuOpen, setIsTabsMenuOpen] = React.useState(false);
+  const [showMoveAllSubmenu, setShowMoveAllSubmenu] = React.useState(false);
+  const [isCopiedAll, setIsCopiedAll] = React.useState(false);
+  const tabsMenuRef = React.useRef<HTMLDivElement>(null);
 
   // Track live Chrome windows and tabs to show accurate window status badges
   React.useEffect(() => {
@@ -108,19 +127,25 @@ export const TabsView: React.FC = () => {
     };
   }, []);
 
-  // Click-away listener to dismiss move dropdowns cleanly
+  // Click-away listener to dismiss move dropdowns and Tabs 3-dot menu cleanly
   React.useEffect(() => {
-    if (!moveDropdownTabId) return;
+    if (!moveDropdownTabId && !isTabsMenuOpen) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setMoveDropdownTabId(null);
+      }
+      if (tabsMenuRef.current && !tabsMenuRef.current.contains(e.target as Node)) {
+        setIsTabsMenuOpen(false);
+        setShowMoveAllSubmenu(false);
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setMoveDropdownTabId(null);
+        setIsTabsMenuOpen(false);
+        setShowMoveAllSubmenu(false);
       }
     };
 
@@ -130,7 +155,7 @@ export const TabsView: React.FC = () => {
       window.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [moveDropdownTabId]);
+  }, [moveDropdownTabId, isTabsMenuOpen]);
 
   const allSelected =
     tabs && tabs.length > 0 && tabs.every((t) => selectedTabIds.has(t.id));
@@ -169,6 +194,248 @@ export const TabsView: React.FC = () => {
     await moveTabsToSpace(Array.from(selectedTabIds), targetSpaceId);
     clearSelectedTabs();
     setMoveDropdownTabId(null);
+  };
+
+  // Reorder tabs in Dexie AND synchronously reorder open Chrome tabs in the browser window
+  const reorderTabsAndSyncBrowser = async (sortedTabs: Tab[]) => {
+    // 1. Update order in IndexedDB
+    const now = Date.now();
+    for (let i = 0; i < sortedTabs.length; i++) {
+      await db.tabs.update(sortedTabs[i].id, {
+        order: i,
+        updatedAt: now,
+      });
+    }
+
+    // 2. Reorder real Chrome tabs across open windows
+    try {
+      const allBrowserTabs = await chrome.tabs.query({});
+      const windowIds = new Set(allBrowserTabs.map((t) => t.windowId));
+
+      for (const winId of windowIds) {
+        const windowTabs = allBrowserTabs.filter((t) => t.windowId === winId);
+        const pinnedCount = windowTabs.filter((t) => t.pinned).length;
+
+        // Collect matching Chrome tab IDs in their new sorted order
+        const orderedTabIds: number[] = [];
+        for (const st of sortedTabs) {
+          const match = windowTabs.find((wt) => {
+            if (st.chromeTabId && wt.id === st.chromeTabId) return true;
+            return false;
+          });
+          if (match?.id) {
+            orderedTabIds.push(match.id);
+          }
+        }
+
+        if (orderedTabIds.length > 0) {
+          try {
+            await chrome.tabs.move(orderedTabIds, { index: pinnedCount });
+          } catch {
+            for (let idx = 0; idx < orderedTabIds.length; idx++) {
+              try {
+                await chrome.tabs.move(orderedTabIds[idx], { index: pinnedCount + idx });
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to reorder Chrome tabs:', err);
+    }
+  };
+
+  // 1. Copy All Links
+  const handleCopyAllLinks = async () => {
+    if (!tabs || tabs.length === 0) return;
+    const links = tabs.map((t) => t.url).join('\n');
+    await navigator.clipboard.writeText(links);
+    setIsCopiedAll(true);
+    setTimeout(() => {
+      setIsCopiedAll(false);
+      setIsTabsMenuOpen(false);
+    }, 1200);
+  };
+
+  // 2. Sort Alphabetically
+  const handleSortAlphabetically = async () => {
+    if (!tabs || tabs.length <= 1) {
+      setIsTabsMenuOpen(false);
+      return;
+    }
+    setIsTabsMenuOpen(false);
+
+    const sorted = [...tabs].sort((a, b) => {
+      const titleA = (a.title || a.url).toLowerCase();
+      const titleB = (b.title || b.url).toLowerCase();
+      return titleA.localeCompare(titleB);
+    });
+
+    await reorderTabsAndSyncBrowser(sorted);
+  };
+
+  // 3. Sort by Domain
+  const handleSortByDomain = async () => {
+    if (!tabs || tabs.length <= 1) {
+      setIsTabsMenuOpen(false);
+      return;
+    }
+    setIsTabsMenuOpen(false);
+
+    const sorted = [...tabs].sort((a, b) => {
+      const domainA = extractDomain(a.url).toLowerCase();
+      const domainB = extractDomain(b.url).toLowerCase();
+      if (domainA !== domainB) {
+        return domainA.localeCompare(domainB);
+      }
+      const titleA = (a.title || a.url).toLowerCase();
+      const titleB = (b.title || b.url).toLowerCase();
+      return titleA.localeCompare(titleB);
+    });
+
+    await reorderTabsAndSyncBrowser(sorted);
+  };
+
+  // 4. Export This Space
+  const handleExportSpace = async () => {
+    if (!tabs) return;
+    setIsTabsMenuOpen(false);
+
+    const targetSpaceId = activeSpaceId || UNSAVED_SPACE_ID;
+    const currentSpace = activeSpaceId ? await db.spaces.get(activeSpaceId) : null;
+    const notes = await db.notes.where('spaceId').equals(targetSpaceId).toArray();
+    const tasks = await db.tasks.where('spaceId').equals(targetSpaceId).sortBy('order');
+    const sections = await db.resourceSections.where('spaceId').equals(targetSpaceId).sortBy('order');
+
+    const resourcesData = [];
+    for (const sec of sections) {
+      const items = await db.resourceItems.where('sectionId').equals(sec.id).toArray();
+      resourcesData.push({
+        title: sec.title,
+        order: sec.order,
+        items: items.map((it) => ({
+          title: it.title,
+          url: it.url,
+          type: it.type,
+        })),
+      });
+    }
+
+    const exportPayload = {
+      app: 'SpaceTabs',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      space: {
+        name: currentSpace?.name || 'Unsaved Session',
+        icon: currentSpace?.icon || '📁',
+        description: currentSpace?.description || '',
+        section: currentSpace?.section || '',
+      },
+      tabs: tabs.map((t) => ({
+        title: t.title,
+        url: t.url,
+        favIconUrl: t.favIconUrl,
+        order: t.order,
+      })),
+      notes: notes.map((n) => ({
+        title: n.title,
+        content: n.content,
+      })),
+      tasks: tasks.map((tk) => ({
+        text: tk.text,
+        completed: tk.completed,
+        order: tk.order,
+        dueDate: tk.dueDate,
+      })),
+      resources: resourcesData,
+    };
+
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const spaceName = currentSpace?.name || 'unsaved';
+    a.download = `${spaceName.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}-space.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // 6. Move All Tabs
+  const handleMoveAllTabs = async (targetSpaceId: string | null) => {
+    if (!tabs || tabs.length === 0) return;
+    setIsTabsMenuOpen(false);
+    setShowMoveAllSubmenu(false);
+    await moveTabsToSpace(
+      tabs.map((t) => t.id),
+      targetSpaceId
+    );
+    clearSelectedTabs();
+  };
+
+  // 7. Suspend All Tabs
+  const handleSuspendAllTabs = async () => {
+    setIsTabsMenuOpen(false);
+    const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
+    const activeTabs = await chrome.tabs.query({ active: true });
+    const activeTabIds = new Set(activeTabs.map((t) => t.id).filter(Boolean));
+
+    for (const t of tabs || []) {
+      if (t.chromeTabId && !activeTabIds.has(t.chromeTabId)) {
+        if (!t.url.startsWith(dashboardUrl) && !t.url.includes('/suspended.html')) {
+          try {
+            await chrome.tabs.discard(t.chromeTabId);
+          } catch {}
+        }
+      }
+    }
+  };
+
+  // 8. Reload All Tabs
+  const handleReloadAllTabs = async () => {
+    setIsTabsMenuOpen(false);
+    for (const t of tabs || []) {
+      if (t.chromeTabId) {
+        try {
+          await chrome.tabs.reload(t.chromeTabId);
+        } catch {}
+      }
+    }
+  };
+
+  // 9. Close Duplicate Tabs
+  const handleCloseDuplicates = async () => {
+    if (!tabs || tabs.length <= 1) {
+      setIsTabsMenuOpen(false);
+      return;
+    }
+    setIsTabsMenuOpen(false);
+
+    const seenUrls = new Set<string>();
+    const duplicateTabIds: string[] = [];
+
+    for (const t of tabs) {
+      const normalized = decodeRealUrl(t.url).toLowerCase().trim();
+      if (seenUrls.has(normalized)) {
+        duplicateTabIds.push(t.id);
+      } else {
+        seenUrls.add(normalized);
+      }
+    }
+
+    if (duplicateTabIds.length > 0) {
+      await closeTabs(duplicateTabIds);
+    }
+  };
+
+  // 10. Close All Tabs
+  const handleCloseAllTabs = async () => {
+    if (!tabs || tabs.length === 0) return;
+    setIsTabsMenuOpen(false);
+    await closeTabs(tabs.map((t) => t.id));
   };
 
   const getFaviconUrl = (url: string, storedFavicon?: string) => {
@@ -330,12 +597,174 @@ export const TabsView: React.FC = () => {
               </div>
             )}
 
-            <button
-              onClick={() => {}}
-              className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
+            {/* Tabs Container 3-Dot Options Menu */}
+            <div className="relative" ref={tabsMenuRef}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsTabsMenuOpen(!isTabsMenuOpen);
+                  setShowMoveAllSubmenu(false);
+                }}
+                className={`p-1 rounded transition ${
+                  isTabsMenuOpen
+                    ? 'bg-slate-800 text-blue-400'
+                    : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+                title="Tabs options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {isTabsMenuOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1.5 z-50 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* 1. Copy all links */}
+                  <button
+                    onClick={handleCopyAllLinks}
+                    className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center justify-between transition"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Link2 className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copy all links</span>
+                    </div>
+                    {isCopiedAll && (
+                      <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Copied
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 2. Sort alphabetically */}
+                  <button
+                    onClick={handleSortAlphabetically}
+                    className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                  >
+                    <ArrowDownAZ className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Sort alphabetically</span>
+                  </button>
+
+                  {/* 3. Sort by domain */}
+                  <button
+                    onClick={handleSortByDomain}
+                    className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Sort by domain</span>
+                  </button>
+
+                  {/* 4. Export this space */}
+                  <button
+                    onClick={handleExportSpace}
+                    className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Export this space</span>
+                  </button>
+
+                  <div className="border-t border-slate-800 my-1" />
+
+                  {/* 5. Select all tabs */}
+                  <button
+                    onClick={() => {
+                      handleSelectAllToggle();
+                      setIsTabsMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{allSelected ? 'Deselect all' : 'Select all tabs'}</span>
+                  </button>
+
+                  {/* 6. Move all tabs */}
+                  {spaces && (
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowMoveAllSubmenu(!showMoveAllSubmenu);
+                        }}
+                        className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center justify-between transition"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <FolderInput className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Move all tabs</span>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-slate-500" />
+                      </button>
+
+                      {showMoveAllSubmenu && (
+                        <div className="absolute right-full top-0 mr-1.5 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 max-h-48 overflow-y-auto">
+                          <div className="px-3 py-1 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
+                            Move all tabs to
+                          </div>
+                          {activeSpaceId !== null && (
+                            <button
+                              onClick={() => handleMoveAllTabs(null)}
+                              className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 border-b border-slate-800/60 pb-2 mb-1"
+                            >
+                              <span>📄</span>
+                              <span className="truncate">Unsaved Session</span>
+                            </button>
+                          )}
+                          {spaces
+                            .filter((s) => s.id !== activeSpaceId)
+                            .map((s) => (
+                              <button
+                                key={s.id}
+                                onClick={() => handleMoveAllTabs(s.id)}
+                                className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2"
+                              >
+                                <span>{s.icon || '📁'}</span>
+                                <span className="truncate">{s.name}</span>
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 7. Suspend all tabs */}
+                  <button
+                    onClick={handleSuspendAllTabs}
+                    className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                  >
+                    <PauseCircle className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Suspend all tabs</span>
+                  </button>
+
+                  {/* 8. Reload all tabs */}
+                  <button
+                    onClick={handleReloadAllTabs}
+                    className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Reload all tabs</span>
+                  </button>
+
+                  <div className="border-t border-slate-800 my-1" />
+
+                  {/* 9. Close duplicate tabs */}
+                  <button
+                    onClick={handleCloseDuplicates}
+                    className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Close duplicate tabs</span>
+                  </button>
+
+                  {/* 10. Close all tabs */}
+                  <button
+                    onClick={handleCloseAllTabs}
+                    className="w-full text-left px-3 py-2 text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2.5 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    <span>Close all tabs</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
