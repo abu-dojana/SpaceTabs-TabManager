@@ -33,7 +33,10 @@ export const Header: React.FC = () => {
     setSearchQuery,
     setCreateSpaceOpen,
     setMoveSectionSpaceId,
+    dashboardTheme,
   } = useUIStore();
+
+  const isLight = dashboardTheme === 'light';
 
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [titleInput, setTitleInput] = React.useState('');
@@ -159,7 +162,13 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md px-6 pt-4 pb-0 select-none">
+    <header
+      className={`border-b px-6 pt-4 pb-0 select-none backdrop-blur-md transition-colors ${
+        isLight
+          ? 'border-slate-200/90 bg-white/95'
+          : 'border-slate-800 bg-slate-950/80'
+      }`}
+    >
       {/* Top row: Title, Search, Actions */}
       <div className="flex items-center justify-between gap-4 pb-4">
         {/* Title / Inline Quick-Save Editor */}
@@ -174,7 +183,11 @@ export const Header: React.FC = () => {
                 onKeyDown={handleKeyDown}
                 onBlur={handleSaveTitle}
                 placeholder="Space name..."
-                className="bg-slate-900 border border-blue-500 rounded-lg px-3 py-1 text-base font-bold text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[220px]"
+                className={`rounded-lg px-3 py-1 text-base font-bold transition focus:outline-none min-w-[220px] ${
+                  isLight
+                    ? 'bg-white border-2 border-blue-500 text-slate-900 focus:ring-2 focus:ring-blue-500/20 shadow-sm'
+                    : 'bg-slate-900 border border-blue-500 text-slate-100 focus:ring-1 focus:ring-blue-500'
+                }`}
               />
               <button
                 onMouseDown={(e) => {
@@ -191,7 +204,11 @@ export const Header: React.FC = () => {
                   e.preventDefault();
                   setIsEditingTitle(false);
                 }}
-                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg transition"
+                className={`p-1.5 rounded-lg transition ${
+                  isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                }`}
                 title="Cancel"
               >
                 <X className="w-4 h-4" />
@@ -200,7 +217,11 @@ export const Header: React.FC = () => {
           ) : (
             <div
               onClick={startEditing}
-              className="group flex flex-col justify-center cursor-pointer py-1 px-2 -ml-2 rounded-lg hover:bg-slate-900 transition"
+              className={`group flex flex-col justify-center cursor-pointer py-1 px-2.5 -ml-2 rounded-lg transition ${
+                isLight
+                  ? 'hover:bg-slate-100/90 active:bg-slate-200/70 text-slate-900'
+                  : 'hover:bg-slate-900/80 active:bg-slate-800/80 text-slate-100'
+              }`}
               title={
                 activeSpaceId
                   ? 'Click to rename space'
@@ -208,24 +229,36 @@ export const Header: React.FC = () => {
               }
             >
               {activeSpace?.section && (
-                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider -mb-0.5">
+                <span className={`text-[10px] font-semibold uppercase tracking-wider -mb-0.5 ${
+                  isLight ? 'text-slate-500' : 'text-slate-500'
+                }`}>
                   {activeSpace.section}
                 </span>
               )}
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2">
+                <h1 className={`text-xl font-bold tracking-tight flex items-center gap-2 ${
+                  isLight ? 'text-slate-900' : 'text-slate-100'
+                }`}>
                   {activeSpace?.icon && <span>{activeSpace.icon}</span>}
                   <span>{defaultTitle}</span>
                 </h1>
-                <Pencil className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Pencil className={`w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity ${
+                  isLight ? 'text-slate-400 group-hover:text-slate-600' : 'text-slate-500 group-hover:text-slate-300'
+                }`} />
                 {!activeSpaceId && (
-                  <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-medium ml-1">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ml-1 transition ${
+                    isLight
+                      ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                      : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                  }`}>
                     Click to Save
                   </span>
                 )}
               </div>
               {activeSpace?.description && (
-                <p className="text-[11px] text-slate-400 line-clamp-1 max-w-sm mt-0.5 font-normal">
+                <p className={`text-[11px] line-clamp-1 max-w-sm mt-0.5 font-normal ${
+                  isLight ? 'text-slate-600' : 'text-slate-400'
+                }`}>
                   {activeSpace.description}
                 </p>
               )}
@@ -241,7 +274,11 @@ export const Header: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search across spaces & tabs..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-full pl-10 pr-4 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+            className={`w-full rounded-full pl-10 pr-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition ${
+              isLight
+                ? 'bg-slate-100/80 hover:bg-slate-100 border border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-500'
+                : 'bg-slate-900 border border-slate-800 text-slate-200 placeholder-slate-500 focus:border-blue-500'
+            }`}
           />
         </div>
 
@@ -261,10 +298,14 @@ export const Header: React.FC = () => {
             <>
               <button
                 onClick={() => activeSpaceId && setMoveSectionSpaceId(activeSpaceId)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60'
+                }`}
                 title="Move this space into a section"
               >
-                <FolderInput className="w-3.5 h-3.5 text-blue-400" />
+                <FolderInput className="w-3.5 h-3.5 text-blue-500" />
                 <span>Move This space to Section</span>
               </button>
 
@@ -281,16 +322,22 @@ export const Header: React.FC = () => {
 
           <button
             onClick={() => setCreateSpaceOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 transition"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              isLight
+                ? 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-sm'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800'
+            }`}
           >
-            <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+            <PlusCircle className="w-3.5 h-3.5 text-amber-500" />
             <span>CREATE</span>
           </button>
         </div>
       </div>
 
       {/* Sub-Navigation Tabs */}
-      <nav className="flex items-center gap-6 text-xs font-medium border-t border-slate-800/60 pt-1">
+      <nav className={`flex items-center gap-6 text-xs font-medium border-t pt-1 ${
+        isLight ? 'border-slate-200' : 'border-slate-800/60'
+      }`}>
         <button
           onClick={() => setActiveView('tabs')}
           className={`flex items-center gap-1.5 py-2.5 border-b-2 transition ${

@@ -360,20 +360,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className={`w-full max-w-4xl h-[680px] max-h-[90vh] flex flex-col rounded-2xl shadow-2xl select-none animate-in fade-in zoom-in-95 duration-100 overflow-hidden relative border ${
-          isLight
-            ? 'bg-white border-slate-300 text-slate-900 shadow-slate-900/10'
-            : 'bg-slate-900 border-slate-700 text-slate-100 shadow-black/80'
-        }`}
+        className={`w-full max-w-4xl h-[680px] max-h-[90vh] flex flex-col rounded-2xl shadow-2xl select-none animate-in fade-in zoom-in-95 duration-100 overflow-hidden relative border ${isLight
+          ? 'bg-white border-slate-300 text-slate-900 shadow-slate-900/10'
+          : 'bg-slate-900 border-slate-700 text-slate-100 shadow-black/80'
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className={`px-8 py-5 border-b flex items-center justify-between flex-shrink-0 ${
-            isLight
-              ? 'bg-slate-50 border-slate-200'
-              : 'bg-slate-950/80 border-slate-800'
-          }`}
+          className={`px-8 py-5 border-b flex items-center justify-between flex-shrink-0 ${isLight
+            ? 'bg-slate-50 border-slate-200'
+            : 'bg-slate-950/80 border-slate-800'
+            }`}
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500">
@@ -391,11 +389,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <button
             onClick={onClose}
-            className={`p-2 rounded-xl transition ${
-              isLight
-                ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
+            className={`p-2 rounded-xl transition ${isLight
+              ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
             title="Close Settings"
           >
             <X className="w-5 h-5" />
@@ -406,21 +403,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex-1 flex overflow-hidden">
           {/* Left Navigation */}
           <nav
-            className={`w-56 border-r p-3.5 space-y-1.5 flex-shrink-0 ${
-              isLight
-                ? 'bg-slate-50/90 border-slate-200'
-                : 'bg-slate-950/90 border-slate-800'
-            }`}
+            className={`w-56 border-r p-3.5 space-y-1.5 flex-shrink-0 ${isLight
+              ? 'bg-slate-50/90 border-slate-200'
+              : 'bg-slate-950/90 border-slate-800'
+              }`}
           >
             <button
               onClick={() => setActiveTab('general')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${
-                activeTab === 'general'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                  : isLight
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${activeTab === 'general'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : isLight
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
             >
               <Sliders className="w-4 h-4" />
               <span>General</span>
@@ -428,13 +423,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('appearance')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${
-                activeTab === 'appearance'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                  : isLight
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${activeTab === 'appearance'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : isLight
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
             >
               <Palette className="w-4 h-4 text-pink-400" />
               <span>Appearance</span>
@@ -442,13 +436,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('suspension')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${
-                activeTab === 'suspension'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                  : isLight
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${activeTab === 'suspension'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : isLight
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
             >
               <Zap className="w-4 h-4 text-amber-400" />
               <span>Memory Saver</span>
@@ -457,13 +450,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Google Drive Cloud Sync */}
             <button
               onClick={() => setActiveTab('cloud')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left cursor-pointer ${
-                activeTab === 'cloud'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                  : isLight
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left cursor-pointer ${activeTab === 'cloud'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : isLight
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <Cloud className="w-4 h-4 text-sky-400" />
@@ -471,26 +463,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               {syncInfo?.profile && (
                 <span
-                  className={`w-2 h-2 rounded-full ${
-                    syncInfo.status === 'syncing'
-                      ? 'bg-amber-400 animate-pulse'
-                      : syncInfo.status === 'error'
+                  className={`w-2 h-2 rounded-full ${syncInfo.status === 'syncing'
+                    ? 'bg-amber-400 animate-pulse'
+                    : syncInfo.status === 'error'
                       ? 'bg-rose-500'
                       : 'bg-emerald-400'
-                  }`}
+                    }`}
                 />
               )}
             </button>
 
             <button
               onClick={() => setActiveTab('backup')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${
-                activeTab === 'backup'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                  : isLight
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${activeTab === 'backup'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : isLight
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
             >
               <Database className="w-4 h-4 text-emerald-400" />
               <span>Backup & Data</span>
@@ -498,13 +488,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('shortcuts')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${
-                activeTab === 'shortcuts'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                  : isLight
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${activeTab === 'shortcuts'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : isLight
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
             >
               <Keyboard className="w-4 h-4 text-purple-400" />
               <span>Shortcuts</span>
@@ -514,13 +503,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               onClick={() => setActiveTab('about')}
-              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${
-                activeTab === 'about'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                  : isLight
+              className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-left ${activeTab === 'about'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : isLight
                   ? 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
+                }`}
             >
               <Info className="w-4 h-4 text-cyan-400" />
               <span>About SpaceTabs</span>
@@ -529,9 +517,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Right Content Pane */}
           <div
-            className={`flex-1 overflow-y-auto p-8 text-xs space-y-7 ${
-              isLight ? 'bg-white text-slate-900' : 'bg-slate-900 text-slate-100'
-            }`}
+            className={`flex-1 overflow-y-auto p-8 text-xs space-y-7 ${isLight ? 'bg-white text-slate-900' : 'bg-slate-900 text-slate-100'
+              }`}
           >
             {/* TAB: GENERAL */}
             {activeTab === 'general' && (
@@ -547,11 +534,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="space-y-3.5">
                     {/* Default Open Mode */}
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight
-                          ? 'bg-slate-50 border-slate-200'
-                          : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight
+                        ? 'bg-slate-50 border-slate-200'
+                        : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -563,25 +549,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <button
                         onClick={() => handleToggle('defaultOpenInNewWindow')}
-                        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${
-                          settings.defaultOpenInNewWindow ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
-                        }`}
+                        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${settings.defaultOpenInNewWindow ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
+                          }`}
                       >
                         <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-200 ease-in-out ${
-                            settings.defaultOpenInNewWindow ? 'translate-x-6' : 'translate-x-0'
-                          }`}
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-200 ease-in-out ${settings.defaultOpenInNewWindow ? 'translate-x-6' : 'translate-x-0'
+                            }`}
                         />
                       </button>
                     </div>
 
                     {/* Discard on Space Switch */}
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight
-                          ? 'bg-slate-50 border-slate-200'
-                          : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight
+                        ? 'bg-slate-50 border-slate-200'
+                        : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -593,14 +576,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <button
                         onClick={() => handleToggle('discardOnSpaceSwitch')}
-                        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${
-                          settings.discardOnSpaceSwitch ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
-                        }`}
+                        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${settings.discardOnSpaceSwitch ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
+                          }`}
                       >
                         <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-200 ease-in-out ${
-                            settings.discardOnSpaceSwitch ? 'translate-x-6' : 'translate-x-0'
-                          }`}
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-200 ease-in-out ${settings.discardOnSpaceSwitch ? 'translate-x-6' : 'translate-x-0'
+                            }`}
                         />
                       </button>
                     </div>
@@ -613,11 +594,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </h3>
                   <div className="space-y-3.5">
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight
-                          ? 'bg-slate-50 border-slate-200'
-                          : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight
+                        ? 'bg-slate-50 border-slate-200'
+                        : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -629,14 +609,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <button
                         onClick={() => handleToggle('showTabFavicons')}
-                        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${
-                          settings.showTabFavicons ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
-                        }`}
+                        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${settings.showTabFavicons ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
+                          }`}
                       >
                         <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-200 ease-in-out ${
-                            settings.showTabFavicons ? 'translate-x-6' : 'translate-x-0'
-                          }`}
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-200 ease-in-out ${settings.showTabFavicons ? 'translate-x-6' : 'translate-x-0'
+                            }`}
                         />
                       </button>
                     </div>
@@ -661,11 +639,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   {/* Quick Presets */}
                   <div
-                    className={`mb-6 p-4 rounded-xl border flex items-center justify-between ${
-                      isLight
-                        ? 'bg-slate-50 border-slate-200 shadow-sm'
-                        : 'bg-slate-950 border-slate-700'
-                    }`}
+                    className={`mb-6 p-4 rounded-xl border flex items-center justify-between ${isLight
+                      ? 'bg-slate-50 border-slate-200 shadow-sm'
+                      : 'bg-slate-950 border-slate-700'
+                      }`}
                   >
                     <div>
                       <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -679,39 +656,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleApplyPreset('dark', 'light')}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition border ${
-                          sidebarTheme === 'dark' && dashboardTheme === 'light'
-                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                            : isLight
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition border ${sidebarTheme === 'dark' && dashboardTheme === 'light'
+                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                          : isLight
                             ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
                             : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-600'
-                        }`}
+                          }`}
                       >
                         Split (Dark/Light)
                       </button>
 
                       <button
                         onClick={() => handleApplyPreset('dark', 'dark')}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition border ${
-                          sidebarTheme === 'dark' && dashboardTheme === 'dark'
-                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                            : isLight
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition border ${sidebarTheme === 'dark' && dashboardTheme === 'dark'
+                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                          : isLight
                             ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
                             : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-600'
-                        }`}
+                          }`}
                       >
                         All Dark
                       </button>
 
                       <button
                         onClick={() => handleApplyPreset('light', 'light')}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition border ${
-                          sidebarTheme === 'light' && dashboardTheme === 'light'
-                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                            : isLight
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition border ${sidebarTheme === 'light' && dashboardTheme === 'light'
+                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                          : isLight
                             ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
                             : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-600'
-                        }`}
+                          }`}
                       >
                         All Light
                       </button>
@@ -734,13 +708,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {/* Dark Sidebar Card */}
                       <div
                         onClick={() => handleSidebarThemeChange('dark')}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition relative group ${
-                          sidebarTheme === 'dark'
-                            ? 'bg-blue-600/15 border-blue-500 ring-2 ring-blue-500 shadow-md'
-                            : isLight
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition relative group ${sidebarTheme === 'dark'
+                          ? 'bg-blue-600/15 border-blue-500 ring-2 ring-blue-500 shadow-md'
+                          : isLight
                             ? 'bg-white border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
                             : 'bg-slate-950 border-slate-700 hover:border-slate-500 hover:bg-slate-950/80'
-                        }`}
+                          }`}
                       >
                         {/* High-contrast Mockup Preview */}
                         <div className="w-full h-20 rounded-lg bg-slate-950 border border-slate-800 mb-3 p-2 flex gap-1.5 overflow-hidden shadow-inner">
@@ -776,13 +749,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {/* Light Sidebar Card */}
                       <div
                         onClick={() => handleSidebarThemeChange('light')}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition relative group ${
-                          sidebarTheme === 'light'
-                            ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600 shadow-md'
-                            : isLight
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition relative group ${sidebarTheme === 'light'
+                          ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600 shadow-md'
+                          : isLight
                             ? 'bg-white border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
                             : 'bg-slate-950 border-slate-700 hover:border-slate-500 hover:bg-slate-950/80'
-                        }`}
+                          }`}
                       >
                         {/* High-contrast Mockup Preview */}
                         <div className="w-full h-20 rounded-lg bg-slate-200 border border-slate-300 mb-3 p-2 flex gap-1.5 overflow-hidden shadow-inner">
@@ -833,13 +805,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {/* Dark Dashboard Card */}
                       <div
                         onClick={() => handleDashboardThemeChange('dark')}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition relative group ${
-                          dashboardTheme === 'dark'
-                            ? 'bg-blue-600/15 border-blue-500 ring-2 ring-blue-500 shadow-md'
-                            : isLight
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition relative group ${dashboardTheme === 'dark'
+                          ? 'bg-blue-600/15 border-blue-500 ring-2 ring-blue-500 shadow-md'
+                          : isLight
                             ? 'bg-white border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
                             : 'bg-slate-950 border-slate-700 hover:border-slate-500 hover:bg-slate-950/80'
-                        }`}
+                          }`}
                       >
                         {/* High-contrast Mockup Preview */}
                         <div className="w-full h-20 rounded-lg bg-slate-950 border border-slate-800 mb-3 p-2 flex gap-1.5 overflow-hidden shadow-inner">
@@ -876,13 +847,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {/* Light Dashboard Card */}
                       <div
                         onClick={() => handleDashboardThemeChange('light')}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition relative group ${
-                          dashboardTheme === 'light'
-                            ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600 shadow-md'
-                            : isLight
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition relative group ${dashboardTheme === 'light'
+                          ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600 shadow-md'
+                          : isLight
                             ? 'bg-white border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm'
                             : 'bg-slate-950 border-slate-700 hover:border-slate-500 hover:bg-slate-950/80'
-                        }`}
+                          }`}
                       >
                         {/* High-contrast Mockup Preview */}
                         <div className="w-full h-20 rounded-lg bg-slate-100 border border-slate-300 mb-3 p-2 flex gap-1.5 overflow-hidden shadow-inner">
@@ -947,13 +917,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             key={item.hex}
                             onClick={() => handleAccentColorChange(item.hex)}
                             title={item.name}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
-                              isSelected
-                                ? 'ring-2 ring-blue-500 border-white shadow-md'
-                                : isLight
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${isSelected
+                              ? 'ring-2 ring-blue-500 border-white shadow-md'
+                              : isLight
                                 ? 'bg-white border-slate-300 hover:bg-slate-50'
                                 : 'bg-slate-950 border-slate-700 hover:bg-slate-900'
-                            }`}
+                              }`}
                           >
                             <span
                               className="w-4 h-4 rounded-full flex items-center justify-center shadow-inner flex-shrink-0"
@@ -968,9 +937,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                       {/* Custom Color Input */}
                       <div
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
-                          isLight ? 'bg-white border-slate-300' : 'bg-slate-950 border-slate-700'
-                        }`}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${isLight ? 'bg-white border-slate-300' : 'bg-slate-950 border-slate-700'
+                          }`}
                         title="Choose custom hex color"
                       >
                         <input
@@ -1011,13 +979,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <div
                             key={pal.id}
                             onClick={() => handleDarkPaletteChange(pal.id as any)}
-                            className={`p-2.5 rounded-xl border-2 cursor-pointer transition text-left ${
-                              isSelected
-                                ? 'border-blue-500 ring-2 ring-blue-500 shadow-md'
-                                : isLight
+                            className={`p-2.5 rounded-xl border-2 cursor-pointer transition text-left ${isSelected
+                              ? 'border-blue-500 ring-2 ring-blue-500 shadow-md'
+                              : isLight
                                 ? 'bg-white border-slate-200 hover:border-slate-300'
                                 : 'bg-slate-950 border-slate-700 hover:border-slate-500'
-                            }`}
+                              }`}
                           >
                             <div
                               className="w-full h-8 rounded-lg mb-2 p-1 flex gap-1 border border-white/10 shadow-inner"
@@ -1063,13 +1030,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <div
                             key={pal.id}
                             onClick={() => handleLightPaletteChange(pal.id as any)}
-                            className={`p-2.5 rounded-xl border-2 cursor-pointer transition text-left ${
-                              isSelected
-                                ? 'border-blue-500 ring-2 ring-blue-500 shadow-md'
-                                : isLight
+                            className={`p-2.5 rounded-xl border-2 cursor-pointer transition text-left ${isSelected
+                              ? 'border-blue-500 ring-2 ring-blue-500 shadow-md'
+                              : isLight
                                 ? 'bg-white border-slate-200 hover:border-slate-300'
                                 : 'bg-slate-950 border-slate-700 hover:border-slate-500'
-                            }`}
+                              }`}
                           >
                             <div
                               className="w-full h-8 rounded-lg mb-2 p-1 flex gap-1 border border-slate-300 shadow-inner"
@@ -1113,11 +1079,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="space-y-4">
                     {/* Auto-suspend toggle */}
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight
-                          ? 'bg-slate-50 border-slate-200'
-                          : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight
+                        ? 'bg-slate-50 border-slate-200'
+                        : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1129,14 +1094,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <button
                         onClick={() => handleToggle('autoSuspendEnabled')}
-                        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${
-                          settings.autoSuspendEnabled ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
-                        }`}
+                        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${settings.autoSuspendEnabled ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
+                          }`}
                       >
                         <div
-                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-200 ease-in-out ${
-                            settings.autoSuspendEnabled ? 'translate-x-6' : 'translate-x-0'
-                          }`}
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-200 ease-in-out ${settings.autoSuspendEnabled ? 'translate-x-6' : 'translate-x-0'
+                            }`}
                         />
                       </button>
                     </div>
@@ -1144,11 +1107,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Inactive threshold */}
                     {settings.autoSuspendEnabled && (
                       <div
-                        className={`p-4 rounded-xl border ${
-                          isLight
-                            ? 'bg-slate-50 border-slate-200'
-                            : 'bg-slate-950/70 border-slate-800'
-                        }`}
+                        className={`p-4 rounded-xl border ${isLight
+                          ? 'bg-slate-50 border-slate-200'
+                          : 'bg-slate-950/70 border-slate-800'
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-3">
                           <span className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1163,13 +1125,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <button
                               key={min}
                               onClick={() => handleSelectThreshold(min)}
-                              className={`py-2 px-3 rounded-lg text-xs font-bold transition border ${
-                                settings.idleThresholdMinutes === min
-                                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                                  : isLight
+                              className={`py-2 px-3 rounded-lg text-xs font-bold transition border ${settings.idleThresholdMinutes === min
+                                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                                : isLight
                                   ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
                                   : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-650'
-                              }`}
+                                }`}
                             >
                               {min < 60 ? `${min}m` : `${min / 60}h`}
                             </button>
@@ -1209,11 +1170,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {/* Connected Account Card */}
                   {syncInfo?.profile ? (
                     <div
-                      className={`p-5 rounded-2xl border ${
-                        isLight
-                          ? 'bg-slate-50 border-slate-200 shadow-sm'
-                          : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`p-5 rounded-2xl border ${isLight
+                        ? 'bg-slate-50 border-slate-200 shadow-sm'
+                        : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3.5">
@@ -1255,13 +1215,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               Last synced:{' '}
                               {syncInfo.lastSyncTime
                                 ? new Date(syncInfo.lastSyncTime).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    second: '2-digit',
-                                  }) +
-                                  ' (' +
-                                  new Date(syncInfo.lastSyncTime).toLocaleDateString() +
-                                  ')'
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                }) +
+                                ' (' +
+                                new Date(syncInfo.lastSyncTime).toLocaleDateString() +
+                                ')'
                                 : 'Never'}
                             </p>
                           </div>
@@ -1274,9 +1234,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50 cursor-pointer"
                           >
                             <RefreshCw
-                              className={`w-3.5 h-3.5 ${
-                                isSyncingNow || syncInfo.status === 'syncing' ? 'animate-spin' : ''
-                              }`}
+                              className={`w-3.5 h-3.5 ${isSyncingNow || syncInfo.status === 'syncing' ? 'animate-spin' : ''
+                                }`}
                             />
                             <span>
                               {isSyncingNow || syncInfo.status === 'syncing' ? 'Syncing...' : 'Sync Now'}
@@ -1284,11 +1243,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </button>
                           <button
                             onClick={handleSignOut}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                              isLight
-                                ? 'bg-white hover:bg-rose-50 text-rose-600 border-slate-300 hover:border-rose-300 shadow-sm'
-                                : 'bg-slate-900 hover:bg-rose-950/30 text-rose-400 border-slate-800 hover:border-rose-900/50'
-                            }`}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${isLight
+                              ? 'bg-white hover:bg-rose-50 text-rose-600 border-slate-300 hover:border-rose-300 shadow-sm'
+                              : 'bg-slate-900 hover:bg-rose-950/30 text-rose-400 border-slate-800 hover:border-rose-900/50'
+                              }`}
                             title="Disconnect Google Account"
                           >
                             <LogOut className="w-3.5 h-3.5" />
@@ -1311,11 +1269,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ) : (
                     /* Disconnected State / Sign-in Hero */
                     <div
-                      className={`p-6 rounded-2xl border ${
-                        isLight
-                          ? 'bg-slate-50 border-slate-200 shadow-sm'
-                          : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`p-6 rounded-2xl border ${isLight
+                        ? 'bg-slate-50 border-slate-200 shadow-sm'
+                        : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div className="flex items-start gap-4 mb-4">
                         <div className="w-12 h-12 rounded-2xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center flex-shrink-0 text-blue-500">
@@ -1362,11 +1319,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {/* Demo Mode Button */}
                         <button
                           onClick={handleConnectDemo}
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs border transition cursor-pointer ${
-                            isLight
-                              ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
-                              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-750'
-                          }`}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs border transition cursor-pointer ${isLight
+                            ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
+                            : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-750'
+                            }`}
                           title="Instant offline simulation without configuring Google Cloud OAuth credentials"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -1395,9 +1351,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       {/* Folder Card */}
                       <div
-                        className={`p-4 rounded-xl border flex items-center justify-between ${
-                          isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                        }`}
+                        className={`p-4 rounded-xl border flex items-center justify-between ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
@@ -1428,9 +1383,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                       {/* File Card */}
                       <div
-                        className={`p-4 rounded-xl border flex items-center justify-between ${
-                          isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                        }`}
+                        className={`p-4 rounded-xl border flex items-center justify-between ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -1459,9 +1413,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="space-y-3 mb-6">
                       {/* Push Force */}
                       <div
-                        className={`flex items-center justify-between p-4 rounded-xl border ${
-                          isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                        }`}
+                        className={`flex items-center justify-between p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                          }`}
                       >
                         <div>
                           <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1483,9 +1436,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                       {/* Pull Force */}
                       <div
-                        className={`flex items-center justify-between p-4 rounded-xl border ${
-                          isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                        }`}
+                        className={`flex items-center justify-between p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                          }`}
                       >
                         <div>
                           <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1498,11 +1450,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           onClick={() => setConfirmPullModal(true)}
                           disabled={isPulling}
-                          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold text-xs border transition disabled:opacity-50 cursor-pointer ${
-                            isLight
-                              ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
-                              : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-750'
-                          }`}
+                          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold text-xs border transition disabled:opacity-50 cursor-pointer ${isLight
+                            ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
+                            : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-750'
+                            }`}
                         >
                           <ArrowDownCircle className="w-4 h-4 text-emerald-400" />
                           <span>{isPulling ? 'Downloading...' : 'Pull from Drive'}</span>
@@ -1524,9 +1475,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="space-y-3">
                     {/* Auto-Sync Toggle */}
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1538,14 +1488,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <button
                         onClick={handleToggleAutoSync}
-                        className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none cursor-pointer ${
-                          syncInfo?.settings?.autoSync ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-800'
-                        }`}
+                        className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none cursor-pointer ${syncInfo?.settings?.autoSync ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-800'
+                          }`}
                       >
                         <span
-                          className={`inline-block w-4 h-4 rounded-full bg-white transition-transform transform ${
-                            syncInfo?.settings?.autoSync ? 'translate-x-6' : 'translate-x-1'
-                          } top-1 absolute left-0 shadow`}
+                          className={`inline-block w-4 h-4 rounded-full bg-white transition-transform transform ${syncInfo?.settings?.autoSync ? 'translate-x-6' : 'translate-x-1'
+                            } top-1 absolute left-0 shadow`}
                         />
                       </button>
                     </div>
@@ -1553,9 +1501,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Sync Interval */}
                     {syncInfo?.settings?.autoSync && (
                       <div
-                        className={`flex items-center justify-between p-4 rounded-xl border ${
-                          isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                        }`}
+                        className={`flex items-center justify-between p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                          }`}
                       >
                         <div>
                           <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1570,13 +1517,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <button
                               key={m}
                               onClick={() => handleSelectInterval(m)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                                (syncInfo?.settings?.syncIntervalMinutes || 15) === m
-                                  ? 'bg-blue-600 text-white shadow-sm'
-                                  : isLight
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${(syncInfo?.settings?.syncIntervalMinutes || 15) === m
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : isLight
                                   ? 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                                   : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
-                              }`}
+                                }`}
                             >
                               {m}m
                             </button>
@@ -1587,9 +1533,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                     {/* Startup Sync Toggle */}
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1601,14 +1546,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <button
                         onClick={handleToggleStartupSync}
-                        className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none cursor-pointer ${
-                          syncInfo?.settings?.syncOnStartup ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-800'
-                        }`}
+                        className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none cursor-pointer ${syncInfo?.settings?.syncOnStartup ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-800'
+                          }`}
                       >
                         <span
-                          className={`inline-block w-4 h-4 rounded-full bg-white transition-transform transform ${
-                            syncInfo?.settings?.syncOnStartup ? 'translate-x-6' : 'translate-x-1'
-                          } top-1 absolute left-0 shadow`}
+                          className={`inline-block w-4 h-4 rounded-full bg-white transition-transform transform ${syncInfo?.settings?.syncOnStartup ? 'translate-x-6' : 'translate-x-1'
+                            } top-1 absolute left-0 shadow`}
                         />
                       </button>
                     </div>
@@ -1630,9 +1573,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   {showAdvancedAuth && (
                     <div
-                      className={`mt-3 p-4 rounded-xl border space-y-3 ${
-                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`mt-3 p-4 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                         When testing unpacked extensions locally, Google OAuth may require a registered Client ID for your extension's temporary ID. You can paste your own Google Cloud Console OAuth 2.0 Web Client ID below:
@@ -1643,11 +1585,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           value={customClientIdInput}
                           onChange={(e) => setCustomClientIdInput(e.target.value)}
                           placeholder="e.g. 123456789-abcdef.apps.googleusercontent.com"
-                          className={`flex-1 px-3 py-2 rounded-xl text-xs font-mono border focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                            isLight
-                              ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
-                              : 'bg-slate-900 border-slate-750 text-slate-100 placeholder:text-slate-500'
-                          }`}
+                          className={`flex-1 px-3 py-2 rounded-xl text-xs font-mono border focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLight
+                            ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
+                            : 'bg-slate-900 border-slate-750 text-slate-100 placeholder:text-slate-500'
+                            }`}
                         />
                         <button
                           onClick={handleSaveCustomClientId}
@@ -1675,9 +1616,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   <div className="grid grid-cols-5 gap-3 mb-6">
                     <div
-                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <Layers className="w-5 h-5 text-blue-500" />
                       <div>
@@ -1687,9 +1627,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     <div
-                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <Bookmark className="w-5 h-5 text-emerald-500" />
                       <div>
@@ -1699,9 +1638,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     <div
-                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <FileText className="w-5 h-5 text-amber-500" />
                       <div>
@@ -1711,9 +1649,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     <div
-                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <ListTodo className="w-5 h-5 text-purple-500" />
                       <div>
@@ -1723,9 +1660,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     <div
-                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`p-3.5 rounded-xl border flex items-center gap-3 ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <Sparkles className="w-5 h-5 text-cyan-500" />
                       <div>
@@ -1740,9 +1676,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </h3>
                   <div className="space-y-3.5">
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1762,9 +1697,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1776,11 +1710,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs border transition ${
-                          isLight
-                            ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-650'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs border transition ${isLight
+                          ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-650'
+                          }`}
                       >
                         <Upload className="w-4 h-4" />
                         <span>Restore Backup</span>
@@ -1795,9 +1728,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     <div
-                      className={`flex items-center justify-between p-4 rounded-xl border ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
+                        }`}
                     >
                       <div>
                         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
@@ -1810,11 +1742,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <button
                         onClick={handlePurge}
                         disabled={isPurging}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs border transition ${
-                          isLight
-                            ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-650'
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs border transition ${isLight
+                          ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-650'
+                          }`}
                       >
                         <Sparkles className="w-4 h-4 text-indigo-400" />
                         <span>{isPurging ? 'Cleaning...' : 'Clean Cache'}</span>
@@ -1836,22 +1767,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </p>
 
                 <div
-                  className={`divide-y border rounded-xl overflow-hidden ${
-                    isLight
-                      ? 'divide-slate-200 border-slate-200 bg-slate-50 shadow-sm'
-                      : 'divide-slate-800 border-slate-800 bg-slate-950/70'
-                  }`}
+                  className={`divide-y border rounded-xl overflow-hidden ${isLight
+                    ? 'divide-slate-200 border-slate-200 bg-slate-50 shadow-sm'
+                    : 'divide-slate-800 border-slate-800 bg-slate-950/70'
+                    }`}
                 >
                   <div className="flex items-center justify-between p-4">
                     <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
                       Jump to SpaceTabs Dashboard
                     </span>
                     <kbd
-                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
-                          : 'bg-slate-800 border-slate-700 text-blue-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${isLight
+                        ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-blue-300'
+                        }`}
                     >
                       Alt + Shift + W
                     </kbd>
@@ -1862,11 +1791,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       Force Save Active Note
                     </span>
                     <kbd
-                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
-                          : 'bg-slate-800 border-slate-700 text-blue-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${isLight
+                        ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-blue-300'
+                        }`}
                     >
                       Ctrl + S / Cmd + S
                     </kbd>
@@ -1877,11 +1805,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       Bold Note Text
                     </span>
                     <kbd
-                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
-                          : 'bg-slate-800 border-slate-700 text-blue-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${isLight
+                        ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-blue-300'
+                        }`}
                     >
                       Ctrl + B / Cmd + B
                     </kbd>
@@ -1892,11 +1819,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       Italic Note Text
                     </span>
                     <kbd
-                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
-                          : 'bg-slate-800 border-slate-700 text-blue-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${isLight
+                        ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-blue-300'
+                        }`}
                     >
                       Ctrl + I / Cmd + I
                     </kbd>
@@ -1907,11 +1833,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       Indent Checklist / Line in Note
                     </span>
                     <kbd
-                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
-                          : 'bg-slate-800 border-slate-700 text-blue-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${isLight
+                        ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-blue-300'
+                        }`}
                     >
                       Tab (2 spaces)
                     </kbd>
@@ -1924,11 +1849,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === 'about' && (
               <div className="space-y-6 animate-in fade-in duration-100">
                 <div
-                  className={`p-6 rounded-2xl border text-center ${
-                    isLight
-                      ? 'bg-blue-50/80 border-blue-200 shadow-sm'
-                      : 'bg-blue-950/40 border-blue-800'
-                  }`}
+                  className={`p-6 rounded-2xl border text-center ${isLight
+                    ? 'bg-blue-50/80 border-blue-200 shadow-sm'
+                    : 'bg-blue-950/40 border-blue-800'
+                    }`}
                 >
                   <div className="w-14 h-14 rounded-2xl bg-blue-600 mx-auto mb-3 flex items-center justify-center text-white shadow-xl shadow-blue-600/30">
                     <Layers className="w-7 h-7" />
@@ -1941,7 +1865,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                   <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 text-xs font-bold mt-3">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>No 5-Space Limit — Free & Open Workspace Suite</span>
+                    <span>No Limits — Free, Private & Open Workspace Suite!</span>
                   </div>
                 </div>
 
@@ -1966,9 +1890,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {confirmPullModal && (
           <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-100">
             <div
-              className={`w-full max-w-md p-6 rounded-2xl border shadow-2xl animate-in zoom-in-95 duration-100 ${
-                isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
-              }`}
+              className={`w-full max-w-md p-6 rounded-2xl border shadow-2xl animate-in zoom-in-95 duration-100 ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+                }`}
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 flex-shrink-0">
@@ -1987,11 +1910,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex justify-end gap-2.5">
                 <button
                   onClick={() => setConfirmPullModal(false)}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                    isLight
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    }`}
                 >
                   Cancel
                 </button>
