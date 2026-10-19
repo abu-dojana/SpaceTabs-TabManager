@@ -16,7 +16,6 @@ import {
 import {
   signInWithGoogle,
   signOutGoogle,
-  signInDemoAccount,
   syncNow,
   forcePushToDrive,
   forcePullFromDrive,
@@ -282,11 +281,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     } else {
       showToast(res.error || 'Failed to sign in with Google.', 'error');
     }
-  };
-
-  const handleConnectDemo = async () => {
-    await signInDemoAccount();
-    showToast('Demo Google Account connected! Drive sync simulated.');
   };
 
   const handleSignOut = async () => {
@@ -1196,16 +1190,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <h4 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                                 {syncInfo.profile.name}
                               </h4>
-                              {syncInfo.profile.isDemoAccount ? (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                                  Demo Mode
-                                </span>
-                              ) : (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                  Connected
-                                </span>
-                              )}
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                Connected
+                              </span>
                             </div>
                             <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                               {syncInfo.profile.email}
@@ -1314,19 +1302,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             />
                           </svg>
                           <span>{isSigningIn ? 'Connecting to Google...' : 'Sign in with Google'}</span>
-                        </button>
-
-                        {/* Demo Mode Button */}
-                        <button
-                          onClick={handleConnectDemo}
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs border transition cursor-pointer ${isLight
-                            ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
-                            : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-750'
-                            }`}
-                          title="Instant offline simulation without configuring Google Cloud OAuth credentials"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Test with Demo Google Account</span>
                         </button>
                       </div>
 

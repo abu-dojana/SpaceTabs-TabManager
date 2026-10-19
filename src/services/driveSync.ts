@@ -21,7 +21,6 @@ export interface GoogleUserProfile {
   name: string;
   picture?: string;
   connectedAt: number;
-  isDemoAccount?: boolean;
 }
 
 export interface CloudSyncSettings {
@@ -65,7 +64,6 @@ const STORAGE_KEY_TOKEN = 'spacetabs_google_token';
 const STORAGE_KEY_SETTINGS = 'spacetabs_sync_settings';
 const STORAGE_KEY_META = 'spacetabs_sync_meta';
 const STORAGE_KEY_TOMBSTONES = 'spacetabs_tombstones';
-const STORAGE_KEY_MOCK_DRIVE = 'spacetabs_mock_drive_data';
 
 // In-memory status listener callbacks
 type StatusCallback = (info: DriveSyncInfo) => void;
@@ -364,7 +362,6 @@ export async function signInWithGoogle(
       email: 'Google Account',
       name: 'Google User',
       connectedAt: Date.now(),
-      isDemoAccount: false,
     };
 
     try {
@@ -379,7 +376,6 @@ export async function signInWithGoogle(
           name: data.name || data.email?.split('@')[0] || profile.name,
           picture: data.picture,
           connectedAt: Date.now(),
-          isDemoAccount: false,
         };
       }
     } catch (e) {
@@ -423,41 +419,10 @@ export async function signOutGoogle(): Promise<void> {
   await setGoogleProfile(null);
   await updateCloudSyncSettings({ enabled: false });
   await updateSyncMeta({ lastError: null });
+  await chrome.storage.local.remove(['spacetabs_mock_drive_data']);
   currentStatus = 'idle';
   currentError = null;
   notifyStatusChange();
-}
-
-/**
- * Signs in using a simulated Demo Google Account.
- * Enables 100% of the sync engine (merging, folder UI, avatars, status indicators, push/pull)
- * even without Google Cloud Console credentials in developer mode!
- */
-export async function signInDemoAccount(
-  customName = 'SpaceTabs User',
-  customEmail = 'user@gmail.com'
-): Promise<GoogleUserProfile> {
-  const profile: GoogleUserProfile = {
-    id: 'demo_google_account_001',
-    email: customEmail,
-    name: customName,
-    picture: 'https://lh3.googleusercontent.com/a/default-user',
-    connectedAt: Date.now(),
-    isDemoAccount: true,
-  };
-
-  await setGoogleProfile(profile);
-  await updateCloudSyncSettings({ enabled: true });
-  await updateSyncMeta({
-    folderId: 'mock_folder_spacetabs_data',
-    fileId: 'mock_file_data_json',
-    folderUrl: 'https://drive.google.com/drive/folders/SpaceTabs_Data',
-    lastSyncTime: Date.now(),
-    lastError: null,
-  });
-
-  setSyncStatus('synced');
-  return profile;
 }
 
 // ==========================================
@@ -889,42 +854,7 @@ export async function syncNow(): Promise<{
   try {
     const localData = await buildLocalExport();
 
-    // 1. DEMO MODE SIMULATION
-    if (profile.isDemoAccount) {
-      await new Promise((r) => setTimeout(r, 650)); // Realistic latency
-      const mockStorage = await chrome.storage.local.get(STORAGE_KEY_MOCK_DRIVE);
-      let remoteData: DriveDataExport | null = mockStorage[STORAGE_KEY_MOCK_DRIVE] || null;
-
-      let merged = localData;
-      if (remoteData) {
-        merged = await mergeRemoteAndLocal(remoteData, localData);
-      }
-      await chrome.storage.local.set({ [STORAGE_KEY_MOCK_DRIVE]: merged });
-
-      const now = Date.now();
-      await updateSyncMeta({
-        lastSyncTime: now,
-        lastError: null,
-        folderId: 'mock_folder_spacetabs_data',
-        fileId: 'mock_file_data_json',
-        folderUrl: 'https://drive.google.com/drive/folders/SpaceTabs_Data',
-      });
-
-      setSyncStatus('synced');
-      return {
-        success: true,
-        message: 'Synced successfully with Google Drive!',
-        stats: {
-          spaces: merged.spaces.length,
-          tabs: merged.tabs.length,
-          notes: merged.notes.length,
-          tasks: merged.tasks.length,
-          resources: merged.resourceItems.length,
-        },
-      };
-    }
-
-    // 2. REAL GOOGLE DRIVE REST API FLOW
+    // REAL GOOGLE DRIVE REST API FLOW
     const token = await getAuthToken(false);
     const { folderId, folderUrl } = await ensureDriveFolder(token);
     const existingFile = await findDataFile(token, folderId);
@@ -989,14 +919,6 @@ export async function forcePushToDrive(): Promise<{ success: boolean; message: s
   try {
     const localData = await buildLocalExport();
 
-    if (profile.isDemoAccount) {
-      await new Promise((r) => setTimeout(r, 500));
-      await chrome.storage.local.set({ [STORAGE_KEY_MOCK_DRIVE]: localData });
-      await updateSyncMeta({ lastSyncTime: Date.now(), lastError: null });
-      setSyncStatus('synced');
-      return { success: true, message: 'Local data pushed to Google Drive!' };
-    }
-
     const token = await getAuthToken(false);
     const { folderId, folderUrl } = await ensureDriveFolder(token);
     const existingFile = await findDataFile(token, folderId);
@@ -1035,29 +957,21 @@ export async function forcePullFromDrive(): Promise<{ success: boolean; message:
   setSyncStatus('syncing');
 
   try {
-    let remoteData: DriveDataExport | null = null;
+    const token = await getAuthToken(false);
+    const meta = await getSyncMeta();
+    let fileId = meta.fileId;
 
-    if (profile.isDemoAccount) {
-      await new Promise((r) => setTimeout(r, 500));
-      const mockStorage = await chrome.storage.local.get(STORAGE_KEY_MOCK_DRIVE);
-      remoteData = mockStorage[STORAGE_KEY_MOCK_DRIVE] || null;
-    } else {
-      const token = await getAuthToken(false);
-      const meta = await getSyncMeta();
-      let fileId = meta.fileId;
-
-      if (!fileId) {
-        const { folderId } = await ensureDriveFolder(token);
-        const existing = await findDataFile(token, folderId);
-        fileId = existing?.fileId;
-      }
-
-      if (!fileId) {
-        throw new Error('No backup file found in your Google Drive folder.');
-      }
-
-      remoteData = await downloadRemoteData(token, fileId);
+    if (!fileId) {
+      const { folderId } = await ensureDriveFolder(token);
+      const existing = await findDataFile(token, folderId);
+      fileId = existing?.fileId;
     }
+
+    if (!fileId) {
+      throw new Error('No backup file found in your Google Drive folder.');
+    }
+
+    const remoteData: DriveDataExport = await downloadRemoteData(token, fileId);
 
     if (!remoteData || !Array.isArray(remoteData.spaces)) {
       throw new Error('Remote backup file is empty or invalid.');
