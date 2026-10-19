@@ -172,9 +172,9 @@ export const Header: React.FC = () => {
       {/* Top row: Title, Search, Actions */}
       <div className="flex items-center justify-between gap-4 pb-4">
         {/* Title / Inline Quick-Save Editor */}
-        <div className="flex items-center gap-2 min-w-[200px]">
+        <div className="flex items-center gap-2 min-w-0 flex-1 max-w-xl mr-3">
           {isEditingTitle ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0 w-full max-w-md">
               <input
                 ref={inputRef}
                 type="text"
@@ -183,7 +183,7 @@ export const Header: React.FC = () => {
                 onKeyDown={handleKeyDown}
                 onBlur={handleSaveTitle}
                 placeholder="Space name..."
-                className={`rounded-lg px-3 py-1 text-base font-bold transition focus:outline-none min-w-[220px] ${
+                className={`rounded-lg px-3 py-1 text-base font-bold transition focus:outline-none min-w-0 w-full ${
                   isLight
                     ? 'bg-white border-2 border-blue-500 text-slate-900 focus:ring-2 focus:ring-blue-500/20 shadow-sm'
                     : 'bg-slate-900 border border-blue-500 text-slate-100 focus:ring-1 focus:ring-blue-500'
@@ -194,7 +194,7 @@ export const Header: React.FC = () => {
                   e.preventDefault(); // prevent blur before click
                   handleSaveTitle();
                 }}
-                className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition"
+                className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition flex-shrink-0"
                 title="Save Space"
               >
                 <Check className="w-4 h-4" />
@@ -204,7 +204,7 @@ export const Header: React.FC = () => {
                   e.preventDefault();
                   setIsEditingTitle(false);
                 }}
-                className={`p-1.5 rounded-lg transition ${
+                className={`p-1.5 rounded-lg transition flex-shrink-0 ${
                   isLight
                     ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200'
                     : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
@@ -217,7 +217,7 @@ export const Header: React.FC = () => {
           ) : (
             <div
               onClick={startEditing}
-              className={`group flex flex-col justify-center cursor-pointer py-1 px-2.5 -ml-2 rounded-lg transition ${
+              className={`group flex flex-col justify-center cursor-pointer py-1 px-2.5 -ml-2 rounded-lg transition min-w-0 max-w-full ${
                 isLight
                   ? 'hover:bg-slate-100/90 active:bg-slate-200/70 text-slate-900'
                   : 'hover:bg-slate-900/80 active:bg-slate-800/80 text-slate-100'
@@ -229,24 +229,24 @@ export const Header: React.FC = () => {
               }
             >
               {activeSpace?.section && (
-                <span className={`text-[10px] font-semibold uppercase tracking-wider -mb-0.5 ${
+                <span className={`text-[10px] font-semibold uppercase tracking-wider -mb-0.5 truncate ${
                   isLight ? 'text-slate-500' : 'text-slate-500'
                 }`}>
                   {activeSpace.section}
                 </span>
               )}
-              <div className="flex items-center gap-2">
-                <h1 className={`text-xl font-bold tracking-tight flex items-center gap-2 ${
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className={`text-xl font-bold tracking-tight flex items-center gap-2 min-w-0 ${
                   isLight ? 'text-slate-900' : 'text-slate-100'
                 }`}>
-                  {activeSpace?.icon && <span>{activeSpace.icon}</span>}
-                  <span>{defaultTitle}</span>
+                  {activeSpace?.icon && <span className="flex-shrink-0">{activeSpace.icon}</span>}
+                  <span className="truncate" title={defaultTitle}>{defaultTitle}</span>
                 </h1>
-                <Pencil className={`w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity ${
+                <Pencil className={`w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${
                   isLight ? 'text-slate-400 group-hover:text-slate-600' : 'text-slate-500 group-hover:text-slate-300'
                 }`} />
                 {!activeSpaceId && (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ml-1 transition ${
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ml-1 transition flex-shrink-0 ${
                     isLight
                       ? 'bg-blue-50 text-blue-600 border border-blue-200'
                       : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
@@ -256,7 +256,7 @@ export const Header: React.FC = () => {
                 )}
               </div>
               {activeSpace?.description && (
-                <p className={`text-[11px] line-clamp-1 max-w-sm mt-0.5 font-normal ${
+                <p className={`text-[11px] truncate max-w-md mt-0.5 font-normal ${
                   isLight ? 'text-slate-600' : 'text-slate-400'
                 }`}>
                   {activeSpace.description}
@@ -267,7 +267,7 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-md relative">
+        <div className="w-64 sm:w-72 md:w-80 max-w-md min-w-[200px] flex-shrink-0 relative">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
@@ -283,7 +283,7 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Workona-style Quick SAVE button when on Unsaved */}
           {!activeSpaceId ? (
             <button
