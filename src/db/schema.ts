@@ -11,6 +11,8 @@ export interface Space {
   name: string;                   // e.g. "Power BI", "Audiobook"
   icon?: string;                  // Emoji or icon name
   color?: string;                 // UI accent color
+  description?: string;           // Optional description / purpose
+  section?: string;               // Optional custom section name (e.g. "Business", "Personal")
   createdAt: number;              // Unix timestamp ms
   updatedAt: number;              // Unix timestamp ms — used for sync conflict resolution
   order: number;                  // Sidebar display order

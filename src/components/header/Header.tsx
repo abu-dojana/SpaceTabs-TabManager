@@ -208,22 +208,34 @@ export const Header: React.FC = () => {
           ) : (
             <div
               onClick={startEditing}
-              className="group flex items-center gap-2 cursor-pointer py-1 px-2 -ml-2 rounded-lg hover:bg-slate-900 transition"
+              className="group flex flex-col justify-center cursor-pointer py-1 px-2 -ml-2 rounded-lg hover:bg-slate-900 transition"
               title={
                 activeSpaceId
                   ? 'Click to rename space'
                   : 'Click to quick-save unsaved tabs as a Space'
               }
             >
-              <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2">
-                {activeSpace?.icon && <span>{activeSpace.icon}</span>}
-                <span>{defaultTitle}</span>
-              </h1>
-              <Pencil className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-              {!activeSpaceId && (
-                <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-medium ml-1">
-                  Click to Save
+              {activeSpace?.section && (
+                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider -mb-0.5">
+                  {activeSpace.section}
                 </span>
+              )}
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2">
+                  {activeSpace?.icon && <span>{activeSpace.icon}</span>}
+                  <span>{defaultTitle}</span>
+                </h1>
+                <Pencil className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {!activeSpaceId && (
+                  <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-medium ml-1">
+                    Click to Save
+                  </span>
+                )}
+              </div>
+              {activeSpace?.description && (
+                <p className="text-[11px] text-slate-400 line-clamp-1 max-w-sm mt-0.5 font-normal">
+                  {activeSpace.description}
+                </p>
               )}
             </div>
           )}
