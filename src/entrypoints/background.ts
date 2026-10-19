@@ -2,11 +2,15 @@ import { defineBackground } from 'wxt/sandbox';
 import { syncWindowTabsToUnsaved } from '@/services/tabManager';
 import {
   setupSuspensionAlarms,
+  initSuspensionListener,
   recordTabActivity,
   forgetTabActivity,
 } from '@/services/suspension';
 
 export default defineBackground(() => {
+  // Synchronously bind alarm listener so Service Worker receives wakeups reliably
+  initSuspensionListener();
+
   const DASHBOARD_PAGE = '/dashboard.html';
   const DASHBOARD_URL = chrome.runtime.getURL(DASHBOARD_PAGE);
 
@@ -89,9 +93,13 @@ export default defineBackground(() => {
     await syncWindowTabsToUnsaved(removeInfo.windowId);
   });
 
-  // 3. Tab Updated: Sync immediately without waiting for 'complete' status
-  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  // 3. Tab Updated: Sync immediately and record activity on load/navigation
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (!tab.windowId) return;
+
+    if (changeInfo.status === 'complete' || changeInfo.url) {
+      recordTabActivity(tabId);
+    }
 
     if (tab.url?.startsWith(DASHBOARD_URL)) {
       if (changeInfo.status === 'complete') {
@@ -105,6 +113,7 @@ export default defineBackground(() => {
 
   // 4. Tab Created, Moved & Activated
   chrome.tabs.onCreated.addListener((tab) => {
+    if (tab.id) recordTabActivity(tab.id);
     if (tab.windowId) syncWindowTabsToUnsaved(tab.windowId);
   });
 

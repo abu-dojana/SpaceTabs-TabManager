@@ -3,26 +3,71 @@
  * 1. Cold Restores: Handled by suspended.html placeholder (~2KB, zero network requests).
  * 2. Idle Tabs: Uses Chrome's native Memory Saver (chrome.tabs.discard) to purge RAM
  *    without losing tab history, title, or favicons.
+ *
+ * Persistence & Worker Restart Resilience:
+ * - Activity timestamps are cached in-memory and persisted to chrome.storage.session.
+ * - Utilizes Chromium's native tab.lastAccessed for authoritative browser-level idle times.
+ * - If a tab has no recorded timestamp, it defaults to NOW (current time) to prevent
+ *   premature discarding upon background service worker restarts.
  */
 
 const SUSPENSION_ALARM_NAME = 'spacetabs-auto-discard-alarm';
 const DEFAULT_IDLE_MINUTES = 15;
+const STORAGE_KEY = 'tab_activity_timestamps';
 
-// Memory map of last active timestamps per tab ID
-const tabLastActiveTimes = new Map<number, number>();
+// In-memory cache for fast O(1) synchronous reads/writes
+let activityCache: Record<number, number> = {};
+let isHydrated = false;
+let pendingSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Hydrates activityCache from chrome.storage.session
+ */
+async function ensureHydrated(): Promise<Record<number, number>> {
+  if (isHydrated) return activityCache;
+  try {
+    const data = await chrome.storage.session.get(STORAGE_KEY);
+    if (data && data[STORAGE_KEY] && typeof data[STORAGE_KEY] === 'object') {
+      activityCache = { ...data[STORAGE_KEY], ...activityCache };
+    }
+  } catch (err) {
+    console.warn('Failed to hydrate tab activity from session storage:', err);
+  } finally {
+    isHydrated = true;
+  }
+  return activityCache;
+}
+
+/**
+ * Persists activityCache to chrome.storage.session with debouncing
+ */
+function schedulePersist() {
+  if (pendingSaveTimer) clearTimeout(pendingSaveTimer);
+  pendingSaveTimer = setTimeout(async () => {
+    try {
+      await chrome.storage.session.set({ [STORAGE_KEY]: activityCache });
+    } catch {
+      // Ignored if session storage unavailable or extension reloading
+    }
+  }, 1000);
+}
 
 /**
  * Records tab activation time
  */
 export function recordTabActivity(tabId: number) {
-  tabLastActiveTimes.set(tabId, Date.now());
+  if (!tabId || tabId <= 0) return;
+  activityCache[tabId] = Date.now();
+  schedulePersist();
 }
 
 /**
  * Removes tab from activity map on close
  */
 export function forgetTabActivity(tabId: number) {
-  tabLastActiveTimes.delete(tabId);
+  if (!tabId) return;
+  delete activityCache[tabId];
+  schedulePersist();
 }
 
 /**
@@ -30,8 +75,18 @@ export function forgetTabActivity(tabId: number) {
  */
 export async function discardInactiveTabs(maxIdleMinutes: number = DEFAULT_IDLE_MINUTES) {
   try {
+    await ensureHydrated();
+
     const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
-    const tabs = await chrome.tabs.query({
+
+    // 1. Never discard active tabs in ANY window
+    const activeTabs = await chrome.tabs.query({ active: true });
+    const activeTabIds = new Set(
+      activeTabs.map((t) => t.id).filter((id): id is number => typeof id === 'number')
+    );
+
+    // 2. Query candidate inactive tabs
+    const candidateTabs = await chrome.tabs.query({
       active: false,
       pinned: false,
       audible: false,
@@ -42,16 +97,52 @@ export async function discardInactiveTabs(maxIdleMinutes: number = DEFAULT_IDLE_
     const now = Date.now();
     const idleThresholdMs = maxIdleMinutes * 60 * 1000;
 
-    for (const tab of tabs) {
+    for (const tab of candidateTabs) {
       if (!tab.id || !tab.url) continue;
 
-      // Never discard the pinned dashboard or already-suspended placeholder tabs
-      if (tab.url.startsWith(dashboardUrl) || tab.url.includes('/suspended.html')) {
+      // Safety check: Never discard active tabs in any window
+      if (activeTabIds.has(tab.id)) continue;
+
+      // Safety check: Never discard pinned tabs or dashboard or suspended placeholders
+      if (tab.pinned || tab.url.startsWith(dashboardUrl) || tab.url.includes('/suspended.html')) {
         continue;
       }
 
-      const lastActive = tabLastActiveTimes.get(tab.id) || 0;
-      const isIdle = now - lastActive > idleThresholdMs;
+      // Safety check: Skip internal system URLs
+      if (
+        tab.url.startsWith('chrome://') ||
+        tab.url.startsWith('about:') ||
+        tab.url.startsWith('edge://') ||
+        tab.url.startsWith('brave://') ||
+        tab.url.startsWith('chrome-extension://')
+      ) {
+        continue;
+      }
+
+      // 3. Determine last active time using persisted records and Chromium's native lastAccessed
+      const recordedTime = activityCache[tab.id];
+      const browserLastAccessed =
+        typeof tab.lastAccessed === 'number' && tab.lastAccessed > 0 && tab.lastAccessed <= now
+          ? tab.lastAccessed
+          : undefined;
+
+      let lastActive: number;
+
+      if (recordedTime && browserLastAccessed) {
+        lastActive = Math.max(recordedTime, browserLastAccessed);
+      } else if (recordedTime) {
+        lastActive = recordedTime;
+      } else if (browserLastAccessed) {
+        lastActive = browserLastAccessed;
+      } else {
+        // Safe default: Tab was newly discovered or worker just woke up without prior record.
+        // DO NOT assume 0. Default to NOW so it must wait the full threshold before discarding.
+        lastActive = now;
+        activityCache[tab.id] = now;
+        schedulePersist();
+      }
+
+      const isIdle = now - lastActive >= idleThresholdMs;
 
       if (isIdle) {
         try {
@@ -99,6 +190,17 @@ export async function discardAllInactiveTabsInWindow(windowId: number) {
 }
 
 /**
+ * Registers the alarm listener synchronously for Service Worker lifecycle resilience
+ */
+export function initSuspensionListener() {
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === SUSPENSION_ALARM_NAME) {
+      discardInactiveTabs();
+    }
+  });
+}
+
+/**
  * Sets up periodic alarm for Chrome's native Memory Saver discarding
  */
 export async function setupSuspensionAlarms() {
@@ -109,12 +211,6 @@ export async function setupSuspensionAlarms() {
         periodInMinutes: 10,
       });
     }
-
-    chrome.alarms.onAlarm.addListener((alarm) => {
-      if (alarm.name === SUSPENSION_ALARM_NAME) {
-        discardInactiveTabs();
-      }
-    });
   } catch (err) {
     console.error('Failed to setup suspension alarm:', err);
   }
