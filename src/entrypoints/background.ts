@@ -1,4 +1,5 @@
 import { defineBackground } from 'wxt/sandbox';
+import { db } from '@/db';
 import { syncWindowTabsToUnsaved } from '@/services/tabManager';
 import {
   setupSuspensionAlarms,
@@ -126,7 +127,34 @@ export default defineBackground(() => {
     syncWindowTabsToUnsaved(activeInfo.windowId);
   });
 
-  // 5. Keyboard Shortcut to focus Dashboard (Alt+Shift+W)
+  // 5. Tab Replaced (Chromium discards, prerenders, or process swaps)
+  chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
+    recordTabActivity(addedTabId);
+    forgetTabActivity(removedTabId);
+
+    try {
+      const records = await db.tabs
+        .where('chromeTabId')
+        .equals(removedTabId)
+        .toArray();
+
+      for (const rec of records) {
+        await db.tabs.update(rec.id, {
+          chromeTabId: addedTabId,
+          updatedAt: Date.now(),
+        });
+      }
+
+      const tab = await chrome.tabs.get(addedTabId);
+      if (tab?.windowId) {
+        syncWindowTabsToUnsaved(tab.windowId);
+      }
+    } catch {
+      // Ignored
+    }
+  });
+
+  // 6. Keyboard Shortcut to focus Dashboard (Alt+Shift+W)
   chrome.commands.onCommand.addListener(async (command) => {
     if (command === 'focus-dashboard') {
       const currentWin = await chrome.windows.getCurrent();

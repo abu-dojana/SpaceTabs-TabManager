@@ -189,11 +189,20 @@ async function performSyncWindowTabs(windowId: number) {
 
       if (match) {
         matchedRecordIds.add(match.id);
+        const tabUrl =
+          browserTab.discarded && (!browserTab.url || browserTab.url === 'chrome://newtab/')
+            ? match.url
+            : realUrl;
+        const tabTitle =
+          browserTab.discarded && (!browserTab.title || browserTab.title === 'New Tab')
+            ? match.title
+            : title;
+
         await db.tabs.update(match.id, {
           chromeTabId: browserTab.id,
           windowId,
-          title,
-          url: realUrl,
+          title: tabTitle,
+          url: tabUrl,
           favIconUrl: favIconUrl || match.favIconUrl,
           order: i,
           updatedAt: now,
@@ -218,12 +227,31 @@ async function performSyncWindowTabs(windowId: number) {
 
     // Clean up closed tabs for THIS window only
     for (const record of existing) {
+      // Critical Guard: NEVER delete a record that was matched or updated during this sync cycle!
+      if (matchedRecordIds.has(record.id)) continue;
+
       if (
         record.windowId === windowId &&
         record.chromeTabId &&
         !validTabIds.has(record.chromeTabId)
       ) {
-        await db.tabs.delete(record.id);
+        // Safe check: Verify if the tab is truly closed before deleting from Dexie
+        let stillExistsInBrowser = false;
+        try {
+          const checkTab = await chrome.tabs.get(record.chromeTabId);
+          if (checkTab) {
+            stillExistsInBrowser = true;
+            if (checkTab.windowId !== windowId) {
+              await db.tabs.update(record.id, { windowId: checkTab.windowId, updatedAt: now });
+            }
+          }
+        } catch {
+          stillExistsInBrowser = false;
+        }
+
+        if (!stillExistsInBrowser) {
+          await db.tabs.delete(record.id);
+        }
       }
     }
   } catch (err) {

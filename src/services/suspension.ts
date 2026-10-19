@@ -11,6 +11,8 @@
  *   premature discarding upon background service worker restarts.
  */
 
+import { db } from '@/db';
+
 const SUSPENSION_ALARM_NAME = 'spacetabs-auto-discard-alarm';
 const DEFAULT_IDLE_MINUTES = 15;
 const STORAGE_KEY = 'tab_activity_timestamps';
@@ -146,7 +148,15 @@ export async function discardInactiveTabs(maxIdleMinutes: number = DEFAULT_IDLE_
 
       if (isIdle) {
         try {
-          await chrome.tabs.discard(tab.id);
+          const discarded = await chrome.tabs.discard(tab.id);
+          if (discarded?.id && discarded.id !== tab.id) {
+            forgetTabActivity(tab.id);
+            recordTabActivity(discarded.id);
+            const records = await db.tabs.where('chromeTabId').equals(tab.id).toArray();
+            for (const r of records) {
+              await db.tabs.update(r.id, { chromeTabId: discarded.id, updatedAt: Date.now() });
+            }
+          }
         } catch {
           // Tab may have been closed or activated during async execution
         }
@@ -179,7 +189,13 @@ export async function discardAllInactiveTabsInWindow(windowId: number) {
       }
 
       try {
-        await chrome.tabs.discard(tab.id);
+        const discarded = await chrome.tabs.discard(tab.id);
+        if (discarded?.id && discarded.id !== tab.id) {
+          const records = await db.tabs.where('chromeTabId').equals(tab.id).toArray();
+          for (const r of records) {
+            await db.tabs.update(r.id, { chromeTabId: discarded.id, updatedAt: Date.now() });
+          }
+        }
       } catch {
         // Ignored
       }

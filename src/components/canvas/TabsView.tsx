@@ -3,7 +3,14 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
-import { focusOrOpenTab, moveTabsToSpace, locateOrOpenTab, closeTabs } from '@/services/tabManager';
+import {
+  focusOrOpenTab,
+  moveTabsToSpace,
+  locateOrOpenTab,
+  closeTabs,
+  setTransitionLock,
+  syncWindowTabsToUnsaved,
+} from '@/services/tabManager';
 import { decodeRealUrl, extractDomain } from '@/utils/urlFilter';
 import {
   Folder,
@@ -379,18 +386,56 @@ export const TabsView: React.FC = () => {
   // 7. Suspend All Tabs
   const handleSuspendAllTabs = async () => {
     setIsTabsMenuOpen(false);
-    const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
-    const activeTabs = await chrome.tabs.query({ active: true });
-    const activeTabIds = new Set(activeTabs.map((t) => t.id).filter(Boolean));
+    if (!tabs || tabs.length === 0) return;
 
-    for (const t of tabs || []) {
-      if (t.chromeTabId && !activeTabIds.has(t.chromeTabId)) {
-        if (!t.url.startsWith(dashboardUrl) && !t.url.includes('/suspended.html')) {
-          try {
-            await chrome.tabs.discard(t.chromeTabId);
-          } catch {}
+    try {
+      const curWin = await chrome.windows.getCurrent();
+      const windowId = curWin?.id;
+
+      if (windowId) {
+        await setTransitionLock(windowId, true);
+      }
+
+      const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
+      const activeTabs = await chrome.tabs.query({ active: true });
+      const activeTabIds = new Set(activeTabs.map((t) => t.id).filter(Boolean));
+
+      for (const t of tabs) {
+        if (t.chromeTabId && !activeTabIds.has(t.chromeTabId)) {
+          if (
+            !t.url.startsWith(dashboardUrl) &&
+            !t.url.includes('/suspended.html') &&
+            !t.url.startsWith('chrome://') &&
+            !t.url.startsWith('about:') &&
+            !t.url.startsWith('edge://') &&
+            !t.url.startsWith('brave://')
+          ) {
+            try {
+              const discarded = await chrome.tabs.discard(t.chromeTabId);
+              if (discarded?.id && discarded.id !== t.chromeTabId) {
+                await db.tabs.update(t.id, {
+                  chromeTabId: discarded.id,
+                  updatedAt: Date.now(),
+                });
+              }
+            } catch {
+              // Ignore tabs that cannot be discarded
+            }
+          }
         }
       }
+
+      // Safety buffer to let Chromium discard lifecycle settle before releasing transition lock
+      if (windowId) {
+        setTimeout(async () => {
+          try {
+            await setTransitionLock(windowId, false);
+            await syncWindowTabsToUnsaved(windowId);
+          } catch {}
+        }, 500);
+      }
+    } catch (err) {
+      console.error('Failed to suspend all tabs:', err);
     }
   };
 
