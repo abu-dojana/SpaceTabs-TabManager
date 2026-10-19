@@ -6,6 +6,7 @@ interface UIState {
   activeView: 'tabs' | 'resources' | 'notes' | 'tasks';
   searchQuery: string;
   isCreateSpaceOpen: boolean;
+  moveSectionSpaceId: string | null;
   setActiveSpaceId: (id: string | null) => void;
   setActiveView: (view: 'tabs' | 'resources' | 'notes' | 'tasks') => void;
   setSearchQuery: (query: string) => void;
@@ -13,6 +14,7 @@ interface UIState {
   selectAllTabs: (ids: string[]) => void;
   clearSelectedTabs: () => void;
   setCreateSpaceOpen: (open: boolean) => void;
+  setMoveSectionSpaceId: (id: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -21,6 +23,7 @@ export const useUIStore = create<UIState>((set) => ({
   activeView: 'tabs',
   searchQuery: '',
   isCreateSpaceOpen: false,
+  moveSectionSpaceId: null,
 
   setActiveSpaceId: (id) =>
     set({ activeSpaceId: id, selectedTabIds: new Set(), searchQuery: '' }),
@@ -38,4 +41,5 @@ export const useUIStore = create<UIState>((set) => ({
   selectAllTabs: (ids) => set({ selectedTabIds: new Set(ids) }),
   clearSelectedTabs: () => set({ selectedTabIds: new Set() }),
   setCreateSpaceOpen: (open) => set({ isCreateSpaceOpen: open }),
+  setMoveSectionSpaceId: (id) => set({ moveSectionSpaceId: id }),
 }));

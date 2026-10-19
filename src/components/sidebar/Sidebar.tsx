@@ -28,6 +28,7 @@ import {
   RotateCcw,
   Check,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -36,11 +37,12 @@ export const Sidebar: React.FC = () => {
     setActiveSpaceId,
     setCreateSpaceOpen,
     clearSelectedTabs,
+    setMoveSectionSpaceId,
   } = useUIStore();
 
   const [dragOverSpaceId, setDragOverSpaceId] = React.useState<string | null>(null);
 
-  // 3-Dot Dropdown & Modals State
+  // 3-Dot Dropdown & Modals State for Spaces
   const [activeMenuSpaceId, setActiveMenuSpaceId] = React.useState<string | null>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -48,10 +50,19 @@ export const Sidebar: React.FC = () => {
   const [inlineEditingName, setInlineEditingName] = React.useState<string>('');
   const renameInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Section Management State
+  const [activeSectionMenu, setActiveSectionMenu] = React.useState<string | null>(null);
+  const sectionMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const [editingSectionName, setEditingSectionName] = React.useState<string | null>(null);
+  const [renamingSectionValue, setRenamingSectionValue] = React.useState<string>('');
+  const renameSectionInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [deleteSectionModal, setDeleteSectionModal] = React.useState<string | null>(null);
+
   const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set());
   const [archiveOpen, setArchiveOpen] = React.useState(false);
 
-  const [sectionModalSpace, setSectionModalSpace] = React.useState<Space | null>(null);
   const [descriptionModalSpace, setDescriptionModalSpace] = React.useState<Space | null>(null);
   const [deleteConfirmSpace, setDeleteConfirmSpace] = React.useState<Space | null>(null);
 
@@ -109,19 +120,23 @@ export const Sidebar: React.FC = () => {
     return others > 0 ? `${topDomain} + ${others}` : topDomain;
   }, [unsavedTabs]);
 
-  // Click-away listener to dismiss space 3-dot dropdown cleanly
+  // Click-away listener to dismiss space & section 3-dot dropdowns cleanly
   React.useEffect(() => {
-    if (!activeMenuSpaceId) return;
+    if (!activeMenuSpaceId && !activeSectionMenu) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setActiveMenuSpaceId(null);
+      }
+      if (sectionMenuRef.current && !sectionMenuRef.current.contains(e.target as Node)) {
+        setActiveSectionMenu(null);
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setActiveMenuSpaceId(null);
+        setActiveSectionMenu(null);
       }
     };
 
@@ -131,15 +146,23 @@ export const Sidebar: React.FC = () => {
       window.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeMenuSpaceId]);
+  }, [activeMenuSpaceId, activeSectionMenu]);
 
-  // Focus and select rename input
+  // Focus and select space rename input
   React.useEffect(() => {
     if (inlineEditingSpaceId && renameInputRef.current) {
       renameInputRef.current.focus();
       renameInputRef.current.select();
     }
   }, [inlineEditingSpaceId]);
+
+  // Focus and select section rename input
+  React.useEffect(() => {
+    if (editingSectionName && renameSectionInputRef.current) {
+      renameSectionInputRef.current.focus();
+      renameSectionInputRef.current.select();
+    }
+  }, [editingSectionName]);
 
   const handleSelectSpace = async (spaceId: string | null) => {
     setActiveSpaceId(spaceId);
@@ -193,6 +216,71 @@ export const Sidebar: React.FC = () => {
       else next.add(sectionName);
       return next;
     });
+  };
+
+  // Section: Commit Rename
+  const handleCommitRenameSection = async (oldName: string) => {
+    const trimmed = renamingSectionValue.trim();
+    if (trimmed && trimmed !== oldName) {
+      const matching = await db.spaces
+        .filter((s) => s.section === oldName)
+        .toArray();
+      const now = Date.now();
+      for (const s of matching) {
+        await db.spaces.update(s.id, {
+          section: trimmed,
+          updatedAt: now,
+        });
+      }
+      setCollapsedSections((prev) => {
+        if (prev.has(oldName)) {
+          const next = new Set(prev);
+          next.delete(oldName);
+          next.add(trimmed);
+          return next;
+        }
+        return prev;
+      });
+    }
+    setEditingSectionName(null);
+  };
+
+  // Section: Archive All Spaces in Section (Workona style)
+  const handleArchiveSectionSpaces = async (sectionName: string) => {
+    const matching = await db.spaces
+      .filter((s) => s.section === sectionName)
+      .toArray();
+
+    const now = Date.now();
+    for (const s of matching) {
+      await db.spaces.update(s.id, {
+        isArchived: true,
+        updatedAt: now,
+      });
+    }
+
+    if (activeSpaceId && matching.some((s) => s.id === activeSpaceId)) {
+      await handleSelectSpace(null);
+    }
+
+    setDeleteSectionModal(null);
+  };
+
+  // Section: Keep All Spaces (Remove Section tag, moving them to main spaces)
+  const handleKeepSectionSpaces = async (sectionName: string) => {
+    const matching = await db.spaces
+      .filter((s) => s.section === sectionName)
+      .toArray();
+
+    const now = Date.now();
+    for (const s of matching) {
+      await db.spaces.update(s.id, {
+        section: undefined,
+        updatedAt: now,
+      });
+    }
+
+    setDeleteSectionModal(null);
   };
 
   // 1. Commit Rename
@@ -513,7 +601,7 @@ export const Sidebar: React.FC = () => {
             <button
               onClick={() => {
                 setActiveMenuSpaceId(null);
-                setSectionModalSpace(space);
+                setMoveSectionSpaceId(space.id);
               }}
               className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center justify-between transition"
             >
@@ -686,23 +774,114 @@ export const Sidebar: React.FC = () => {
 
             return (
               <div key={sectionName} className="mt-3">
-                {/* Section Header */}
-                <div
-                  onClick={() => toggleSection(sectionName)}
-                  className="flex items-center justify-between px-2 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-200 cursor-pointer rounded transition group"
-                >
-                  <div className="flex items-center gap-1.5">
-                    {isCollapsed ? (
-                      <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300" />
-                    )}
-                    <span>{sectionName}</span>
+                {/* Section Header or Inline Rename Input */}
+                {editingSectionName === sectionName ? (
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-blue-500 rounded-lg">
+                    <input
+                      ref={renameSectionInputRef}
+                      type="text"
+                      value={renamingSectionValue}
+                      onChange={(e) => setRenamingSectionValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCommitRenameSection(sectionName);
+                        if (e.key === 'Escape') setEditingSectionName(null);
+                      }}
+                      onBlur={() => handleCommitRenameSection(sectionName)}
+                      className="flex-1 bg-transparent text-xs text-slate-100 font-semibold uppercase tracking-wider focus:outline-none min-w-0"
+                    />
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleCommitRenameSection(sectionName);
+                      }}
+                      className="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded"
+                      title="Save Name"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setEditingSectionName(null);
+                      }}
+                      className="p-1 text-slate-400 hover:bg-slate-800 rounded"
+                      title="Cancel"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800/80 text-slate-400 font-mono">
-                    {sectionSpaces.length}
-                  </span>
-                </div>
+                ) : (
+                  <div className="relative">
+                    <div
+                      onClick={() => toggleSection(sectionName)}
+                      className="flex items-center justify-between px-2 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-200 cursor-pointer rounded transition group"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
+                        {isCollapsed ? (
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
+                        )}
+                        <span className="truncate">{sectionName}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800/80 text-slate-400 font-mono">
+                          {sectionSpaces.length}
+                        </span>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSectionMenu(
+                              activeSectionMenu === sectionName ? null : sectionName
+                            );
+                          }}
+                          className={`p-0.5 rounded transition ${
+                            activeSectionMenu === sectionName
+                              ? 'bg-slate-800 text-blue-400 opacity-100'
+                              : 'opacity-0 group-hover:opacity-100 hover:bg-slate-800 text-slate-500 hover:text-slate-200'
+                          }`}
+                          title="Section options"
+                        >
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Section 3-Dot Dropdown Menu */}
+                    {activeSectionMenu === sectionName && (
+                      <div
+                        ref={sectionMenuRef}
+                        className="absolute right-1 top-full mt-1 z-50 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => {
+                            setActiveSectionMenu(null);
+                            setEditingSectionName(sectionName);
+                            setRenamingSectionValue(sectionName);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Rename section</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveSectionMenu(null);
+                            setDeleteSectionModal(sectionName);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2.5 transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                          <span>Delete section</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Section Spaces */}
                 {!isCollapsed && (
@@ -794,113 +973,6 @@ export const Sidebar: React.FC = () => {
       {/* MODALS */}
       {/* ======================================================== */}
 
-      {/* 4. Move to Section Modal */}
-      {sectionModalSpace && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-sm w-full shadow-2xl text-left select-none animate-in fade-in zoom-in-95 duration-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-              <div className="flex items-center gap-2 min-w-0">
-                <FolderInput className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                <h3 className="text-sm font-semibold text-slate-100 truncate">
-                  Move "{sectionModalSpace.name}" to Section
-                </h3>
-              </div>
-              <button
-                onClick={() => setSectionModalSpace(null)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded hover:bg-slate-800 transition ml-2"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Existing Sections */}
-            {allSections.length > 0 && (
-              <div className="mb-4">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Existing Sections
-                </div>
-                <div className="space-y-1 max-h-36 overflow-y-auto">
-                  {allSections.map((sec) => (
-                    <button
-                      key={sec}
-                      onClick={async () => {
-                        await db.spaces.update(sectionModalSpace.id, {
-                          section: sec,
-                          updatedAt: Date.now(),
-                        });
-                        setSectionModalSpace(null);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition ${
-                        sectionModalSpace.section === sec
-                          ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                          : 'text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span>{sec}</span>
-                      {sectionModalSpace.section === sec && (
-                        <Check className="w-3.5 h-3.5 text-blue-400" />
-                      )}
-                    </button>
-                  ))}
-
-                  {sectionModalSpace.section && (
-                    <button
-                      onClick={async () => {
-                        await db.spaces.update(sectionModalSpace.id, {
-                          section: undefined,
-                          updatedAt: Date.now(),
-                        });
-                        setSectionModalSpace(null);
-                      }}
-                      className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-amber-400 hover:bg-amber-500/10 transition mt-1"
-                    >
-                      Remove from section (Move to top)
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Create New Section Input */}
-            <div>
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Create New Section
-              </div>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const form = e.target as HTMLFormElement;
-                  const input = form.elements.namedItem('newSection') as HTMLInputElement;
-                  const val = input.value.trim();
-                  if (val) {
-                    await db.spaces.update(sectionModalSpace.id, {
-                      section: val,
-                      updatedAt: Date.now(),
-                    });
-                    setSectionModalSpace(null);
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  name="newSection"
-                  type="text"
-                  autoFocus
-                  placeholder="e.g. Business, Projects, Reading"
-                  className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition flex-shrink-0"
-                >
-                  Move
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 5. Add / Edit Description Modal */}
       {descriptionModalSpace && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -990,6 +1062,58 @@ export const Sidebar: React.FC = () => {
                 className="px-4 py-1.5 rounded-lg text-xs font-medium bg-red-600 hover:bg-red-500 text-white transition shadow-sm"
               >
                 Delete Space
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Section Modal (Workona Style) */}
+      {deleteSectionModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-100"
+          onClick={() => setDeleteSectionModal(null)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl select-none animate-in fade-in zoom-in-95 duration-100 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setDeleteSectionModal(null)}
+              className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Amber Warning Triangle (matching Workona screenshot) */}
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <AlertTriangle className="w-7 h-7 text-amber-400" />
+            </div>
+
+            {/* Title (matching Workona: Archive the contents of Business?) */}
+            <h3 className="text-base font-bold text-slate-100 mb-2">
+              Archive the contents of {deleteSectionModal}?
+            </h3>
+            <p className="text-xs text-slate-400 mb-6">
+              You can archive all spaces in this section or keep them active in your main spaces list.
+            </p>
+
+            {/* Actions (matching Workona: ARCHIVE SPACES / KEEP SPACES) */}
+            <div className="space-y-2">
+              <button
+                onClick={() => handleArchiveSectionSpaces(deleteSectionModal)}
+                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-xs tracking-wider uppercase shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-1.5"
+              >
+                <Archive className="w-4 h-4" />
+                <span>ARCHIVE SPACES</span>
+              </button>
+
+              <button
+                onClick={() => handleKeepSectionSpaces(deleteSectionModal)}
+                className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold rounded-lg text-xs tracking-wider uppercase transition"
+              >
+                KEEP SPACES
               </button>
             </div>
           </div>

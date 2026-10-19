@@ -581,3 +581,72 @@ export async function moveTabsToSpace(
   }
 }
 
+/**
+ * Closes one or more tabs:
+ * 1. Closes the physical Chrome browser tab if it is currently open in any window.
+ * 2. Removes the tab record from the database.
+ */
+export async function closeTabs(tabIds: string[]) {
+  if (!tabIds || tabIds.length === 0) return;
+  const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
+
+  let currentWindowId: number | undefined;
+  try {
+    const curWin = await chrome.windows.getCurrent();
+    currentWindowId = curWin.id;
+  } catch {}
+
+  let allBrowserTabs: chrome.tabs.Tab[] = [];
+  try {
+    allBrowserTabs = await chrome.tabs.query({});
+  } catch {}
+
+  for (const id of tabIds) {
+    const record = await db.tabs.get(id);
+    if (!record) {
+      await db.tabs.delete(id);
+      continue;
+    }
+
+    const realUrl = decodeRealUrl(record.url);
+    let targetBrowserTabId: number | undefined;
+
+    // 1. Try exact match by chromeTabId
+    if (record.chromeTabId) {
+      const match = allBrowserTabs.find((t) => t.id === record.chromeTabId);
+      if (match?.id && !match.url?.startsWith(dashboardUrl)) {
+        targetBrowserTabId = match.id;
+      }
+    }
+
+    // 2. Fallback: match by URL within record's windowId or current window
+    if (!targetBrowserTabId) {
+      const preferredWinId = record.windowId || currentWindowId;
+      const match = allBrowserTabs.find((t) => {
+        if (!t.id || t.url?.startsWith(dashboardUrl)) return false;
+        if (preferredWinId && t.windowId !== preferredWinId) return false;
+        const tReal = decodeRealUrl(t.url || '');
+        const tPending = decodeRealUrl(t.pendingUrl || '');
+        return tReal === realUrl || tPending === realUrl;
+      });
+      if (match?.id) {
+        targetBrowserTabId = match.id;
+      }
+    }
+
+    // Close the physical browser tab in Chrome if open
+    if (targetBrowserTabId) {
+      try {
+        await chrome.tabs.remove(targetBrowserTabId);
+        // Exclude the closed tab from subsequent iterations
+        allBrowserTabs = allBrowserTabs.filter((t) => t.id !== targetBrowserTabId);
+      } catch (err) {
+        // Tab might have already been closed
+      }
+    }
+
+    // Always delete the record from Dexie
+    await db.tabs.delete(id);
+  }
+}
+

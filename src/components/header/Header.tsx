@@ -5,7 +5,6 @@ import { UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
 import {
   openSpaceInNewWindow,
-  openSpaceInCurrentWindow,
   setWindowActiveSpaceId,
 } from '@/services/tabManager';
 import {
@@ -21,6 +20,7 @@ import {
   Check,
   X,
   BookmarkCheck,
+  FolderInput,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -32,6 +32,7 @@ export const Header: React.FC = () => {
     searchQuery,
     setSearchQuery,
     setCreateSpaceOpen,
+    setMoveSectionSpaceId,
   } = useUIStore();
 
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
@@ -157,15 +158,6 @@ export const Header: React.FC = () => {
     }
   };
 
-  const handleOpenHere = async () => {
-    if (activeSpaceId) {
-      const currentWin = await chrome.windows.getCurrent();
-      if (currentWin.id) {
-        await openSpaceInCurrentWindow(activeSpaceId, currentWin.id);
-      }
-    }
-  };
-
   return (
     <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md px-6 pt-4 pb-0 select-none">
       {/* Top row: Title, Search, Actions */}
@@ -268,11 +260,12 @@ export const Header: React.FC = () => {
           ) : (
             <>
               <button
-                onClick={handleOpenHere}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
-                title="Open space tabs in this window alongside current tabs"
+                onClick={() => activeSpaceId && setMoveSectionSpaceId(activeSpaceId)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition"
+                title="Move this space into a section"
               >
-                <span>Open All Here</span>
+                <FolderInput className="w-3.5 h-3.5 text-blue-400" />
+                <span>Move This space to Section</span>
               </button>
 
               <button

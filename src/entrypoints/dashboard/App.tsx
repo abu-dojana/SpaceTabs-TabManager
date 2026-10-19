@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/sidebar/Sidebar';
 import { Header } from '@/components/header/Header';
 import { TabsView } from '@/components/canvas/TabsView';
 import { CreateSpaceModal } from '@/components/modals/CreateSpaceModal';
+import { MoveToSectionModal } from '@/components/modals/MoveToSectionModal';
 import { useUIStore } from '@/store/uiStore';
 import { getWindowActiveSpaceId } from '@/services/tabManager';
 import { Bookmark, FileText, CheckSquare, AlertTriangle } from 'lucide-react';
@@ -134,6 +135,7 @@ export default function App() {
 
         {/* Modals */}
         <CreateSpaceModal />
+        <MoveToSectionModal />
       </div>
     </ErrorBoundary>
   );

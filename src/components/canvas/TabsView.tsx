@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
-import { focusOrOpenTab, moveTabsToSpace, locateOrOpenTab } from '@/services/tabManager';
+import { focusOrOpenTab, moveTabsToSpace, locateOrOpenTab, closeTabs } from '@/services/tabManager';
 import {
   Folder,
   MoreVertical,
@@ -22,6 +22,7 @@ import {
   History,
   Compass,
   Globe,
+  X,
 } from 'lucide-react';
 
 export const TabsView: React.FC = () => {
@@ -150,14 +151,12 @@ export const TabsView: React.FC = () => {
   };
 
   const handleDeleteTab = async (id: string) => {
-    await db.tabs.delete(id);
+    await closeTabs([id]);
   };
 
   const handleDeleteSelected = async () => {
     const ids = Array.from(selectedTabIds);
-    for (const id of ids) {
-      await db.tabs.delete(id);
-    }
+    await closeTabs(ids);
     clearSelectedTabs();
   };
 
@@ -534,10 +533,10 @@ export const TabsView: React.FC = () => {
 
                     <button
                       onClick={() => handleDeleteTab(tab.id)}
-                      className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400"
-                      title="Delete Tab"
+                      className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400 transition"
+                      title="Close Tab"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
