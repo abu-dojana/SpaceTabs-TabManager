@@ -403,7 +403,26 @@ export const NotesView: React.FC = () => {
     };
   }, []);
 
-  // Debounced auto-save to Dexie
+  // Immediate flush of pending changes (e.g. on blur, note switch, or Ctrl+S)
+  const flushSave = async (id: string, newTitle: string, newContent: string) => {
+    if (!id) return;
+    if (saveDebounceTimer.current) {
+      clearTimeout(saveDebounceTimer.current);
+      saveDebounceTimer.current = null;
+    }
+    try {
+      await db.notes.update(id, {
+        title: newTitle.trim() || 'Untitled Note',
+        content: newContent,
+        updatedAt: Date.now(),
+      });
+      setSaveStatus('saved');
+    } catch (err) {
+      console.error('Failed to flush note save:', err);
+    }
+  };
+
+  // Debounced auto-save to Dexie with 3-second grace period
   const triggerAutoSave = (newTitle: string, newContent: string) => {
     if (!selectedNoteId) return;
     setSaveStatus('saving');
@@ -423,7 +442,16 @@ export const NotesView: React.FC = () => {
       } catch (err) {
         console.error('Failed to auto-save note:', err);
       }
-    }, 400);
+    }, 3000);
+  };
+
+  // Handle switching to a different note (flushes pending changes first)
+  const handleSelectNote = async (newNoteId: string) => {
+    if (newNoteId === selectedNoteId) return;
+    if (selectedNoteId && saveStatus === 'saving') {
+      await flushSave(selectedNoteId, titleBuffer, contentBuffer);
+    }
+    setSelectedNoteId(newNoteId);
   };
 
   // Handle title changes
@@ -442,6 +470,10 @@ export const NotesView: React.FC = () => {
 
   // Create new note
   const handleCreateNewNote = async () => {
+    if (selectedNoteId && saveStatus === 'saving') {
+      await flushSave(selectedNoteId, titleBuffer, contentBuffer);
+    }
+
     const id = crypto.randomUUID();
     const now = Date.now();
     const newNote: Note = {
@@ -457,6 +489,7 @@ export const NotesView: React.FC = () => {
     setSelectedNoteId(id);
     setTitleBuffer(newNote.title);
     setContentBuffer(newNote.content);
+    setSaveStatus('saved');
     setViewMode('edit');
 
     // Focus editor after creation
@@ -558,6 +591,11 @@ export const NotesView: React.FC = () => {
     } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
       e.preventDefault();
       insertFormatting('*', '*', 'italic text');
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      if (selectedNoteId) {
+        flushSave(selectedNoteId, titleBuffer, contentBuffer);
+      }
     }
   };
 
@@ -599,7 +637,7 @@ export const NotesView: React.FC = () => {
               return (
                 <div
                   key={note.id}
-                  onClick={() => setSelectedNoteId(note.id)}
+                  onClick={() => handleSelectNote(note.id)}
                   className={`group p-3 rounded-lg cursor-pointer transition relative border ${
                     isSelected
                       ? 'bg-blue-600/10 border-blue-500/40 text-white'
@@ -757,6 +795,11 @@ export const NotesView: React.FC = () => {
                 type="text"
                 value={titleBuffer}
                 onChange={handleTitleChange}
+                onBlur={() => {
+                  if (selectedNoteId && saveStatus === 'saving') {
+                    flushSave(selectedNoteId, titleBuffer, contentBuffer);
+                  }
+                }}
                 placeholder="Note Title..."
                 className="w-full bg-transparent text-xl font-bold text-slate-100 placeholder-slate-600 focus:outline-none tracking-tight"
               />
@@ -853,6 +896,11 @@ export const NotesView: React.FC = () => {
                     value={contentBuffer}
                     onChange={handleContentChange}
                     onKeyDown={handleKeyDown}
+                    onBlur={() => {
+                      if (selectedNoteId && saveStatus === 'saving') {
+                        flushSave(selectedNoteId, titleBuffer, contentBuffer);
+                      }
+                    }}
                     placeholder="Write markdown notes, brainstorm ideas, paste snippets, or track checklist items..."
                     className="w-full h-full bg-transparent text-xs text-slate-200 placeholder-slate-600 focus:outline-none resize-none font-mono leading-relaxed selection:bg-blue-600/30"
                   />

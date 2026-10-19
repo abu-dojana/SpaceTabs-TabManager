@@ -4,6 +4,7 @@ import { Header } from '@/components/header/Header';
 import { TabsView } from '@/components/canvas/TabsView';
 import { ResourcesView } from '@/components/canvas/ResourcesView';
 import { NotesView } from '@/components/canvas/NotesView';
+import { TasksView } from '@/components/canvas/TasksView';
 import { CreateSpaceModal } from '@/components/modals/CreateSpaceModal';
 import { MoveToSectionModal } from '@/components/modals/MoveToSectionModal';
 import { useUIStore } from '@/store/uiStore';
@@ -100,17 +101,7 @@ export default function App() {
 
             {activeView === 'notes' && <NotesView />}
 
-            {activeView === 'tasks' && (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                <CheckSquare className="w-10 h-10 text-slate-600 mb-3" />
-                <h3 className="text-base font-semibold text-slate-300">
-                  Project Checklist
-                </h3>
-                <p className="text-xs text-slate-500 max-w-sm mt-1">
-                  Keep quick to-dos side-by-side with your active project tabs.
-                </p>
-              </div>
-            )}
+            {activeView === 'tasks' && <TasksView />}
           </div>
         </main>
 
