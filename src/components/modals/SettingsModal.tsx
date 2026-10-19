@@ -1926,7 +1926,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     : 'bg-blue-950/40 border-blue-800'
                     }`}
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-700 mx-auto mb-3 flex items-center justify-center text-white shadow-xl shadow-rose-600/30">
+                  <div
+                    className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center text-white shadow-xl transition-colors duration-150"
+                    style={{
+                      backgroundColor: accentColor || '#f43f5e',
+                      boxShadow: `0 10px 25px -5px ${accentColor || '#f43f5e'}50`,
+                    }}
+                  >
                     <Layers className="w-7 h-7" />
                   </div>
                   <h3 className={`text-lg font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>

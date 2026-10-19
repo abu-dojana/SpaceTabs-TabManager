@@ -11,6 +11,7 @@ import { SettingsModal } from '@/components/modals/SettingsModal';
 import { useUIStore } from '@/store/uiStore';
 import { getWindowActiveSpaceId } from '@/services/tabManager';
 import { getUserSettings } from '@/services/settings';
+import { updateAppFavicon } from '@/utils/favicon';
 import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink } from 'lucide-react';
 
 interface ErrorBoundaryProps {
@@ -154,6 +155,11 @@ export default function App() {
       '--accent-light': hexToRgba(validAccent, 0.15),
       '--accent-border': hexToRgba(validAccent, 0.38),
     } as React.CSSProperties;
+  }, [accentColor]);
+
+  // Dynamically sync browser tab favicon with user's chosen accent color
+  React.useEffect(() => {
+    updateAppFavicon(accentColor);
   }, [accentColor]);
 
   return (
