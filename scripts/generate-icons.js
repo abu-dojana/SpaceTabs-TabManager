@@ -39,7 +39,6 @@ function makeChunk(type, data) {
 function encodePNG(width, height, rgbaBuffer) {
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
-  // IHDR
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
@@ -50,12 +49,11 @@ function encodePNG(width, height, rgbaBuffer) {
   ihdr[12] = 0; // interlace
   const ihdrChunk = makeChunk('IHDR', ihdr);
 
-  // Scanlines with filter byte 0x00
   const scanlineWidth = width * 4;
   const rawData = Buffer.alloc(height * (1 + scanlineWidth));
   for (let y = 0; y < height; y++) {
     const rawOffset = y * (1 + scanlineWidth);
-    rawData[rawOffset] = 0; // None filter
+    rawData[rawOffset] = 0;
     rgbaBuffer.copy(rawData, rawOffset + 1, y * scanlineWidth, (y + 1) * scanlineWidth);
   }
 
@@ -66,52 +64,62 @@ function encodePNG(width, height, rgbaBuffer) {
   return Buffer.concat([signature, ihdrChunk, idatChunk, iendChunk]);
 }
 
-function pointInPolygon(px, py, vertices) {
-  let inside = false;
-  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
-    const xi = vertices[i][0], yi = vertices[i][1];
-    const xj = vertices[j][0], yj = vertices[j][1];
-    const intersect = ((yi > py) !== (yj > py)) &&
-      (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
-    if (intersect) inside = !inside;
-  }
-  return inside;
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  let t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  return Math.hypot(px - projX, py - projY);
 }
+
+// Normalized (0 to 1) 24x24 Lucide Layers segments
+const normalizedSegments = [
+  // Top diamond
+  [12 / 24, 2.8 / 24, 21.2 / 24, 7.5 / 24],
+  [21.2 / 24, 7.5 / 24, 12 / 24, 12.2 / 24],
+  [12 / 24, 12.2 / 24, 2.8 / 24, 7.5 / 24],
+  [2.8 / 24, 7.5 / 24, 12 / 24, 2.8 / 24],
+  // Middle chevron
+  [2.8 / 24, 12.5 / 24, 12 / 24, 17.2 / 24],
+  [12 / 24, 17.2 / 24, 21.2 / 24, 12.5 / 24],
+  // Bottom chevron
+  [2.8 / 24, 17.5 / 24, 12 / 24, 22.2 / 24],
+  [12 / 24, 22.2 / 24, 21.2 / 24, 17.5 / 24],
+];
 
 function renderIconRGBA(size) {
   const buf = Buffer.alloc(size * size * 4);
   const radius = Math.round(size * 0.22);
-  const cx = size / 2;
-  const cy = size / 2;
+  const pad = size * 0.19;
+  const innerSize = size - pad * 2;
+  const thickness = Math.max(1.2, size * 0.075);
 
-  // Scaled needle vertices (from Lucide 24x24 translated by 4,4 in 32x32)
-  // Polygon: [16.24, 7.76], [14.12, 14.12], [7.76, 16.24], [9.88, 9.88]
-  // In [0,1] normalized coords:
-  // (4 + x) / 32, (4 + y) / 32
-  const needleNorm = [
-    [(4 + 16.24) / 32, (4 + 7.76) / 32],
-    [(4 + 14.12) / 32, (4 + 14.12) / 32],
-    [(4 + 7.76) / 32, (4 + 16.24) / 32],
-    [(4 + 9.88) / 32, (4 + 9.88) / 32],
-  ];
-  const needlePoly = needleNorm.map(([nx, ny]) => [nx * size, ny * size]);
-
-  const ringRadius = (10 / 32) * size;
-  const ringThickness = Math.max(1, (2 / 32) * size);
+  const scaledSegments = normalizedSegments.map(([x1, y1, x2, y2]) => [
+    pad + x1 * innerSize,
+    pad + y1 * innerSize,
+    pad + x2 * innerSize,
+    pad + y2 * innerSize,
+  ]);
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const idx = (y * size + x) * 4;
+      const px = x + 0.5;
+      const py = y + 0.5;
 
-      // Rounded rect check
-      let inRect = false;
-      const rx = Math.max(radius - x, 0, x - (size - 1 - radius));
-      const ry = Math.max(radius - y, 0, y - (size - 1 - radius));
-      if (rx * rx + ry * ry <= radius * radius) {
-        inRect = true;
+      // Rounded rectangle distance & antialiasing
+      const rx = Math.max(radius - px, 0, px - (size - radius));
+      const ry = Math.max(radius - py, 0, py - (size - radius));
+      const distFromCorner = Math.hypot(rx, ry);
+      let cornerAlpha = 1.0;
+      if (distFromCorner > radius) {
+        cornerAlpha = Math.max(0, 1.0 - (distFromCorner - radius));
       }
 
-      if (!inRect) {
+      if (cornerAlpha <= 0) {
         buf[idx] = 0;
         buf[idx + 1] = 0;
         buf[idx + 2] = 0;
@@ -119,30 +127,38 @@ function renderIconRGBA(size) {
         continue;
       }
 
-      // Compass circle check
-      const distFromCenter = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-      const onRing = Math.abs(distFromCenter - ringRadius) <= (ringThickness / 2 + 0.3);
-
-      // Compass needle check
-      const inNeedle = pointInPolygon(x + 0.5, y + 0.5, needlePoly);
-
-      if (onRing || inNeedle) {
-        // White icon
-        buf[idx] = 255;
-        buf[idx + 1] = 255;
-        buf[idx + 2] = 255;
-        buf[idx + 3] = 255;
-      } else {
-        // Blue gradient background (#3B82F6 -> #1D4ED8)
-        const factor = (x + y) / (size * 2);
-        const r = Math.round(59 + (29 - 59) * factor);
-        const g = Math.round(130 + (78 - 130) * factor);
-        const b = Math.round(246 + (216 - 246) * factor);
-        buf[idx] = r;
-        buf[idx + 1] = g;
-        buf[idx + 2] = b;
-        buf[idx + 3] = 255;
+      // Find minimum distance to any layers line segment
+      let minDist = 999999;
+      for (const [x1, y1, x2, y2] of scaledSegments) {
+        const d = distToSegment(px, py, x1, y1, x2, y2);
+        if (d < minDist) minDist = d;
       }
+
+      // Antialiased stroke coverage
+      const strokeRadius = thickness / 2;
+      let strokeAlpha = 0;
+      if (minDist <= strokeRadius) {
+        strokeAlpha = 1.0;
+      } else if (minDist <= strokeRadius + 0.8) {
+        strokeAlpha = Math.max(0, 1.0 - (minDist - strokeRadius) / 0.8);
+      }
+
+      // Vibrant Gradient Background (#3B82F6 -> #1D4ED8)
+      const factor = (x + y) / (size * 2);
+      const bgR = Math.round(59 + (29 - 59) * factor);
+      const bgG = Math.round(130 + (78 - 130) * factor);
+      const bgB = Math.round(246 + (216 - 246) * factor);
+
+      // Blend white stroke (255,255,255) over background
+      const finalR = Math.round(bgR * (1 - strokeAlpha) + 255 * strokeAlpha);
+      const finalG = Math.round(bgG * (1 - strokeAlpha) + 255 * strokeAlpha);
+      const finalB = Math.round(bgB * (1 - strokeAlpha) + 255 * strokeAlpha);
+      const finalA = Math.round(255 * cornerAlpha);
+
+      buf[idx] = finalR;
+      buf[idx + 1] = finalG;
+      buf[idx + 2] = finalB;
+      buf[idx + 3] = finalA;
     }
   }
   return buf;
@@ -156,9 +172,10 @@ const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="
     </linearGradient>
   </defs>
   <rect width="128" height="128" rx="28" fill="url(#bg)"/>
-  <g transform="translate(16, 16) scale(4)" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <circle cx="12" cy="12" r="10"/>
-    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="white"/>
+  <g transform="translate(24, 24) scale(3.333)" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9A1 1 0 0 0 22 7.91a1 1 0 0 0 0-1.83z"/>
+    <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/>
+    <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/>
   </g>
 </svg>`;
 
@@ -178,4 +195,4 @@ for (const dir of targetDirs) {
   }
 }
 
-console.log('Successfully generated icons: icon.svg, icon-16.png, icon-32.png, icon-48.png, icon-128.png');
+console.log('Successfully generated modern Layers icons: icon.svg, icon-16.png, icon-32.png, icon-48.png, icon-128.png');
