@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
-import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
+import { type Tab, type Space, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
 import {
   focusOrOpenTab,
@@ -43,6 +43,7 @@ import {
 export const TabsView: React.FC = () => {
   const {
     activeSpaceId,
+    setActiveSpaceId,
     searchQuery,
     selectedTabIds,
     toggleSelectTab,
@@ -85,6 +86,18 @@ export const TabsView: React.FC = () => {
   const [currentWindowId, setCurrentWindowId] = React.useState<number | null>(null);
   const [liveTabsMap, setLiveTabsMap] = React.useState<Map<number, number>>(new Map()); // chromeTabId -> windowId
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // On-the-fly "Move to a New Space" creation state
+  const [isCreatingNewSpaceForTabs, setIsCreatingNewSpaceForTabs] = React.useState(false);
+  const [newSpaceNameInput, setNewSpaceNameInput] = React.useState('');
+  const newSpaceInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (isCreatingNewSpaceForTabs && newSpaceInputRef.current) {
+      newSpaceInputRef.current.focus();
+      newSpaceInputRef.current.select();
+    }
+  }, [isCreatingNewSpaceForTabs]);
 
   // Tabs 3-Dot Options Menu State
   const [isTabsMenuOpen, setIsTabsMenuOpen] = React.useState(false);
@@ -141,6 +154,8 @@ export const TabsView: React.FC = () => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setMoveDropdownTabId(null);
+        setIsCreatingNewSpaceForTabs(false);
+        setNewSpaceNameInput('');
       }
       if (tabsMenuRef.current && !tabsMenuRef.current.contains(e.target as Node)) {
         setIsTabsMenuOpen(false);
@@ -151,6 +166,8 @@ export const TabsView: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setMoveDropdownTabId(null);
+        setIsCreatingNewSpaceForTabs(false);
+        setNewSpaceNameInput('');
         setIsTabsMenuOpen(false);
         setShowMoveAllSubmenu(false);
       }
@@ -201,6 +218,33 @@ export const TabsView: React.FC = () => {
     await moveTabsToSpace(Array.from(selectedTabIds), targetSpaceId);
     clearSelectedTabs();
     setMoveDropdownTabId(null);
+  };
+
+  const handleMoveToNewSpace = async (tabIdsToMove: string[], customName?: string) => {
+    if (!tabIdsToMove || tabIdsToMove.length === 0) return;
+    const finalName = customName?.trim() || 'Untitled Space';
+    const newSpaceId = crypto.randomUUID();
+    const allSpaces = await db.spaces.toArray();
+    const maxOrder = allSpaces.reduce((max, s) => Math.max(max, s.order), -1);
+
+    const newSpace: Space = {
+      id: newSpaceId,
+      name: finalName,
+      icon: '📁',
+      color: '#3b82f6',
+      order: maxOrder + 1,
+      isArchived: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    await db.spaces.add(newSpace);
+    await moveTabsToSpace(tabIdsToMove, newSpaceId);
+    clearSelectedTabs();
+    setMoveDropdownTabId(null);
+    setIsCreatingNewSpaceForTabs(false);
+    setNewSpaceNameInput('');
+    setActiveSpaceId(newSpaceId);
   };
 
   // Reorder tabs in Dexie AND synchronously reorder open Chrome tabs in the browser window
@@ -600,11 +644,70 @@ export const TabsView: React.FC = () => {
                     </button>
 
                     {moveDropdownTabId === 'bulk' && (
-                      <div className="absolute right-0 top-full mt-1.5 z-50 w-52 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1">
+                      <div className="absolute right-0 top-full mt-1.5 z-50 w-60 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 overflow-hidden">
                         <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
                           Move {selectedTabIds.size} tabs to
                         </div>
-                        <div className="max-h-48 overflow-y-auto">
+
+                        {/* Move to a New Space (on the fly) */}
+                        <div className="p-1.5 border-b border-slate-800 bg-slate-950/40">
+                          {isCreatingNewSpaceForTabs ? (
+                            <form
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                handleMoveToNewSpace(Array.from(selectedTabIds), newSpaceNameInput);
+                              }}
+                              className="flex items-center gap-1.5"
+                            >
+                              <input
+                                ref={newSpaceInputRef}
+                                type="text"
+                                value={newSpaceNameInput}
+                                onChange={(e) => setNewSpaceNameInput(e.target.value)}
+                                placeholder="Untitled Space"
+                                className="flex-1 px-2.5 py-1 text-xs rounded-lg bg-slate-900 border border-blue-500/50 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') {
+                                    setIsCreatingNewSpaceForTabs(false);
+                                    setNewSpaceNameInput('');
+                                  }
+                                }}
+                              />
+                              <button
+                                type="submit"
+                                className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
+                                title="Create and move tabs"
+                              >
+                                Move
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsCreatingNewSpaceForTabs(false);
+                                  setNewSpaceNameInput('');
+                                }}
+                                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                                title="Cancel"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </form>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsCreatingNewSpaceForTabs(true);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-400 hover:bg-blue-600/15 transition cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Move to a New Space</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="max-h-48 overflow-y-auto py-1">
                           {activeSpaceId !== null && (
                             <button
                               onClick={() => handleMoveSelected(null)}
@@ -615,7 +718,7 @@ export const TabsView: React.FC = () => {
                             </button>
                           )}
                           {spaces
-                            .filter((s) => s.id !== activeSpaceId)
+                            ?.filter((s) => s.id !== activeSpaceId)
                             .map((s) => (
                               <button
                                 key={s.id}
@@ -971,14 +1074,73 @@ export const TabsView: React.FC = () => {
 
                       {isDropdownOpen && spaces && (
                         <div
-                          className={`absolute right-0 z-50 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 ${
+                          className={`absolute right-0 z-50 w-60 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 overflow-hidden ${
                             isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1'
                           }`}
                         >
-                          <div className="px-3 py-1 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
+                          <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
                             Move to Space
                           </div>
-                          <div className="max-h-48 overflow-y-auto">
+
+                          {/* Move to a New Space (on the fly) */}
+                          <div className="p-1.5 border-b border-slate-800 bg-slate-950/40">
+                            {isCreatingNewSpaceForTabs ? (
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  handleMoveToNewSpace([tab.id], newSpaceNameInput);
+                                }}
+                                className="flex items-center gap-1.5"
+                              >
+                                <input
+                                  ref={newSpaceInputRef}
+                                  type="text"
+                                  value={newSpaceNameInput}
+                                  onChange={(e) => setNewSpaceNameInput(e.target.value)}
+                                  placeholder="Untitled Space"
+                                  className="flex-1 px-2.5 py-1 text-xs rounded-lg bg-slate-900 border border-blue-500/50 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') {
+                                      setIsCreatingNewSpaceForTabs(false);
+                                      setNewSpaceNameInput('');
+                                    }
+                                  }}
+                                />
+                                <button
+                                  type="submit"
+                                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
+                                  title="Create and move tab"
+                                >
+                                  Move
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsCreatingNewSpaceForTabs(false);
+                                    setNewSpaceNameInput('');
+                                  }}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                                  title="Cancel"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </form>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsCreatingNewSpaceForTabs(true);
+                                }}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-400 hover:bg-blue-600/15 transition cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Move to a New Space</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="max-h-48 overflow-y-auto py-1">
                             {tab.spaceId !== UNSAVED_SPACE_ID && (
                               <button
                                 onClick={() => handleMoveTab(tab.id, null)}
@@ -989,7 +1151,7 @@ export const TabsView: React.FC = () => {
                               </button>
                             )}
                             {spaces
-                              .filter((s) => s.id !== tab.spaceId)
+                              ?.filter((s) => s.id !== tab.spaceId)
                               .map((s) => (
                                 <button
                                   key={s.id}
