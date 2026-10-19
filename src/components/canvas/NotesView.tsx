@@ -266,7 +266,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, onToggleTo
             type="checkbox"
             checked={checked}
             onChange={() => onToggleTodo?.(i)}
-            className="w-3.5 h-3.5 mt-0.5 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-0 cursor-pointer"
+            className="cursor-pointer flex-shrink-0 mt-0.5"
           />
           <span
             className={`flex-1 ${

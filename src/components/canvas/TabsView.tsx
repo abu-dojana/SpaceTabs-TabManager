@@ -554,14 +554,14 @@ export const TabsView: React.FC = () => {
                   }
                 }}
                 onChange={handleSelectAllToggle}
-                className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                className="cursor-pointer"
                 title={allSelected ? 'Deselect all' : 'Select all'}
               />
             )}
             <Folder className="w-5 h-5 text-blue-400" />
             <h2 className="text-base font-semibold text-slate-100">Tabs</h2>
             {tabs && (
-              <span className="text-xs text-slate-400 font-mono">
+              <span className="text-xs text-slate-400 font-medium">
                 ({tabs.length})
               </span>
             )}
@@ -873,7 +873,7 @@ export const TabsView: React.FC = () => {
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleSelectTab(tab.id)}
-                      className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer flex-shrink-0"
+                      className="cursor-pointer flex-shrink-0"
                     />
 
                     <div className="w-4 h-4 flex-shrink-0 flex items-center justify-center">

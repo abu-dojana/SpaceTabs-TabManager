@@ -255,7 +255,7 @@ export const TasksView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-slate-100">Tasks</h2>
-                <span className="text-xs text-slate-400 font-mono">
+                <span className="text-xs text-slate-400 font-medium">
                   ({completedCount}/{totalCount})
                 </span>
               </div>

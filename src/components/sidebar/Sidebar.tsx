@@ -789,7 +789,7 @@ export const Sidebar: React.FC = () => {
               <span>Unsaved</span>
             </div>
             {unsavedTabs && unsavedTabs.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono">
+              <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300">
                 {unsavedTabs.length}
               </span>
             )}
@@ -852,13 +852,20 @@ export const Sidebar: React.FC = () => {
               <Folder className="w-3.5 h-3.5" />
               <span>Spaces</span>
             </div>
-            <button
-              onClick={() => setCreateSpaceOpen(true)}
-              className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
-              title="Create new Space"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {unsectionedSpaces.length > 0 && (
+                <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400">
+                  {unsectionedSpaces.length}
+                </span>
+              )}
+              <button
+                onClick={() => setCreateSpaceOpen(true)}
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
+                title="Create new Space"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Top-Level Unsectioned Spaces */}
@@ -930,7 +937,7 @@ export const Sidebar: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800/80 text-slate-400 font-mono">
+                        <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800/80 text-slate-400">
                           {sectionSpaces.length}
                         </span>
 
@@ -1010,7 +1017,7 @@ export const Sidebar: React.FC = () => {
             </div>
             <div className="flex items-center gap-1.5">
               {archivedSpaces && archivedSpaces.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-400 font-mono">
+                <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400">
                   {archivedSpaces.length}
                 </span>
               )}

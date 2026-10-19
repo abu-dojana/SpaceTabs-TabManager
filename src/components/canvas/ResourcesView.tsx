@@ -439,7 +439,7 @@ export const ResourcesView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold text-slate-100">Resources</h2>
-              <span className="text-xs text-slate-400 font-mono">
+              <span className="text-xs text-slate-400 font-medium">
                 ({allItems?.filter((it) => sections?.some((s) => s.id === it.sectionId)).length || 0})
               </span>
             </div>
