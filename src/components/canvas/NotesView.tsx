@@ -361,6 +361,25 @@ export const NotesView: React.FC = () => {
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const saveDebounceTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedNoteIdRef = React.useRef<string | null>(null);
+
+  // Track latest buffers in refs so unmount / flush always has latest values
+  const titleRef = React.useRef(titleBuffer);
+  const contentRef = React.useRef(contentBuffer);
+  const selectedNoteIdRef = React.useRef(selectedNoteId);
+  const isDirtyRef = React.useRef(false);
+
+  React.useEffect(() => {
+    titleRef.current = titleBuffer;
+  }, [titleBuffer]);
+
+  React.useEffect(() => {
+    contentRef.current = contentBuffer;
+  }, [contentBuffer]);
+
+  React.useEffect(() => {
+    selectedNoteIdRef.current = selectedNoteId;
+  }, [selectedNoteId]);
 
   // Filter notes based on global search query
   const filteredNotes = React.useMemo(() => {
@@ -374,57 +393,33 @@ export const NotesView: React.FC = () => {
     );
   }, [notes, searchQuery]);
 
-  // Sync selected note into editor buffer
-  React.useEffect(() => {
-    if (selectedNoteId) {
-      const current = notes?.find((n) => n.id === selectedNoteId);
-      if (current) {
-        setTitleBuffer(current.title || '');
-        setContentBuffer(current.content || '');
-        setSaveStatus('saved');
-      }
-    } else if (filteredNotes.length > 0) {
-      // Auto-select first note
-      const first = filteredNotes[0];
-      setSelectedNoteId(first.id);
-      setTitleBuffer(first.title || '');
-      setContentBuffer(first.content || '');
-      setSaveStatus('saved');
-    } else {
-      setTitleBuffer('');
-      setContentBuffer('');
-    }
-  }, [selectedNoteId, filteredNotes]);
-
-  // Clean up timer on unmount
-  React.useEffect(() => {
-    return () => {
-      if (saveDebounceTimer.current) clearTimeout(saveDebounceTimer.current);
-    };
-  }, []);
-
   // Immediate flush of pending changes (e.g. on blur, note switch, or Ctrl+S)
-  const flushSave = async (id: string, newTitle: string, newContent: string) => {
-    if (!id) return;
+  const flushSave = async (id?: string) => {
+    const targetId = id || selectedNoteIdRef.current;
+    if (!targetId || !isDirtyRef.current) return;
+
     if (saveDebounceTimer.current) {
       clearTimeout(saveDebounceTimer.current);
       saveDebounceTimer.current = null;
     }
+
     try {
-      await db.notes.update(id, {
-        title: newTitle.trim() || 'Untitled Note',
-        content: newContent,
+      await db.notes.update(targetId, {
+        title: titleRef.current.trim() || 'Untitled Note',
+        content: contentRef.current,
         updatedAt: Date.now(),
       });
+      isDirtyRef.current = false;
       setSaveStatus('saved');
     } catch (err) {
       console.error('Failed to flush note save:', err);
     }
   };
 
-  // Debounced auto-save to Dexie with 3-second grace period
+  // Debounced auto-save to Dexie (500ms)
   const triggerAutoSave = (newTitle: string, newContent: string) => {
-    if (!selectedNoteId) return;
+    if (!selectedNoteIdRef.current) return;
+    isDirtyRef.current = true;
     setSaveStatus('saving');
 
     if (saveDebounceTimer.current) {
@@ -432,24 +427,99 @@ export const NotesView: React.FC = () => {
     }
 
     saveDebounceTimer.current = setTimeout(async () => {
+      const targetId = selectedNoteIdRef.current;
+      if (!targetId || !isDirtyRef.current) return;
+
       try {
-        await db.notes.update(selectedNoteId, {
+        await db.notes.update(targetId, {
           title: newTitle.trim() || 'Untitled Note',
           content: newContent,
           updatedAt: Date.now(),
         });
+        isDirtyRef.current = false;
         setSaveStatus('saved');
       } catch (err) {
         console.error('Failed to auto-save note:', err);
       }
-    }, 3000);
+    }, 500);
   };
+
+  // Reset selected note when switching spaces (flushing current note first)
+  React.useEffect(() => {
+    if (isDirtyRef.current && selectedNoteIdRef.current) {
+      flushSave(selectedNoteIdRef.current);
+    }
+    setSelectedNoteId(null);
+    loadedNoteIdRef.current = null;
+    setTitleBuffer('');
+    setContentBuffer('');
+    setSaveStatus('saved');
+  }, [targetSpaceId]);
+
+  // Sync selected note into editor buffer only when note selection changes
+  React.useEffect(() => {
+    if (!notes) return;
+
+    // Case 1: A note is currently selected
+    if (selectedNoteId) {
+      const current = notes.find((n) => n.id === selectedNoteId);
+      if (current) {
+        // Only load into buffers if we haven't loaded this note ID yet
+        // (CRITICAL: prevents background saves or search re-queries from overwriting in-flight typing!)
+        if (loadedNoteIdRef.current !== selectedNoteId) {
+          setTitleBuffer(current.title || '');
+          setContentBuffer(current.content || '');
+          loadedNoteIdRef.current = selectedNoteId;
+          isDirtyRef.current = false;
+          setSaveStatus('saved');
+        }
+      } else {
+        // Note was deleted
+        setSelectedNoteId(null);
+        loadedNoteIdRef.current = null;
+      }
+      return;
+    }
+
+    // Case 2: No note currently selected -> auto-select first note if available
+    if (filteredNotes.length > 0) {
+      const first = filteredNotes[0];
+      setSelectedNoteId(first.id);
+      setTitleBuffer(first.title || '');
+      setContentBuffer(first.content || '');
+      loadedNoteIdRef.current = first.id;
+      isDirtyRef.current = false;
+      setSaveStatus('saved');
+    } else {
+      setTitleBuffer('');
+      setContentBuffer('');
+      loadedNoteIdRef.current = null;
+    }
+  }, [selectedNoteId, notes, filteredNotes]);
+
+  // Clean up timer and flush unsaved work on unmount
+  React.useEffect(() => {
+    return () => {
+      if (saveDebounceTimer.current) {
+        clearTimeout(saveDebounceTimer.current);
+      }
+      if (isDirtyRef.current && selectedNoteIdRef.current) {
+        db.notes
+          .update(selectedNoteIdRef.current, {
+            title: titleRef.current.trim() || 'Untitled Note',
+            content: contentRef.current,
+            updatedAt: Date.now(),
+          })
+          .catch(() => {});
+      }
+    };
+  }, []);
 
   // Handle switching to a different note (flushes pending changes first)
   const handleSelectNote = async (newNoteId: string) => {
     if (newNoteId === selectedNoteId) return;
-    if (selectedNoteId && saveStatus === 'saving') {
-      await flushSave(selectedNoteId, titleBuffer, contentBuffer);
+    if (selectedNoteId && isDirtyRef.current) {
+      await flushSave(selectedNoteId);
     }
     setSelectedNoteId(newNoteId);
   };
@@ -470,8 +540,8 @@ export const NotesView: React.FC = () => {
 
   // Create new note
   const handleCreateNewNote = async () => {
-    if (selectedNoteId && saveStatus === 'saving') {
-      await flushSave(selectedNoteId, titleBuffer, contentBuffer);
+    if (selectedNoteId && isDirtyRef.current) {
+      await flushSave(selectedNoteId);
     }
 
     const id = crypto.randomUUID();
@@ -486,9 +556,11 @@ export const NotesView: React.FC = () => {
     };
 
     await db.notes.add(newNote);
+    loadedNoteIdRef.current = id;
     setSelectedNoteId(id);
     setTitleBuffer(newNote.title);
     setContentBuffer(newNote.content);
+    isDirtyRef.current = false;
     setSaveStatus('saved');
     setViewMode('edit');
 
@@ -593,9 +665,7 @@ export const NotesView: React.FC = () => {
       insertFormatting('*', '*', 'italic text');
     } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
-      if (selectedNoteId) {
-        flushSave(selectedNoteId, titleBuffer, contentBuffer);
-      }
+      flushSave();
     }
   };
 
@@ -795,11 +865,7 @@ export const NotesView: React.FC = () => {
                 type="text"
                 value={titleBuffer}
                 onChange={handleTitleChange}
-                onBlur={() => {
-                  if (selectedNoteId && saveStatus === 'saving') {
-                    flushSave(selectedNoteId, titleBuffer, contentBuffer);
-                  }
-                }}
+                onBlur={() => flushSave()}
                 placeholder="Note Title..."
                 className="w-full bg-transparent text-xl font-bold text-slate-100 placeholder-slate-600 focus:outline-none tracking-tight"
               />
@@ -896,11 +962,7 @@ export const NotesView: React.FC = () => {
                     value={contentBuffer}
                     onChange={handleContentChange}
                     onKeyDown={handleKeyDown}
-                    onBlur={() => {
-                      if (selectedNoteId && saveStatus === 'saving') {
-                        flushSave(selectedNoteId, titleBuffer, contentBuffer);
-                      }
-                    }}
+                    onBlur={() => flushSave()}
                     placeholder="Write markdown notes, brainstorm ideas, paste snippets, or track checklist items..."
                     className="w-full h-full bg-transparent text-xs text-slate-200 placeholder-slate-600 focus:outline-none resize-none font-mono leading-relaxed selection:bg-blue-600/30"
                   />
