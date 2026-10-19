@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/sidebar/Sidebar';
 import { Header } from '@/components/header/Header';
 import { TabsView } from '@/components/canvas/TabsView';
 import { ResourcesView } from '@/components/canvas/ResourcesView';
+import { NotesView } from '@/components/canvas/NotesView';
 import { CreateSpaceModal } from '@/components/modals/CreateSpaceModal';
 import { MoveToSectionModal } from '@/components/modals/MoveToSectionModal';
 import { useUIStore } from '@/store/uiStore';
@@ -97,17 +98,7 @@ export default function App() {
 
             {activeView === 'resources' && <ResourcesView />}
 
-            {activeView === 'notes' && (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                <FileText className="w-10 h-10 text-slate-600 mb-3" />
-                <h3 className="text-base font-semibold text-slate-300">
-                  Space Scratchpad
-                </h3>
-                <p className="text-xs text-slate-500 max-w-sm mt-1">
-                  Lightweight markdown notes directly attached to this workspace.
-                </p>
-              </div>
-            )}
+            {activeView === 'notes' && <NotesView />}
 
             {activeView === 'tasks' && (
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
