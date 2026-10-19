@@ -163,16 +163,16 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className={`border-b px-6 pt-4 pb-0 select-none backdrop-blur-md transition-colors ${
+      className={`border-b px-4 sm:px-6 pt-4 pb-0 select-none backdrop-blur-md transition-colors ${
         isLight
           ? 'border-slate-200/90 bg-white/95'
           : 'border-slate-800 bg-slate-950/80'
       }`}
     >
       {/* Top row: Title, Search, Actions */}
-      <div className="flex items-center justify-between gap-4 pb-4">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 pb-4">
         {/* Title / Inline Quick-Save Editor */}
-        <div className="flex items-center gap-2 min-w-0 flex-1 max-w-xl mr-3">
+        <div className="flex items-center gap-2 min-w-[150px] sm:min-w-[200px] flex-1 max-w-xl mr-2 sm:mr-3">
           {isEditingTitle ? (
             <div className="flex items-center gap-1.5 min-w-0 w-full max-w-md">
               <input
@@ -267,13 +267,13 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="w-64 sm:w-72 md:w-80 max-w-md min-w-[200px] flex-shrink-0 relative">
+        <div className="w-36 sm:w-48 md:w-56 lg:w-64 max-w-xs min-w-[130px] flex-shrink-0 relative transition-all duration-150 focus-within:w-52 sm:focus-within:w-64 md:focus-within:w-72">
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search across spaces & tabs..."
+            placeholder="Search tabs & spaces..."
             className={`w-full rounded-full pl-10 pr-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition ${
               isLight
                 ? 'bg-slate-100/80 hover:bg-slate-100 border border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-500'
@@ -283,12 +283,12 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           {/* Workona-style Quick SAVE button when on Unsaved */}
           {!activeSpaceId ? (
             <button
               onClick={startEditing}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
               title="Quick save current tabs into a new space"
             >
               <BookmarkCheck className="w-4 h-4" />
@@ -298,38 +298,41 @@ export const Header: React.FC = () => {
             <>
               <button
                 onClick={() => activeSpaceId && setMoveSectionSpaceId(activeSpaceId)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                   isLight
                     ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
                     : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60'
                 }`}
                 title="Move this space into a section"
               >
-                <FolderInput className="w-3.5 h-3.5 text-blue-500" />
-                <span>Move This space to Section</span>
+                <FolderInput className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                <span className="hidden xl:inline">Move to Section</span>
+                <span className="hidden md:inline xl:hidden">Move</span>
               </button>
 
               <button
                 onClick={handleOpenInNewWindow}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
                 title="Open space tabs in a clean separate window"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>Open in New Window</span>
+                <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden lg:inline">Open in Window</span>
+                <span className="hidden sm:inline lg:hidden">Window</span>
               </button>
             </>
           )}
 
           <button
             onClick={() => setCreateSpaceOpen(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
               isLight
                 ? 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-sm'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800'
             }`}
+            title="Create a new space"
           >
-            <PlusCircle className="w-3.5 h-3.5 text-amber-500" />
-            <span>CREATE</span>
+            <PlusCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+            <span className="hidden sm:inline">CREATE</span>
           </button>
         </div>
       </div>
