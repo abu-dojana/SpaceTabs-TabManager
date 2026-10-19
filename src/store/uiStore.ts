@@ -9,6 +9,9 @@ interface UIState {
   moveSectionSpaceId: string | null;
   sidebarTheme: 'dark' | 'light';
   dashboardTheme: 'dark' | 'light';
+  accentColor: string;
+  darkPalette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso';
+  lightPalette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint';
   isSettingsOpen: boolean;
   settingsTab: 'general' | 'appearance' | 'suspension' | 'backup' | 'shortcuts' | 'about';
   setActiveSpaceId: (id: string | null) => void;
@@ -21,6 +24,9 @@ interface UIState {
   setMoveSectionSpaceId: (id: string | null) => void;
   setSidebarTheme: (theme: 'dark' | 'light') => void;
   setDashboardTheme: (theme: 'dark' | 'light') => void;
+  setAccentColor: (color: string) => void;
+  setDarkPalette: (palette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso') => void;
+  setLightPalette: (palette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint') => void;
   setSettingsOpen: (
     open: boolean,
     tab?: 'general' | 'appearance' | 'suspension' | 'backup' | 'shortcuts' | 'about'
@@ -36,6 +42,9 @@ export const useUIStore = create<UIState>((set) => ({
   moveSectionSpaceId: null,
   sidebarTheme: 'dark',
   dashboardTheme: 'dark',
+  accentColor: '#2563eb',
+  darkPalette: 'slate',
+  lightPalette: 'snow',
   isSettingsOpen: false,
   settingsTab: 'general',
 
@@ -58,6 +67,9 @@ export const useUIStore = create<UIState>((set) => ({
   setMoveSectionSpaceId: (id) => set({ moveSectionSpaceId: id }),
   setSidebarTheme: (theme) => set({ sidebarTheme: theme }),
   setDashboardTheme: (theme) => set({ dashboardTheme: theme }),
+  setAccentColor: (color) => set({ accentColor: color }),
+  setDarkPalette: (palette) => set({ darkPalette: palette }),
+  setLightPalette: (palette) => set({ lightPalette: palette }),
   setSettingsOpen: (open, tab) =>
     set((state) => ({
       isSettingsOpen: open,

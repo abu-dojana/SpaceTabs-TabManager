@@ -36,6 +36,7 @@ import {
   Moon,
   Layout,
   Columns,
+  Pipette,
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -56,8 +57,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const {
     sidebarTheme,
     dashboardTheme,
+    accentColor,
+    darkPalette,
+    lightPalette,
     setSidebarTheme,
     setDashboardTheme,
+    setAccentColor,
+    setDarkPalette,
+    setLightPalette,
   } = useUIStore();
 
   const [settings, setSettings] = React.useState<UserSettings>(DEFAULT_SETTINGS);
@@ -77,9 +84,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setSettings(loaded);
         if (loaded.sidebarTheme) setSidebarTheme(loaded.sidebarTheme);
         if (loaded.dashboardTheme) setDashboardTheme(loaded.dashboardTheme);
+        if (loaded.accentColor) setAccentColor(loaded.accentColor);
+        if (loaded.darkPalette) setDarkPalette(loaded.darkPalette);
+        if (loaded.lightPalette) setLightPalette(loaded.lightPalette);
       });
     }
-  }, [isOpen, initialTab, setSidebarTheme, setDashboardTheme]);
+  }, [
+    isOpen,
+    initialTab,
+    setSidebarTheme,
+    setDashboardTheme,
+    setAccentColor,
+    setDarkPalette,
+    setLightPalette,
+  ]);
 
   // Live Database stats for the Backup & Storage view
   const spacesCount = useLiveQuery(() => db.spaces.count()) ?? 0;
@@ -123,6 +141,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const updated = await updateUserSettings({ dashboardTheme: theme });
     setSettings(updated);
     showToast(`Dashboard set to ${theme} mode`);
+  };
+
+  const handleAccentColorChange = async (color: string) => {
+    setAccentColor(color);
+    const updated = await updateUserSettings({ accentColor: color });
+    setSettings(updated);
+    showToast('Accent color updated');
+  };
+
+  const handleDarkPaletteChange = async (palette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso') => {
+    setDarkPalette(palette);
+    const updated = await updateUserSettings({ darkPalette: palette });
+    setSettings(updated);
+    showToast(`Dark palette set to ${palette}`);
+  };
+
+  const handleLightPaletteChange = async (palette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint') => {
+    setLightPalette(palette);
+    const updated = await updateUserSettings({ lightPalette: palette });
+    setSettings(updated);
+    showToast(`Light palette set to ${palette}`);
   };
 
   const handleApplyPreset = async (sb: 'dark' | 'light', dbTheme: 'dark' | 'light') => {
@@ -492,7 +531,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-600'
                         }`}
                       >
-                        Workona (Dark/Light)
+                        Split (Dark/Light)
                       </button>
 
                       <button
@@ -623,7 +662,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
 
                   {/* Section 2: Dashboard Canvas Theme */}
-                  <div>
+                  <div className="mb-7">
                     <div className="flex items-center gap-2 mb-1.5">
                       <Layout className="w-4 h-4 text-emerald-500" />
                       <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
@@ -710,7 +749,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <span>Light Dashboard</span>
                             </div>
                             <div className={`text-xs mt-0.5 font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                              White workspace (Workona look)
+                              Clean white workspace
                             </div>
                           </div>
                           {dashboardTheme === 'light' && (
@@ -720,6 +759,178 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           )}
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Accent Color Palette */}
+                  <div className="mb-7">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Pipette className="w-4 h-4 text-pink-500" />
+                      <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                        Accent Color
+                      </h4>
+                    </div>
+                    <p className={`text-xs mb-3.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                      Primary highlight color for active tabs, checkboxes, primary buttons, and focus states.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {[
+                        { name: 'Ocean Blue', hex: '#2563eb' },
+                        { name: 'Royal Indigo', hex: '#6366f1' },
+                        { name: 'Violet Purple', hex: '#8b5cf6' },
+                        { name: 'Emerald Green', hex: '#10b981' },
+                        { name: 'Crimson Rose', hex: '#f43f5e' },
+                        { name: 'Amber Gold', hex: '#f59e0b' },
+                        { name: 'Ocean Cyan', hex: '#06b6d4' },
+                        { name: 'Sunset Orange', hex: '#f97316' },
+                      ].map((item) => {
+                        const isSelected = (accentColor || '#2563eb').toLowerCase() === item.hex.toLowerCase();
+                        return (
+                          <button
+                            key={item.hex}
+                            onClick={() => handleAccentColorChange(item.hex)}
+                            title={item.name}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                              isSelected
+                                ? 'ring-2 ring-blue-500 border-white shadow-md'
+                                : isLight
+                                ? 'bg-white border-slate-300 hover:bg-slate-50'
+                                : 'bg-slate-950 border-slate-700 hover:bg-slate-900'
+                            }`}
+                          >
+                            <span
+                              className="w-4 h-4 rounded-full flex items-center justify-center shadow-inner flex-shrink-0"
+                              style={{ backgroundColor: item.hex }}
+                            >
+                              {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                            </span>
+                            <span className={isLight ? 'text-slate-800' : 'text-slate-200'}>{item.name}</span>
+                          </button>
+                        );
+                      })}
+
+                      {/* Custom Color Input */}
+                      <div
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
+                          isLight ? 'bg-white border-slate-300' : 'bg-slate-950 border-slate-700'
+                        }`}
+                        title="Choose custom hex color"
+                      >
+                        <input
+                          type="color"
+                          value={accentColor || '#2563eb'}
+                          onChange={(e) => handleAccentColorChange(e.target.value)}
+                          className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent p-0"
+                        />
+                        <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                          {accentColor || '#2563eb'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4: Dark Mode Theme Tone */}
+                  <div className="mb-7">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Moon className="w-4 h-4 text-blue-400" />
+                      <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                        Dark Mode Tone & Palette
+                      </h4>
+                    </div>
+                    <p className={`text-xs mb-3.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                      Select your preferred dark surface tone. Applies when dark mode is enabled.
+                    </p>
+
+                    <div className="grid grid-cols-5 gap-2.5">
+                      {[
+                        { id: 'slate', name: 'Deep Slate', bg: '#0b1329', card: '#0f172a', desc: 'Classic navy' },
+                        { id: 'midnight', name: 'Midnight', bg: '#09090b', card: '#121215', desc: 'OLED black' },
+                        { id: 'indigo', name: 'Space Indigo', bg: '#0b0e20', card: '#121633', desc: 'Cosmic galaxy' },
+                        { id: 'forest', name: 'Forest Dark', bg: '#07150f', card: '#0d2218', desc: 'Pine charcoal' },
+                        { id: 'espresso', name: 'Warm Espresso', bg: '#151210', card: '#201c19', desc: 'Rich cocoa' },
+                      ].map((pal) => {
+                        const isSelected = (darkPalette || 'slate') === pal.id;
+                        return (
+                          <div
+                            key={pal.id}
+                            onClick={() => handleDarkPaletteChange(pal.id as any)}
+                            className={`p-2.5 rounded-xl border-2 cursor-pointer transition text-left ${
+                              isSelected
+                                ? 'border-blue-500 ring-2 ring-blue-500 shadow-md'
+                                : isLight
+                                ? 'bg-white border-slate-200 hover:border-slate-300'
+                                : 'bg-slate-950 border-slate-700 hover:border-slate-500'
+                            }`}
+                          >
+                            <div
+                              className="w-full h-8 rounded-lg mb-2 p-1 flex gap-1 border border-white/10 shadow-inner"
+                              style={{ backgroundColor: pal.bg }}
+                            >
+                              <div className="w-1/3 h-full rounded" style={{ backgroundColor: pal.card }} />
+                              <div className="flex-1 h-full rounded opacity-75" style={{ backgroundColor: pal.card }} />
+                            </div>
+                            <div className={`font-bold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                              {pal.name}
+                            </div>
+                            <div className={`text-[10px] truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                              {pal.desc}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Section 5: Light Mode Theme Tone */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Sun className="w-4 h-4 text-amber-500" />
+                      <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                        Light Mode Tone & Palette
+                      </h4>
+                    </div>
+                    <p className={`text-xs mb-3.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                      Select your preferred light surface tone. Applies when light mode is enabled.
+                    </p>
+
+                    <div className="grid grid-cols-5 gap-2.5">
+                      {[
+                        { id: 'snow', name: 'Pure Snow', bg: '#f8fafc', card: '#ffffff', desc: 'Crisp white' },
+                        { id: 'paper', name: 'Warm Paper', bg: '#f7f5ef', card: '#fdfcf9', desc: 'Cozy cream' },
+                        { id: 'zinc', name: 'Cool Zinc', bg: '#f4f4f5', card: '#ffffff', desc: 'Modern silver' },
+                        { id: 'sky', name: 'Soft Sky', bg: '#f0f7ff', card: '#ffffff', desc: 'Airy blue' },
+                        { id: 'mint', name: 'Fresh Mint', bg: '#f0fdf4', card: '#ffffff', desc: 'Calming sage' },
+                      ].map((pal) => {
+                        const isSelected = (lightPalette || 'snow') === pal.id;
+                        return (
+                          <div
+                            key={pal.id}
+                            onClick={() => handleLightPaletteChange(pal.id as any)}
+                            className={`p-2.5 rounded-xl border-2 cursor-pointer transition text-left ${
+                              isSelected
+                                ? 'border-blue-500 ring-2 ring-blue-500 shadow-md'
+                                : isLight
+                                ? 'bg-white border-slate-200 hover:border-slate-300'
+                                : 'bg-slate-950 border-slate-700 hover:border-slate-500'
+                            }`}
+                          >
+                            <div
+                              className="w-full h-8 rounded-lg mb-2 p-1 flex gap-1 border border-slate-300 shadow-inner"
+                              style={{ backgroundColor: pal.bg }}
+                            >
+                              <div className="w-1/3 h-full rounded border border-slate-200" style={{ backgroundColor: pal.card }} />
+                              <div className="flex-1 h-full rounded border border-slate-200" style={{ backgroundColor: pal.card }} />
+                            </div>
+                            <div className={`font-bold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                              {pal.name}
+                            </div>
+                            <div className={`text-[10px] truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                              {pal.desc}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1112,7 +1323,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div className={`space-y-3 text-xs leading-relaxed ${isLight ? 'text-slate-800 font-medium' : 'text-slate-200 font-medium'}`}>
                   <p className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                    SpaceTabs is built as a fast, private, and completely free alternative to Workona.
+                    SpaceTabs is a fast, private, and completely free workspace & tab manager.
                   </p>
                   <ul className="list-disc pl-5 space-y-2 text-xs">
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>No Artificial Space Limits:</strong> Create unlimited spaces, sections, tabs, and resources.</li>

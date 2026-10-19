@@ -11,6 +11,9 @@ import {
 } from '@/db/schema';
 import { discardInactiveTabs, discardAllInactiveTabsInWindow } from './suspension';
 
+export type DarkPalette = 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso';
+export type LightPalette = 'snow' | 'paper' | 'zinc' | 'sky' | 'mint';
+
 export interface UserSettings {
   autoSuspendEnabled: boolean;
   idleThresholdMinutes: number;
@@ -19,6 +22,9 @@ export interface UserSettings {
   showTabFavicons: boolean;
   sidebarTheme: 'dark' | 'light';
   dashboardTheme: 'dark' | 'light';
+  accentColor: string;
+  darkPalette: DarkPalette;
+  lightPalette: LightPalette;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -29,6 +35,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   showTabFavicons: true,
   sidebarTheme: 'dark',
   dashboardTheme: 'dark',
+  accentColor: '#2563eb',
+  darkPalette: 'slate',
+  lightPalette: 'snow',
 };
 
 const SETTINGS_STORAGE_KEY = 'spacetabs_user_settings';

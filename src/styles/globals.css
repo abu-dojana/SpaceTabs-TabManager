@@ -365,3 +365,197 @@ input[type="checkbox"]:indeterminate {
   border-color: #cbd5e1 !important;
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
 }
+
+/* =========================================================================
+   DYNAMIC ACCENT COLOR BINDINGS
+   ========================================================================= */
+.bg-blue-600 {
+  background-color: var(--accent-color, #2563eb) !important;
+}
+.hover\:bg-blue-500:hover {
+  background-color: var(--accent-hover, #1d4ed8) !important;
+}
+.text-blue-400,
+.text-blue-500 {
+  color: var(--accent-color, #2563eb) !important;
+}
+.border-blue-500,
+.border-blue-500\/30,
+.border-blue-500\/40,
+.border-blue-400\/30 {
+  border-color: var(--accent-border, rgba(37, 99, 235, 0.4)) !important;
+}
+.bg-blue-600\/10,
+.bg-blue-600\/15,
+.bg-blue-600\/20,
+.bg-blue-500\/10,
+.bg-blue-500\/20 {
+  background-color: var(--accent-light, rgba(37, 99, 235, 0.15)) !important;
+}
+input[type="checkbox"]:checked,
+[data-dashboard-theme="light"] input[type="checkbox"]:checked,
+[data-sidebar-theme="light"] input[type="checkbox"]:checked,
+input[type="checkbox"]:indeterminate,
+[data-dashboard-theme="light"] input[type="checkbox"]:indeterminate,
+[data-sidebar-theme="light"] input[type="checkbox"]:indeterminate {
+  background-color: var(--accent-color, #2563eb) !important;
+  border-color: var(--accent-color, #2563eb) !important;
+}
+
+/* =========================================================================
+   DARK THEME PALETTES (Midnight, Indigo, Forest, Espresso)
+   ========================================================================= */
+/* Midnight OLED (Pitch Black / Carbon) */
+[data-dark-palette="midnight"] aside,
+[data-dark-palette="midnight"] [data-sidebar-theme="dark"] aside,
+[data-dark-palette="midnight"] [data-sidebar-theme="dark"] .bg-slate-950 {
+  background-color: #000000 !important;
+  border-color: #1e1e24 !important;
+}
+[data-dark-palette="midnight"] [data-dashboard-theme="dark"] main,
+[data-dark-palette="midnight"] [data-dashboard-theme="dark"].bg-slate-900\/40 {
+  background-color: #09090b !important;
+}
+[data-dark-palette="midnight"] [data-dashboard-theme="dark"] .tab-manager-card,
+[data-dark-palette="midnight"] [data-dashboard-theme="dark"] .bg-slate-900 {
+  background-color: #121215 !important;
+  border-color: #27272a !important;
+}
+[data-dark-palette="midnight"] [data-dashboard-theme="dark"] .border-slate-800,
+[data-dark-palette="midnight"] [data-dashboard-theme="dark"] .border-slate-800\/80,
+[data-dark-palette="midnight"] [data-dashboard-theme="dark"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #27272a !important;
+}
+
+/* Space Indigo (Deep Cosmic Nebula) */
+[data-dark-palette="indigo"] aside,
+[data-dark-palette="indigo"] [data-sidebar-theme="dark"] aside,
+[data-dark-palette="indigo"] [data-sidebar-theme="dark"] .bg-slate-950 {
+  background-color: #070914 !important;
+  border-color: #1c203d !important;
+}
+[data-dark-palette="indigo"] [data-dashboard-theme="dark"] main,
+[data-dark-palette="indigo"] [data-dashboard-theme="dark"].bg-slate-900\/40 {
+  background-color: #0b0e20 !important;
+}
+[data-dark-palette="indigo"] [data-dashboard-theme="dark"] .tab-manager-card,
+[data-dark-palette="indigo"] [data-dashboard-theme="dark"] .bg-slate-900 {
+  background-color: #121633 !important;
+  border-color: #242b5c !important;
+}
+[data-dark-palette="indigo"] [data-dashboard-theme="dark"] .border-slate-800,
+[data-dark-palette="indigo"] [data-dashboard-theme="dark"] .border-slate-800\/80,
+[data-dark-palette="indigo"] [data-dashboard-theme="dark"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #242b5c !important;
+}
+
+/* Forest Dark (Pine Charcoal) */
+[data-dark-palette="forest"] aside,
+[data-dark-palette="forest"] [data-sidebar-theme="dark"] aside,
+[data-dark-palette="forest"] [data-sidebar-theme="dark"] .bg-slate-950 {
+  background-color: #030c08 !important;
+  border-color: #12281d !important;
+}
+[data-dark-palette="forest"] [data-dashboard-theme="dark"] main,
+[data-dark-palette="forest"] [data-dashboard-theme="dark"].bg-slate-900\/40 {
+  background-color: #07150f !important;
+}
+[data-dark-palette="forest"] [data-dashboard-theme="dark"] .tab-manager-card,
+[data-dark-palette="forest"] [data-dashboard-theme="dark"] .bg-slate-900 {
+  background-color: #0d2218 !important;
+  border-color: #1a3c2c !important;
+}
+[data-dark-palette="forest"] [data-dashboard-theme="dark"] .border-slate-800,
+[data-dark-palette="forest"] [data-dashboard-theme="dark"] .border-slate-800\/80,
+[data-dark-palette="forest"] [data-dashboard-theme="dark"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1a3c2c !important;
+}
+
+/* Warm Espresso (Rich Cocoa / Stone) */
+[data-dark-palette="espresso"] aside,
+[data-dark-palette="espresso"] [data-sidebar-theme="dark"] aside,
+[data-dark-palette="espresso"] [data-sidebar-theme="dark"] .bg-slate-950 {
+  background-color: #0e0c0b !important;
+  border-color: #26211d !important;
+}
+[data-dark-palette="espresso"] [data-dashboard-theme="dark"] main,
+[data-dark-palette="espresso"] [data-dashboard-theme="dark"].bg-slate-900\/40 {
+  background-color: #151210 !important;
+}
+[data-dark-palette="espresso"] [data-dashboard-theme="dark"] .tab-manager-card,
+[data-dark-palette="espresso"] [data-dashboard-theme="dark"] .bg-slate-900 {
+  background-color: #201c19 !important;
+  border-color: #38312b !important;
+}
+[data-dark-palette="espresso"] [data-dashboard-theme="dark"] .border-slate-800,
+[data-dark-palette="espresso"] [data-dashboard-theme="dark"] .border-slate-800\/80,
+[data-dark-palette="espresso"] [data-dashboard-theme="dark"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #38312b !important;
+}
+
+/* =========================================================================
+   LIGHT THEME PALETTES (Paper, Zinc, Sky, Mint)
+   ========================================================================= */
+/* Warm Paper (Cozy Cream / Notion Book) */
+[data-light-palette="paper"] [data-sidebar-theme="light"] aside,
+[data-light-palette="paper"] [data-sidebar-theme="light"] .bg-slate-950 {
+  background-color: #f7f5ef !important;
+  border-color: #e6e1d4 !important;
+}
+[data-light-palette="paper"] [data-dashboard-theme="light"] main {
+  background-color: #f7f5ef !important;
+}
+[data-light-palette="paper"] [data-dashboard-theme="light"] header,
+[data-light-palette="paper"] [data-dashboard-theme="light"] .tab-manager-card,
+[data-light-palette="paper"] [data-dashboard-theme="light"] .bg-slate-900 {
+  background-color: #fdfcf9 !important;
+  border-color: #e6e1d4 !important;
+}
+
+/* Cool Zinc (Modern Silver / Minimalist Gray) */
+[data-light-palette="zinc"] [data-sidebar-theme="light"] aside,
+[data-light-palette="zinc"] [data-sidebar-theme="light"] .bg-slate-950 {
+  background-color: #f4f4f5 !important;
+  border-color: #e4e4e7 !important;
+}
+[data-light-palette="zinc"] [data-dashboard-theme="light"] main {
+  background-color: #f4f4f5 !important;
+}
+[data-light-palette="zinc"] [data-dashboard-theme="light"] header,
+[data-light-palette="zinc"] [data-dashboard-theme="light"] .tab-manager-card,
+[data-light-palette="zinc"] [data-dashboard-theme="light"] .bg-slate-900 {
+  background-color: #ffffff !important;
+  border-color: #e4e4e7 !important;
+}
+
+/* Soft Sky (Airy Pastel Blue) */
+[data-light-palette="sky"] [data-sidebar-theme="light"] aside,
+[data-light-palette="sky"] [data-sidebar-theme="light"] .bg-slate-950 {
+  background-color: #f0f7ff !important;
+  border-color: #dbeafe !important;
+}
+[data-light-palette="sky"] [data-dashboard-theme="light"] main {
+  background-color: #f0f7ff !important;
+}
+[data-light-palette="sky"] [data-dashboard-theme="light"] header,
+[data-light-palette="sky"] [data-dashboard-theme="light"] .tab-manager-card,
+[data-light-palette="sky"] [data-dashboard-theme="light"] .bg-slate-900 {
+  background-color: #ffffff !important;
+  border-color: #dbeafe !important;
+}
+
+/* Fresh Mint (Calming Sage Green) */
+[data-light-palette="mint"] [data-sidebar-theme="light"] aside,
+[data-light-palette="mint"] [data-sidebar-theme="light"] .bg-slate-950 {
+  background-color: #f0fdf4 !important;
+  border-color: #dcfce7 !important;
+}
+[data-light-palette="mint"] [data-dashboard-theme="light"] main {
+  background-color: #f0fdf4 !important;
+}
+[data-light-palette="mint"] [data-dashboard-theme="light"] header,
+[data-light-palette="mint"] [data-dashboard-theme="light"] .tab-manager-card,
+[data-light-palette="mint"] [data-dashboard-theme="light"] .bg-slate-900 {
+  background-color: #ffffff !important;
+  border-color: #dcfce7 !important;
+}

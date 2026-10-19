@@ -81,16 +81,7 @@ export const Sidebar: React.FC = () => {
   const [descriptionModalSpace, setDescriptionModalSpace] = React.useState<Space | null>(null);
   const [deleteConfirmSpace, setDeleteConfirmSpace] = React.useState<Space | null>(null);
 
-  // Settings Menu Popover State
-  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = React.useState(false);
-  const [settingsToast, setSettingsToast] = React.useState<string | null>(null);
-  const settingsMenuRef = React.useRef<HTMLDivElement>(null);
-  const importFileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const showSettingsToast = (msg: string) => {
-    setSettingsToast(msg);
-    setTimeout(() => setSettingsToast(null), 3000);
-  };
 
   // Read active spaces from Dexie
   const spaces = useLiveQuery(async () => {
@@ -146,9 +137,9 @@ export const Sidebar: React.FC = () => {
     return others > 0 ? `${topDomain} + ${others}` : topDomain;
   }, [unsavedTabs]);
 
-  // Click-away listener to dismiss space & section 3-dot dropdowns and settings menu cleanly
+  // Click-away listener to dismiss space & section 3-dot dropdowns cleanly
   React.useEffect(() => {
-    if (!activeMenuSpaceId && !activeSectionMenu && !isSettingsMenuOpen) return;
+    if (!activeMenuSpaceId && !activeSectionMenu) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -157,16 +148,12 @@ export const Sidebar: React.FC = () => {
       if (sectionMenuRef.current && !sectionMenuRef.current.contains(e.target as Node)) {
         setActiveSectionMenu(null);
       }
-      if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target as Node)) {
-        setIsSettingsMenuOpen(false);
-      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setActiveMenuSpaceId(null);
         setActiveSectionMenu(null);
-        setIsSettingsMenuOpen(false);
       }
     };
 
@@ -176,7 +163,7 @@ export const Sidebar: React.FC = () => {
       window.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeMenuSpaceId, activeSectionMenu, isSettingsMenuOpen]);
+  }, [activeMenuSpaceId, activeSectionMenu]);
 
   // Focus and select space rename input
   React.useEffect(() => {
@@ -1071,205 +1058,25 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Settings Footer & Menu (Replacing static "No 5-Space Limit" footer) */}
-      <div className="relative p-2 border-t border-slate-800/80 bg-slate-950/60 flex-shrink-0" ref={settingsMenuRef}>
+      {/* Settings Footer Trigger (Directly opens Settings Modal) */}
+      <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 flex-shrink-0">
         <button
-          onClick={() => setIsSettingsMenuOpen(!isSettingsMenuOpen)}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition group border ${
-            isSettingsMenuOpen
-              ? 'bg-blue-600/10 border-blue-500/40 text-blue-300'
-              : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 hover:border-slate-800/80'
-          }`}
-          title="Open SpaceTabs Settings & Options"
+          onClick={() => setSettingsOpen(true)}
+          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition group border border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 hover:border-slate-800/80 cursor-pointer"
+          title="Open Settings & Preferences"
         >
           <div className="flex items-center gap-2.5">
-            <Settings
-              className={`w-4 h-4 transition duration-200 ${
-                isSettingsMenuOpen ? 'text-blue-400 rotate-45' : 'text-slate-400 group-hover:text-blue-400'
-              }`}
-            />
+            <Settings className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition" />
             <span className="font-semibold text-slate-300 group-hover:text-white">Settings</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className="text-emerald-500 flex items-center gap-1 text-[11px] font-medium">
               <CheckCircle2 className="w-3 h-3" />
               Ready
             </span>
-            <ChevronUp
-              className={`w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition-transform duration-200 ${
-                isSettingsMenuOpen ? 'rotate-180' : ''
-              }`}
-            />
           </div>
         </button>
-
-        {/* Upward-floating Settings Menu Popover */}
-        {isSettingsMenuOpen && (
-          <div className="absolute bottom-full mb-2 left-2 right-2 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl p-1.5 z-50 text-slate-200 select-none animate-in fade-in slide-in-from-bottom-2 duration-150">
-            {/* Quick Header */}
-            <div className="px-2.5 py-1.5 border-b border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-              <span className="font-semibold text-slate-300">SpaceTabs Menu</span>
-              <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                v1.0.0
-              </span>
-            </div>
-
-            <div className="py-1 space-y-0.5">
-              {/* Appearance & Themes trigger */}
-              <button
-                onClick={() => {
-                  setIsSettingsMenuOpen(false);
-                  setSettingsOpen(true, 'appearance');
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
-              >
-                <Palette className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium">Appearance & Themes</div>
-                  <div className="text-[10px] text-slate-500">Sidebar & dashboard light/dark modes</div>
-                </div>
-              </button>
-
-              {/* Preferences / Settings Modal trigger */}
-              <button
-                onClick={() => {
-                  setIsSettingsMenuOpen(false);
-                  setSettingsOpen(true, 'general');
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
-              >
-                <Sliders className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium">Preferences & Behavior</div>
-                  <div className="text-[10px] text-slate-500">Auto-suspend, window defaults</div>
-                </div>
-              </button>
-
-              {/* Memory / Tab Suspension Quick Action */}
-              <button
-                onClick={() => {
-                  setIsSettingsMenuOpen(false);
-                  setSettingsOpen(true, 'suspension');
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium">Memory Saver</div>
-                  <div className="text-[10px] text-slate-500">Idle tab discarding rules</div>
-                </div>
-              </button>
-
-              {/* Export Full Backup (1-click) */}
-              <button
-                onClick={async () => {
-                  setIsSettingsMenuOpen(false);
-                  try {
-                    await exportAllSpacesBackup();
-                    showSettingsToast('Backup downloaded successfully!');
-                  } catch {
-                    showSettingsToast('Failed to export backup.');
-                  }
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium">Export All Data (Backup)</div>
-                  <div className="text-[10px] text-slate-500">Download all spaces & workspaces</div>
-                </div>
-              </button>
-
-              {/* Import Backup */}
-              <button
-                onClick={() => {
-                  setIsSettingsMenuOpen(false);
-                  importFileInputRef.current?.click();
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
-              >
-                <Upload className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium">Import Backup (Restore)</div>
-                  <div className="text-[10px] text-slate-500">Restore from .json backup file</div>
-                </div>
-              </button>
-
-              {/* Keyboard Shortcuts */}
-              <button
-                onClick={() => {
-                  setIsSettingsMenuOpen(false);
-                  setSettingsOpen(true, 'shortcuts');
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
-              >
-                <Keyboard className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium">Keyboard Shortcuts</div>
-                  <div className="text-[10px] text-slate-500">Hotkeys & quick navigation</div>
-                </div>
-              </button>
-
-              {/* Clean Unsaved Tabs */}
-              <button
-                onClick={async () => {
-                  setIsSettingsMenuOpen(false);
-                  try {
-                    const count = await purgeStaleUnsavedTabs();
-                    showSettingsToast(`Cleaned ${count} closed tab(s) from cache.`);
-                  } catch {
-                    showSettingsToast('Failed to clean cache.');
-                  }
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium">Clean Unsaved Cache</div>
-                  <div className="text-[10px] text-slate-500">Purge stale closed tabs</div>
-                </div>
-              </button>
-            </div>
-
-            {/* Menu Footer: "No 5-Space Limit" Badge */}
-            <button
-              onClick={() => {
-                setIsSettingsMenuOpen(false);
-                setSettingsOpen(true, 'about');
-              }}
-              className="w-full pt-1.5 mt-1 border-t border-slate-800/80 px-2.5 py-1.5 flex items-center justify-between text-[11px] text-slate-400 hover:bg-slate-800/50 rounded-lg transition"
-            >
-              <span className="text-slate-300 font-medium">No 5-Space Limit</span>
-              <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
-                <CheckCircle2 className="w-3 h-3" />
-                Free & Open
-              </span>
-            </button>
-          </div>
-        )}
-
-        {/* Hidden File Input for Importing Backup */}
-        <input
-          ref={importFileInputRef}
-          type="file"
-          accept=".json"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            try {
-              const text = await file.text();
-              const res = await importSpacesBackup(text);
-              showSettingsToast(res.message);
-            } catch {
-              showSettingsToast('Failed to read backup file.');
-            } finally {
-              if (importFileInputRef.current) importFileInputRef.current.value = '';
-            }
-          }}
-          className="hidden"
-        />
       </div>
 
       {/* ======================================================== */}
@@ -1423,13 +1230,6 @@ export const Sidebar: React.FC = () => {
         </div>
       )}
 
-      {/* Settings Quick Action Toast */}
-      {settingsToast && (
-        <div className="fixed bottom-4 left-4 z-50 bg-slate-800 border border-slate-700 text-white px-3.5 py-2 rounded-xl text-xs shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{settingsToast}</span>
-        </div>
-      )}
     </aside>
   );
 };

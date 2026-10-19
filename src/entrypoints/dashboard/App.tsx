@@ -58,14 +58,42 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  let c = hex.replace('#', '');
+  if (c.length === 3) c = c.split('').map((x) => x + x).join('');
+  const num = parseInt(c, 16);
+  if (isNaN(num)) return `rgba(37, 99, 235, ${alpha})`;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function adjustBrightness(hex: string, percent: number): string {
+  let c = hex.replace('#', '');
+  if (c.length === 3) c = c.split('').map((x) => x + x).join('');
+  const num = parseInt(c, 16);
+  if (isNaN(num)) return hex;
+  const r = Math.min(255, Math.max(0, ((num >> 16) & 255) + Math.round(255 * (percent / 100))));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 255) + Math.round(255 * (percent / 100))));
+  const b = Math.min(255, Math.max(0, (num & 255) + Math.round(255 * (percent / 100))));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
 export default function App() {
   const {
     activeView,
     setActiveSpaceId,
     sidebarTheme,
     dashboardTheme,
+    accentColor,
+    darkPalette,
+    lightPalette,
     setSidebarTheme,
     setDashboardTheme,
+    setAccentColor,
+    setDarkPalette,
+    setLightPalette,
     isSettingsOpen,
     settingsTab,
     setSettingsOpen,
@@ -75,6 +103,9 @@ export default function App() {
     getUserSettings().then((settings) => {
       if (settings.sidebarTheme) setSidebarTheme(settings.sidebarTheme);
       if (settings.dashboardTheme) setDashboardTheme(settings.dashboardTheme);
+      if (settings.accentColor) setAccentColor(settings.accentColor);
+      if (settings.darkPalette) setDarkPalette(settings.darkPalette);
+      if (settings.lightPalette) setLightPalette(settings.lightPalette);
     });
 
     async function syncActiveSpaceFromWindow() {
@@ -99,11 +130,31 @@ export default function App() {
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, [setActiveSpaceId, setSidebarTheme, setDashboardTheme]);
+  }, [
+    setActiveSpaceId,
+    setSidebarTheme,
+    setDashboardTheme,
+    setAccentColor,
+    setDarkPalette,
+    setLightPalette,
+  ]);
+
+  const dynamicStyles = React.useMemo(() => {
+    const validAccent = accentColor || '#2563eb';
+    return {
+      '--accent-color': validAccent,
+      '--accent-hover': adjustBrightness(validAccent, -12),
+      '--accent-light': hexToRgba(validAccent, 0.15),
+      '--accent-border': hexToRgba(validAccent, 0.38),
+    } as React.CSSProperties;
+  }, [accentColor]);
 
   return (
     <ErrorBoundary>
       <div
+        data-dark-palette={darkPalette}
+        data-light-palette={lightPalette}
+        style={dynamicStyles}
         className={`flex h-screen w-screen overflow-hidden font-sans transition-colors duration-150 ${
           dashboardTheme === 'light' && sidebarTheme === 'light' ? 'bg-slate-50' : 'bg-slate-950'
         }`}
