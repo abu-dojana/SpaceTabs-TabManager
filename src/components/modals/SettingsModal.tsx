@@ -1922,17 +1922,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-5 animate-in fade-in duration-100">
                 <div
                   className={`p-6 rounded-2xl border text-center ${isLight
-                    ? 'bg-blue-50/80 border-blue-200 shadow-sm'
-                    : 'bg-blue-950/40 border-blue-800'
+                    ? 'bg-rose-50/50 border-rose-200/80 shadow-sm'
+                    : 'bg-rose-950/20 border-rose-900/40'
                     }`}
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-blue-600 mx-auto mb-3 flex items-center justify-center text-white shadow-xl shadow-blue-600/30">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 mx-auto mb-3 flex items-center justify-center text-white shadow-xl shadow-rose-500/30">
                     <Layers className="w-7 h-7" />
                   </div>
                   <h3 className={`text-lg font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                     SpaceTabs — Tab Manager
                   </h3>
-                  <p className="text-xs text-blue-500 font-mono mt-0.5 font-bold">
+                  <p className="text-xs text-rose-500 font-mono mt-0.5 font-bold">
                     Version 1.0.0 • Manifest V3
                   </p>
                   <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 text-xs font-bold mt-3">

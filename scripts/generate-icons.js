@@ -143,11 +143,11 @@ function renderIconRGBA(size) {
         strokeAlpha = Math.max(0, 1.0 - (minDist - strokeRadius) / 0.8);
       }
 
-      // Vibrant Gradient Background (#3B82F6 -> #1D4ED8)
+      // Vibrant Crimson Rose Gradient Background (#F43F5E -> #BE123C)
       const factor = (x + y) / (size * 2);
-      const bgR = Math.round(59 + (29 - 59) * factor);
-      const bgG = Math.round(130 + (78 - 130) * factor);
-      const bgB = Math.round(246 + (216 - 246) * factor);
+      const bgR = Math.round(244 + (190 - 244) * factor);
+      const bgG = Math.round(63 + (18 - 63) * factor);
+      const bgB = Math.round(94 + (60 - 94) * factor);
 
       // Blend white stroke (255,255,255) over background
       const finalR = Math.round(bgR * (1 - strokeAlpha) + 255 * strokeAlpha);
@@ -167,8 +167,8 @@ function renderIconRGBA(size) {
 const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3B82F6" />
-      <stop offset="100%" stop-color="#1D4ED8" />
+      <stop offset="0%" stop-color="#F43F5E" />
+      <stop offset="100%" stop-color="#BE123C" />
     </linearGradient>
   </defs>
   <rect width="128" height="128" rx="28" fill="url(#bg)"/>
