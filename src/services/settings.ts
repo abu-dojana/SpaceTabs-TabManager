@@ -41,7 +41,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   darkPalette: 'slate',
   lightPalette: 'snow',
   sidebarWidth: 260,
-  patreonUrl: 'https://www.patreon.com',
+  patreonUrl: 'https://www.patreon.com/abudojana',
 };
 
 const SETTINGS_STORAGE_KEY = 'spacetabs_user_settings';

@@ -11,7 +11,7 @@ import { SettingsModal } from '@/components/modals/SettingsModal';
 import { useUIStore } from '@/store/uiStore';
 import { getWindowActiveSpaceId } from '@/services/tabManager';
 import { getUserSettings } from '@/services/settings';
-import { Bookmark, FileText, CheckSquare, AlertTriangle } from 'lucide-react';
+import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -187,6 +187,37 @@ export default function App() {
 
             {activeView === 'tasks' && <TasksView />}
           </div>
+
+          {/* Bottom Footer: Support Me! */}
+          <footer
+            className={`py-2 px-6 border-t flex items-center justify-between text-xs select-none flex-shrink-0 transition-colors ${
+              dashboardTheme === 'light'
+                ? 'bg-white/80 border-slate-200 text-slate-500'
+                : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] opacity-75">
+                SpaceTabs • Free, Unlimited & Local-First Workspace
+              </span>
+            </div>
+
+            <a
+              href="https://www.patreon.com/abudojana"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition shadow-sm group ${
+                dashboardTheme === 'light'
+                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200'
+                  : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
+              }`}
+              title="Support Abu Dojana on Patreon"
+            >
+              <Heart className="w-3.5 h-3.5 fill-rose-500/30 text-rose-500 group-hover:fill-rose-500 group-hover:scale-110 transition-transform" />
+              <span>Support Me!</span>
+              <ExternalLink className="w-3 h-3 opacity-70 group-hover:opacity-100 transition-opacity" />
+            </a>
+          </footer>
         </main>
 
         {/* Modals */}

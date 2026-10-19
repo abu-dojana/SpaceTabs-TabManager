@@ -1182,7 +1182,7 @@ export const Sidebar: React.FC = () => {
       <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 flex-shrink-0 space-y-1">
         {/* Support on Patreon Button */}
         <a
-          href={patreonUrl || 'https://www.patreon.com'}
+          href={patreonUrl || 'https://www.patreon.com/abudojana'}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition group border border-transparent text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 cursor-pointer"

@@ -50,7 +50,7 @@ export const useUIStore = create<UIState>((set) => ({
   darkPalette: 'slate',
   lightPalette: 'snow',
   sidebarWidth: 260,
-  patreonUrl: 'https://www.patreon.com',
+  patreonUrl: 'https://www.patreon.com/abudojana',
   isSettingsOpen: false,
   settingsTab: 'general',
   setPatreonUrl: (url) => set({ patreonUrl: url }),

@@ -1644,49 +1644,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   </div>
                 </div>
-
-                {/* 4. Advanced / Custom OAuth Client ID */}
-                <div className="pt-2">
-                  <button
-                    onClick={() => setShowAdvancedAuth(!showAdvancedAuth)}
-                    className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition cursor-pointer"
-                  >
-                    <Key className="w-3.5 h-3.5" />
-                    <span>Advanced OAuth & Custom Google Client ID</span>
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 transition-transform ${showAdvancedAuth ? 'rotate-180' : ''}`}
-                    />
-                  </button>
-
-                  {showAdvancedAuth && (
-                    <div
-                      className={`mt-3 p-4 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'
-                        }`}
-                    >
-                      <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                        When testing unpacked extensions locally, Google OAuth may require a registered Client ID for your extension's temporary ID. You can paste your own Google Cloud Console OAuth 2.0 Web Client ID below:
-                      </p>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={customClientIdInput}
-                          onChange={(e) => setCustomClientIdInput(e.target.value)}
-                          placeholder="e.g. 123456789-abcdef.apps.googleusercontent.com"
-                          className={`flex-1 px-3 py-2 rounded-xl text-xs font-mono border focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLight
-                            ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400'
-                            : 'bg-slate-900 border-slate-750 text-slate-100 placeholder:text-slate-500'
-                            }`}
-                        />
-                        <button
-                          onClick={handleSaveCustomClientId}
-                          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow transition cursor-pointer"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 
@@ -1934,7 +1891,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* TAB: ABOUT */}
             {activeTab === 'about' && (
-              <div className="space-y-6 animate-in fade-in duration-100">
+              <div className="space-y-5 animate-in fade-in duration-100">
                 <div
                   className={`p-6 rounded-2xl border text-center ${isLight
                     ? 'bg-blue-50/80 border-blue-200 shadow-sm'
@@ -1956,6 +1913,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
+                {/* Support & Donations Card (Prominently on top) */}
+                <div
+                  className={`p-5 rounded-2xl border ${
+                    isLight
+                      ? 'bg-rose-50/70 border-rose-200 shadow-sm'
+                      : 'bg-rose-950/20 border-rose-900/60'
+                  }`}
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/20 flex-shrink-0">
+                      <Heart className="w-5 h-5 fill-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className={`text-sm font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        <span>Support SpaceTabs on Patreon</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-500/15 text-rose-500 border border-rose-500/20">
+                          Creator Support
+                        </span>
+                      </h4>
+                      <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                        SpaceTabs is 100% free with no paid subscriptions, artificial limits, or data selling.
+                        If SpaceTabs saves you time and tabs, consider supporting independent development on Patreon!
+                      </p>
+
+                      <div className="mt-3.5 pt-3 border-t border-rose-500/20">
+                        <a
+                          href="https://www.patreon.com/abudojana"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white shadow-lg shadow-rose-600/25 transition cursor-pointer"
+                        >
+                          <Heart className="w-4 h-4 fill-white" />
+                          <span>Become a Patron on Patreon</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className={`space-y-3 text-xs leading-relaxed ${isLight ? 'text-slate-800 font-medium' : 'text-slate-200 font-medium'}`}>
                   <p className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                     SpaceTabs is a fast, private, and completely free workspace & tab manager.
@@ -1967,73 +1964,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Native Chromium Memory Saver:</strong> Background tabs are safely suspended using Chrome's native discard engine to save up to 80% RAM.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Full Workspace Productivity:</strong> Integrated Tabs, Resources, Notes, and Tasks for each space.</li>
                   </ul>
-                </div>
-
-                {/* Support & Donations Card */}
-                <div
-                  className={`p-5 rounded-2xl border ${
-                    isLight
-                      ? 'bg-rose-50/70 border-rose-200 shadow-sm'
-                      : 'bg-rose-950/20 border-rose-900/60'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/20 flex-shrink-0">
-                        <Heart className="w-5 h-5 fill-white" />
-                      </div>
-                      <div>
-                        <h4 className={`text-sm font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                          <span>Support SpaceTabs on Patreon</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-500/15 text-rose-500 border border-rose-500/20">
-                            Creator Support
-                          </span>
-                        </h4>
-                        <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                          SpaceTabs is 100% free with no paid subscriptions, artificial limits, or data selling.
-                          If SpaceTabs saves you time and tabs, consider supporting independent development on Patreon!
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-rose-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    <a
-                      href={settings.patreonUrl || patreonUrl || 'https://www.patreon.com'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white shadow-lg shadow-rose-600/25 transition cursor-pointer"
-                    >
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span>Become a Patron on Patreon</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-
-                    <div className="flex items-center gap-1.5 flex-1 max-w-sm">
-                      <input
-                        type="url"
-                        value={patreonInput}
-                        onChange={(e) => setPatreonInput(e.target.value)}
-                        placeholder="https://www.patreon.com/yourname"
-                        className={`text-xs px-3 py-1.5 rounded-lg border flex-1 min-w-0 transition focus:outline-none focus:ring-1 focus:ring-rose-500 ${
-                          isLight
-                            ? 'bg-white border-slate-300 text-slate-800 placeholder-slate-400'
-                            : 'bg-slate-900 border-slate-700 text-slate-200 placeholder-slate-500'
-                        }`}
-                      />
-                      <button
-                        onClick={handleSavePatreonUrl}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-                          isLight
-                            ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                        }`}
-                        title="Save your custom Patreon page URL"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
