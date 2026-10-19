@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { type Note, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
+import { recordTombstone } from '@/services/driveSync';
 import {
   FileText,
   Plus,
@@ -572,6 +573,7 @@ export const NotesView: React.FC = () => {
 
   // Delete note
   const handleDeleteNote = async (id: string) => {
+    recordTombstone(id, 'notes').catch(() => {});
     await db.notes.delete(id);
     setConfirmDeleteId(null);
     if (selectedNoteId === id) {

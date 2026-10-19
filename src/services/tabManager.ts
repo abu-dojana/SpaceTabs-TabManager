@@ -1,6 +1,7 @@
 import { db } from '@/db';
 import { type Tab as DbTab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { isSystemOrExtensionUrl, decodeRealUrl } from '@/utils/urlFilter';
+import { recordTombstone } from '@/services/driveSync';
 
 export const SUSPENDED_URL_PREFIX = '/suspended.html';
 
@@ -671,6 +672,11 @@ export async function closeTabs(tabIds: string[]) {
       } catch (err) {
         // Tab might have already been closed
       }
+    }
+
+    // Record tombstone for cloud sync if this is a saved workspace tab
+    if (record && record.spaceId !== UNSAVED_SPACE_ID) {
+      recordTombstone(id, 'tabs').catch(() => {});
     }
 
     // Always delete the record from Dexie

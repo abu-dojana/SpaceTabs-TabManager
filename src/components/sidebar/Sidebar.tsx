@@ -38,12 +38,20 @@ import {
   Keyboard,
   Sparkles,
   Palette,
+  Cloud,
+  RefreshCw,
+  User,
 } from 'lucide-react';
 import {
   exportAllSpacesBackup,
   importSpacesBackup,
   purgeStaleUnsavedTabs,
 } from '@/services/settings';
+import {
+  recordTombstones,
+  subscribeSyncStatus,
+  type DriveSyncInfo,
+} from '@/services/driveSync';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -56,6 +64,16 @@ export const Sidebar: React.FC = () => {
   } = useUIStore();
 
   const [dragOverSpaceId, setDragOverSpaceId] = React.useState<string | null>(null);
+
+  // Cloud Drive Sync live info subscription
+  const [syncInfo, setSyncInfo] = React.useState<DriveSyncInfo | null>(null);
+
+  React.useEffect(() => {
+    const unsub = subscribeSyncStatus((info) => {
+      setSyncInfo(info);
+    });
+    return () => unsub();
+  }, []);
 
   // 3-Dot Dropdown & Modals State for Spaces
   const [activeMenuSpaceId, setActiveMenuSpaceId] = React.useState<string | null>(null);
@@ -498,6 +516,31 @@ export const Sidebar: React.FC = () => {
     if (activeSpaceId === spaceId) {
       await handleSelectSpace(null);
     }
+
+    // Record tombstones for multi-device sync
+    try {
+      const childTabs = await db.tabs.where('spaceId').equals(spaceId).toArray();
+      const childNotes = await db.notes.where('spaceId').equals(spaceId).toArray();
+      const childTasks = await db.tasks.where('spaceId').equals(spaceId).toArray();
+      const childSections = await db.resourceSections.where('spaceId').equals(spaceId).toArray();
+      const childItemIds: string[] = [];
+      for (const s of childSections) {
+        const items = await db.resourceItems.where('sectionId').equals(s.id).toArray();
+        childItemIds.push(...items.map((it) => it.id));
+      }
+
+      await recordTombstones([
+        { id: spaceId, table: 'spaces' },
+        ...childTabs.map((t) => ({ id: t.id, table: 'tabs' as const })),
+        ...childNotes.map((n) => ({ id: n.id, table: 'notes' as const })),
+        ...childTasks.map((t) => ({ id: t.id, table: 'tasks' as const })),
+        ...childSections.map((s) => ({ id: s.id, table: 'resource_sections' as const })),
+        ...childItemIds.map((id) => ({ id, table: 'resource_items' as const })),
+      ]);
+    } catch (e) {
+      console.warn('Failed to record space tombstones:', e);
+    }
+
     await db.tabs.where('spaceId').equals(spaceId).delete();
     await db.notes.where('spaceId').equals(spaceId).delete();
     await db.tasks.where('spaceId').equals(spaceId).delete();
@@ -755,15 +798,86 @@ export const Sidebar: React.FC = () => {
             <span className="font-bold text-slate-100 tracking-tight text-base">
               SpaceTabs
             </span>
-            <div className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Local-First
-            </div>
+            {syncInfo?.profile ? (
+              syncInfo.status === 'syncing' ? (
+                <button
+                  onClick={() => setSettingsOpen(true, 'cloud')}
+                  className="text-[11px] text-amber-400 flex items-center gap-1 font-medium hover:underline cursor-pointer"
+                  title="Syncing in progress — Click to open Cloud Sync settings"
+                >
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                  <span>Syncing...</span>
+                </button>
+              ) : syncInfo.status === 'error' ? (
+                <button
+                  onClick={() => setSettingsOpen(true, 'cloud')}
+                  className="text-[11px] text-rose-400 flex items-center gap-1 font-medium hover:underline cursor-pointer"
+                  title={syncInfo.lastSyncError || 'Sync Error — Click to configure'}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  <span>Sync Error</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setSettingsOpen(true, 'cloud')}
+                  className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium hover:underline cursor-pointer"
+                  title="Google Drive connected & synced — Click to view"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>Drive Synced</span>
+                </button>
+              )
+            ) : (
+              <button
+                onClick={() => setSettingsOpen(true, 'cloud')}
+                className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium hover:underline cursor-pointer"
+                title="Local-first offline mode. Click to connect Google Drive."
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Local-First</span>
+              </button>
+            )}
           </div>
         </div>
-        <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-xs font-bold text-blue-400">
-          A
-        </div>
+
+        {/* User Profile Avatar with dynamic status indicator */}
+        <button
+          onClick={() => setSettingsOpen(true, 'cloud')}
+          className="relative group p-0.5 rounded-full transition focus:outline-none cursor-pointer"
+          title={
+            syncInfo?.profile
+              ? `${syncInfo.profile.name} (${syncInfo.profile.email})\nClick to manage Google Drive sync`
+              : 'Connect Google Account to enable Cloud Sync'
+          }
+        >
+          {syncInfo?.profile?.picture ? (
+            <img
+              src={syncInfo.profile.picture}
+              alt={syncInfo.profile.name}
+              className="w-7 h-7 rounded-full object-cover border border-blue-400/40 group-hover:border-blue-400 transition shadow-sm"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 group-hover:border-blue-400/60 flex items-center justify-center text-xs font-bold text-blue-400 transition shadow-sm">
+              {syncInfo?.profile?.name ? syncInfo.profile.name.charAt(0).toUpperCase() : 'A'}
+            </div>
+          )}
+
+          {/* Sync indicator dot */}
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
+              syncInfo?.profile
+                ? syncInfo.status === 'syncing'
+                  ? 'bg-amber-400 animate-spin'
+                  : syncInfo.status === 'error'
+                  ? 'bg-rose-500'
+                  : 'bg-emerald-400'
+                : 'bg-slate-500'
+            }`}
+          />
+        </button>
       </div>
 
       {/* Navigation Sections */}

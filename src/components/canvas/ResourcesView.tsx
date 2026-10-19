@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { type ResourceSection, type ResourceItem, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
+import { recordTombstone, recordTombstones } from '@/services/driveSync';
 import { focusOrOpenTab } from '@/services/tabManager';
 import { decodeRealUrl, extractDomain } from '@/utils/urlFilter';
 import {
@@ -227,6 +228,11 @@ export const ResourcesView: React.FC = () => {
     setActiveSectionMenuId(null);
     // Delete all items under this section
     const itemsToDelete = await db.resourceItems.where('sectionId').equals(sectionId).toArray();
+    recordTombstones([
+      { id: sectionId, table: 'resource_sections' as const },
+      ...itemsToDelete.map((it) => ({ id: it.id, table: 'resource_items' as const })),
+    ]).catch(() => {});
+
     for (const it of itemsToDelete) {
       await db.resourceItems.delete(it.id);
     }
@@ -261,6 +267,7 @@ export const ResourcesView: React.FC = () => {
   // Delete resource item
   const handleDeleteItem = async (itemId: string) => {
     setActiveItemMenuId(null);
+    recordTombstone(itemId, 'resource_items').catch(() => {});
     await db.resourceItems.delete(itemId);
   };
 

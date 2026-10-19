@@ -13,7 +13,7 @@ interface UIState {
   darkPalette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso';
   lightPalette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint';
   isSettingsOpen: boolean;
-  settingsTab: 'general' | 'appearance' | 'suspension' | 'backup' | 'shortcuts' | 'about';
+  settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about';
   setActiveSpaceId: (id: string | null) => void;
   setActiveView: (view: 'tabs' | 'resources' | 'notes' | 'tasks') => void;
   setSearchQuery: (query: string) => void;
@@ -29,7 +29,7 @@ interface UIState {
   setLightPalette: (palette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint') => void;
   setSettingsOpen: (
     open: boolean,
-    tab?: 'general' | 'appearance' | 'suspension' | 'backup' | 'shortcuts' | 'about'
+    tab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about'
   ) => void;
 }
 

@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { type Task, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
+import { recordTombstone, recordTombstones } from '@/services/driveSync';
 import {
   CheckSquare,
   Square,
@@ -198,6 +199,7 @@ export const TasksView: React.FC = () => {
 
   // Delete task
   const handleDeleteTask = async (id: string) => {
+    recordTombstone(id, 'tasks').catch(() => {});
     await db.tasks.delete(id);
   };
 
@@ -205,8 +207,11 @@ export const TasksView: React.FC = () => {
   const handleClearCompleted = async () => {
     if (!allTasks) return;
     const completedTasks = allTasks.filter((t) => t.completed);
-    for (const t of completedTasks) {
-      await db.tasks.delete(t.id);
+    if (completedTasks.length > 0) {
+      recordTombstones(completedTasks.map((t) => ({ id: t.id, table: 'tasks' as const }))).catch(() => {});
+      for (const t of completedTasks) {
+        await db.tasks.delete(t.id);
+      }
     }
   };
 

@@ -7,10 +7,33 @@ import {
   recordTabActivity,
   forgetTabActivity,
 } from '@/services/suspension';
+import {
+  DRIVE_SYNC_ALARM,
+  setupDriveSyncAlarm,
+  syncNow,
+  getCloudSyncSettings,
+  getGoogleProfile,
+} from '@/services/driveSync';
 
 export default defineBackground(() => {
   // Synchronously bind alarm listener so Service Worker receives wakeups reliably
   initSuspensionListener();
+
+  // Background Drive Sync alarm listener
+  chrome.alarms?.onAlarm?.addListener(async (alarm) => {
+    if (alarm.name === DRIVE_SYNC_ALARM) {
+      try {
+        const settings = await getCloudSyncSettings();
+        const profile = await getGoogleProfile();
+        if (settings.enabled && settings.autoSync && profile) {
+          console.log('[Background] Executing scheduled Google Drive sync...');
+          await syncNow();
+        }
+      } catch (err) {
+        console.warn('[Background] Drive sync alarm failed:', err);
+      }
+    }
+  });
 
   const DASHBOARD_PAGE = '/dashboard.html';
   const DASHBOARD_URL = chrome.runtime.getURL(DASHBOARD_PAGE);
@@ -56,6 +79,12 @@ export default defineBackground(() => {
   // 1. Startup & Window Lifecycle
   chrome.runtime.onStartup.addListener(async () => {
     await setupSuspensionAlarms();
+    const syncSettings = await getCloudSyncSettings();
+    if (syncSettings.enabled && syncSettings.syncOnStartup) {
+      syncNow().catch((e) => console.warn('[Background] Startup Drive sync error:', e));
+    }
+    await setupDriveSyncAlarm(syncSettings.syncIntervalMinutes);
+
     const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
     for (const win of windows) {
       if (win.id) {
@@ -67,6 +96,7 @@ export default defineBackground(() => {
 
   chrome.runtime.onInstalled.addListener(async () => {
     await setupSuspensionAlarms();
+    await setupDriveSyncAlarm();
   });
 
   chrome.windows.onCreated.addListener((window) => {
