@@ -26,10 +26,23 @@ const initTime = Date.now();
 let isRestoring = false;
 
 function restore() {
-  if (isRestoring) return;
-  if (realUrl && realUrl.startsWith('http')) {
-    isRestoring = true;
+  if (isRestoring || !realUrl) return;
+  isRestoring = true;
+
+  if (realUrl.startsWith('http://') || realUrl.startsWith('https://')) {
     window.location.replace(realUrl);
+  } else {
+    try {
+      chrome.tabs.getCurrent((tab) => {
+        if (tab?.id) {
+          chrome.tabs.update(tab.id, { url: realUrl });
+        } else {
+          window.location.replace(realUrl);
+        }
+      });
+    } catch {
+      window.location.replace(realUrl);
+    }
   }
 }
 

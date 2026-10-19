@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { type Tab as DbTab, UNSAVED_SPACE_ID } from '@/db/schema';
-import { isSystemOrExtensionUrl, decodeRealUrl } from '@/utils/urlFilter';
+import { isSystemOrExtensionUrl, decodeRealUrl, isSuspendableUrl } from '@/utils/urlFilter';
 import { recordTombstone } from '@/services/driveSync';
 
 export const SUSPENDED_URL_PREFIX = '/suspended.html';
@@ -361,15 +361,9 @@ export async function switchWindowToSpace(
     // 5. Open target tabs dormant in the background
     for (let i = 0; i < targetTabs.length; i++) {
       const tabRecord = targetTabs[i];
-      const isInternalUrl =
-        tabRecord.url.startsWith('chrome://') ||
-        tabRecord.url.startsWith('about:') ||
-        tabRecord.url.startsWith('edge://') ||
-        tabRecord.url.startsWith('brave://');
-
-      const openUrl = isInternalUrl
-        ? tabRecord.url
-        : buildSuspendedUrl(tabRecord.url, tabRecord.title);
+      const openUrl = isSuspendableUrl(tabRecord.url)
+        ? buildSuspendedUrl(tabRecord.url, tabRecord.title)
+        : tabRecord.url;
 
       const created = await chrome.tabs.create({
         windowId,
@@ -427,15 +421,9 @@ export async function openSpaceInNewWindow(spaceId: string) {
     // Restore space tabs
     for (let i = 0; i < spaceTabs.length; i++) {
       const tabItem = spaceTabs[i];
-      const isInternalUrl =
-        tabItem.url.startsWith('chrome://') ||
-        tabItem.url.startsWith('about:') ||
-        tabItem.url.startsWith('edge://') ||
-        tabItem.url.startsWith('brave://');
-
-      const openUrl = isInternalUrl
-        ? tabItem.url
-        : buildSuspendedUrl(tabItem.url, tabItem.title);
+      const openUrl = isSuspendableUrl(tabItem.url)
+        ? buildSuspendedUrl(tabItem.url, tabItem.title)
+        : tabItem.url;
 
       const createdTab = await chrome.tabs.create({
         windowId: newWindow.id,

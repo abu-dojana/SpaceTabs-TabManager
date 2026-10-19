@@ -862,12 +862,10 @@ export async function syncNow(): Promise<{
     let mergedPayload = localData;
 
     if (existingFile) {
-      try {
-        const remoteData = await downloadRemoteData(token, existingFile.fileId);
-        mergedPayload = await mergeRemoteAndLocal(remoteData, localData);
-      } catch (pullErr: any) {
-        console.warn('Could not read existing remote data, proceeding with local push:', pullErr);
-      }
+      // Must successfully download and merge remote data before pushing.
+      // If remote download fails, abort to prevent destructive overwrite of remote-only changes.
+      const remoteData = await downloadRemoteData(token, existingFile.fileId);
+      mergedPayload = await mergeRemoteAndLocal(remoteData, localData);
     }
 
     // Push merged state to Drive
@@ -1011,6 +1009,10 @@ export async function forcePullFromDrive(): Promise<{ success: boolean; message:
         if (remoteData?.tasks?.length) await db.tasks.bulkPut(remoteData.tasks);
       }
     );
+
+    // Restore remote tombstones (deletion history) to prevent deleted items from reappearing
+    const remoteTombstones = Array.isArray(remoteData.deletedIds) ? remoteData.deletedIds : [];
+    await chrome.storage.local.set({ [STORAGE_KEY_TOMBSTONES]: remoteTombstones });
 
     await updateSyncMeta({ lastSyncTime: Date.now(), lastError: null });
     setSyncStatus('synced');

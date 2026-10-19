@@ -19,6 +19,18 @@ export function isSystemOrExtensionUrl(url?: string): boolean {
   return false;
 }
 
+/**
+ * Checks whether a URL is a standard web URL that can be suspended and restored via window.location.replace().
+ * Only http:// and https:// URLs can be safely loaded into suspended.html placeholders and restored.
+ * Non-HTTP schemes (file://, chrome://, about:, edge://, brave://, chrome-extension://, view-source:)
+ * must be opened directly to avoid tabs becoming stuck on the placeholder.
+ */
+export function isSuspendableUrl(url?: string): boolean {
+  if (!url) return false;
+  const lower = url.trim().toLowerCase();
+  return lower.startsWith('http://') || lower.startsWith('https://');
+}
+
 export function decodeRealUrl(url?: string): string {
   if (!url) return '';
   if (url.includes('/suspended.html')) {
