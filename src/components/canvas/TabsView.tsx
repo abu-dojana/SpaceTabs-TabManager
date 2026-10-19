@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
-import { focusOrOpenTab, moveTabsToSpace } from '@/services/tabManager';
+import { focusOrOpenTab, moveTabsToSpace, locateOrOpenTab } from '@/services/tabManager';
 import {
   Folder,
   MoreVertical,
@@ -14,6 +14,7 @@ import {
   Check,
   FolderInput,
   GripVertical,
+  Crosshair,
   Puzzle,
   Settings,
   Bookmark,
@@ -60,7 +61,51 @@ export const TabsView: React.FC = () => {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [moveDropdownTabId, setMoveDropdownTabId] = React.useState<string | null>(null);
   const [draggingTabId, setDraggingTabId] = React.useState<string | null>(null);
+  const [currentWindowId, setCurrentWindowId] = React.useState<number | null>(null);
+  const [liveTabsMap, setLiveTabsMap] = React.useState<Map<number, number>>(new Map()); // chromeTabId -> windowId
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Track live Chrome windows and tabs to show accurate window status badges
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const refreshLiveTabs = async () => {
+      try {
+        const curWin = await chrome.windows.getCurrent();
+        if (isMounted && curWin.id) setCurrentWindowId(curWin.id);
+
+        const all = await chrome.tabs.query({});
+        const map = new Map<number, number>();
+        for (const t of all) {
+          if (t.id && t.windowId) {
+            map.set(t.id, t.windowId);
+          }
+        }
+        if (isMounted) setLiveTabsMap(map);
+      } catch {}
+    };
+
+    refreshLiveTabs();
+
+    const onEvent = () => {
+      refreshLiveTabs();
+    };
+
+    chrome.tabs.onCreated.addListener(onEvent);
+    chrome.tabs.onRemoved.addListener(onEvent);
+    chrome.tabs.onUpdated.addListener(onEvent);
+    chrome.tabs.onActivated.addListener(onEvent);
+    chrome.windows.onFocusChanged.addListener(onEvent);
+
+    return () => {
+      isMounted = false;
+      chrome.tabs.onCreated.removeListener(onEvent);
+      chrome.tabs.onRemoved.removeListener(onEvent);
+      chrome.tabs.onUpdated.removeListener(onEvent);
+      chrome.tabs.onActivated.removeListener(onEvent);
+      chrome.windows.onFocusChanged.removeListener(onEvent);
+    };
+  }, []);
 
   // Click-away listener to dismiss move dropdowns cleanly
   React.useEffect(() => {
@@ -303,6 +348,14 @@ export const TabsView: React.FC = () => {
               const isNearBottom = index >= Math.max(tabs.length - 2, 1);
               const isDropdownOpen = moveDropdownTabId === tab.id;
 
+              const liveWindowId = tab.chromeTabId
+                ? liveTabsMap.get(tab.chromeTabId)
+                : undefined;
+              const isOpenInThisWindow =
+                liveWindowId !== undefined && liveWindowId === currentWindowId;
+              const isOpenInOtherWindow =
+                liveWindowId !== undefined && liveWindowId !== currentWindowId;
+
               return (
                 <div
                   key={tab.id}
@@ -334,7 +387,7 @@ export const TabsView: React.FC = () => {
                       : 'hover:bg-slate-800/50'
                   }`}
                 >
-                  {/* Left: Grip + Checkbox + Favicon + Title */}
+                  {/* Left: Grip + Checkbox + Favicon + Title + Window Status */}
                   <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-4">
                     <div
                       className="text-slate-600 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0 -ml-1"
@@ -355,12 +408,33 @@ export const TabsView: React.FC = () => {
                     </div>
 
                     <button
-                      onClick={() => focusOrOpenTab(tab.url)}
+                      onClick={() => locateOrOpenTab(tab)}
                       className="text-xs text-slate-200 hover:text-blue-400 font-medium truncate text-left transition"
                       title={tab.title}
                     >
                       {tab.title || tab.url}
                     </button>
+
+                    {/* Window Status Badges */}
+                    {isOpenInThisWindow && (
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0"
+                        title="Tab is currently open in this browser window"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        This Window
+                      </span>
+                    )}
+
+                    {isOpenInOtherWindow && (
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 flex-shrink-0"
+                        title="Tab is currently open in another browser window"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5" />
+                        Another Window
+                      </span>
+                    )}
                   </div>
 
                   {/* Right Actions (shown on hover or active dropdown) */}
@@ -371,12 +445,25 @@ export const TabsView: React.FC = () => {
                         : 'opacity-0 group-hover:opacity-100'
                     }`}
                   >
+                    {/* Locate Tab Button */}
                     <button
-                      onClick={() => focusOrOpenTab(tab.url)}
-                      className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-slate-200"
-                      title="Open Tab"
+                      onClick={() => locateOrOpenTab(tab)}
+                      className={`p-1 rounded transition ${
+                        isOpenInOtherWindow
+                          ? 'hover:bg-purple-500/20 text-purple-400 hover:text-purple-200'
+                          : isOpenInThisWindow
+                          ? 'hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-200'
+                          : 'hover:bg-slate-700 text-slate-400 hover:text-slate-200'
+                      }`}
+                      title={
+                        isOpenInOtherWindow
+                          ? 'Locate & switch to tab in another window'
+                          : isOpenInThisWindow
+                          ? 'Locate & switch to tab in this window'
+                          : 'Open and focus tab'
+                      }
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <Crosshair className="w-3.5 h-3.5" />
                     </button>
 
                     <button

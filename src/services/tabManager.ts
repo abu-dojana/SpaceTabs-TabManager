@@ -158,6 +158,9 @@ async function performSyncWindowTabs(windowId: number) {
       .equals(targetSpaceId)
       .toArray();
 
+    const validTabIds = new Set(validTabs.map((t) => t.id));
+    const matchedRecordIds = new Set<string>();
+
     // Map open browser tabs to Dexie records
     for (let i = 0; i < validTabs.length; i++) {
       const browserTab = validTabs[i];
@@ -166,11 +169,26 @@ async function performSyncWindowTabs(windowId: number) {
       const title = getEffectiveTabTitle(browserTab, realUrl);
       const favIconUrl = browserTab.favIconUrl || '';
 
-      const match = existing.find(
-        (e) => e.chromeTabId === browserTab.id || e.url === realUrl
+      // 1. Match by exact chromeTabId first
+      let match = existing.find(
+        (e) => !matchedRecordIds.has(e.id) && e.chromeTabId === browserTab.id
       );
 
+      // 2. If no exact tabId match, match by url ONLY if:
+      // - The record is NOT already claimed by another active tab in this or another window
+      // - And the record belongs to this windowId or has no windowId yet
+      if (!match) {
+        match = existing.find(
+          (e) =>
+            !matchedRecordIds.has(e.id) &&
+            e.url === realUrl &&
+            (!e.chromeTabId || e.windowId === windowId) &&
+            (!e.chromeTabId || !validTabIds.has(e.chromeTabId))
+        );
+      }
+
       if (match) {
+        matchedRecordIds.add(match.id);
         await db.tabs.update(match.id, {
           chromeTabId: browserTab.id,
           windowId,
@@ -181,8 +199,10 @@ async function performSyncWindowTabs(windowId: number) {
           updatedAt: now,
         });
       } else {
+        const newId = crypto.randomUUID();
+        matchedRecordIds.add(newId);
         await db.tabs.add({
-          id: crypto.randomUUID(),
+          id: newId,
           chromeTabId: browserTab.id,
           spaceId: targetSpaceId,
           windowId,
@@ -196,8 +216,7 @@ async function performSyncWindowTabs(windowId: number) {
       }
     }
 
-    // Clean up closed tabs for this space in this window
-    const validTabIds = new Set(validTabs.map((t) => t.id));
+    // Clean up closed tabs for THIS window only
     for (const record of existing) {
       if (
         record.windowId === windowId &&
@@ -427,6 +446,11 @@ export async function focusOrOpenTab(url: string, windowId?: number) {
   const existingTab = tabs.find((t) => decodeRealUrl(t.url) === realUrl);
   if (existingTab?.id) {
     await chrome.tabs.update(existingTab.id, { active: true });
+    if (existingTab.windowId) {
+      try {
+        await chrome.windows.update(existingTab.windowId, { focused: true });
+      } catch {}
+    }
   } else {
     await chrome.tabs.create({
       url: realUrl,
@@ -435,6 +459,84 @@ export async function focusOrOpenTab(url: string, windowId?: number) {
     });
   }
 }
+
+/**
+ * Locates an existing open tab across ANY window, activates it,
+ * and brings its window to the foreground.
+ * If not currently open anywhere, creates it in the current window.
+ */
+export async function locateOrOpenTab(tabRecord: {
+  id: string;
+  url: string;
+  chromeTabId?: number;
+  windowId?: number;
+}) {
+  const realUrl = decodeRealUrl(tabRecord.url);
+  const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
+
+  // 1. Check if the tab's recorded chromeTabId is still open
+  if (tabRecord.chromeTabId) {
+    try {
+      const liveTab = await chrome.tabs.get(tabRecord.chromeTabId);
+      if (liveTab && liveTab.id) {
+        await chrome.tabs.update(liveTab.id, { active: true });
+        if (liveTab.windowId) {
+          await chrome.windows.update(liveTab.windowId, { focused: true });
+        }
+        return;
+      }
+    } catch {
+      // Tab may have been closed or reloaded
+    }
+  }
+
+  // 2. Search across ALL open windows for a tab matching realUrl
+  try {
+    const allTabs = await chrome.tabs.query({});
+    const match = allTabs.find((t) => {
+      if (!t.url) return false;
+      if (t.url.startsWith(dashboardUrl)) return false;
+      const tabReal = decodeRealUrl(t.url);
+      const tabPending = decodeRealUrl(t.pendingUrl || '');
+      return tabReal === realUrl || tabPending === realUrl;
+    });
+
+    if (match && match.id) {
+      await chrome.tabs.update(match.id, { active: true });
+      if (match.windowId) {
+        await chrome.windows.update(match.windowId, { focused: true });
+      }
+      await db.tabs.update(tabRecord.id, {
+        chromeTabId: match.id,
+        windowId: match.windowId,
+        updatedAt: Date.now(),
+      });
+      return;
+    }
+  } catch (err) {
+    console.error('Failed to locate tab across windows:', err);
+  }
+
+  // 3. Not currently open anywhere: open it in current window
+  try {
+    const currentWin = await chrome.windows.getCurrent();
+    const newTab = await chrome.tabs.create({
+      url: realUrl,
+      windowId: currentWin.id,
+      active: true,
+    });
+    if (newTab.id && currentWin.id) {
+      await db.tabs.update(tabRecord.id, {
+        chromeTabId: newTab.id,
+        windowId: currentWin.id,
+        updatedAt: Date.now(),
+      });
+    }
+  } catch (err) {
+    console.error('Failed to open tab:', err);
+  }
+}
+
 
 /**
  * Moves one or more tabs to a target space.
