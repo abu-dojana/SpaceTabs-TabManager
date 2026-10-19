@@ -47,9 +47,9 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 | :---: | :---: |
 | ![Themes](docs/screenshots/settings-appearance.png) | ![Google Drive Sync](docs/screenshots/google-drive-sync.png) |
 
-| Crimson Rose Light Theme |
-| :---: |
-| ![Crimson Rose Theme](docs/screenshots/dashboard-light-rose.png) |
+| Crimson Rose Light Theme | Accent Colors & Surface Palettes |
+| :---: | :---: |
+| ![Crimson Rose Theme](docs/screenshots/dashboard-light-rose.png) | ![Palettes & Accents](docs/screenshots/settings-palettes-accents.png) |
 
 ---
 
