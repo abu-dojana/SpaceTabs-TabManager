@@ -1,102 +1,131 @@
-# SpaceTabs 🚀
+# SpaceTabs — Tab Manager 🚀
 
-> **The local-first, memory-saver alternative to Workona and Tablerone.**  
-> Built for Google Chrome, Brave, Microsoft Edge, and Chromium browsers (Manifest V3).
+<p align="center">
+  <img src="public/icon-128.png" alt="SpaceTabs Logo" width="96" height="96" />
+</p>
 
-SpaceTabs is a modern tab and workspace manager that organizes your browsing into dedicated **Spaces**, frees up gigabytes of RAM using on-demand tab suspension and native discard APIs, and keeps your browsing data strictly private on your device.
+<p align="center">
+  <strong>The local-first, memory-saving workspace & tab manager for Chromium browsers.</strong><br />
+  A fast, unlimited, privacy-respecting alternative to Workona and Tablerone with zero paywalls.
+</p>
+
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/spacetabs-tab-manager/aiajlcdplbpchfohgekcgafcpghgjojhh">
+    <img src="https://img.shields.io/badge/Chrome%20Web%20Store-SpaceTabs-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
+  </a>
+  <img src="https://img.shields.io/badge/Manifest-V3-success?style=for-the-badge" alt="Manifest V3" />
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License" />
+  <img src="https://img.shields.io/badge/Sync-Google%20Drive-34A853?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive Sync" />
+</p>
 
 ---
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/ceb00445-3644-43b5-818a-c3c220c450e0" alt="SpaceTabs Dashboard" width="100%" />
+  <img src="docs/screenshots/dashboard-split.png" alt="SpaceTabs Dashboard - Split Theme" width="100%" />
 </p>
+
+---
+
+## 💡 Why SpaceTabs?
+
+Modern workflows involve dozens or hundreds of tabs across projects, research sessions, and work streams. Traditional browsers slow to a crawl, eat gigabytes of RAM, and cloud-based tab managers lock your data behind monthly subscriptions.
+
+**SpaceTabs is designed differently:**
+- **Local-First & Unlimited:** Store as many spaces, tabs, notes, and tasks as you need. All data lives in your browser's IndexedDB.
+- **Save Up to 95% Memory:** Suspends cold-restored tabs to lightweight placeholders (~1 MB each) until clicked, with native Chrome `discard()` for idle open tabs.
+- **Private Cloud Backup:** Sync directly with your personal Google Drive account using Google's secure `drive.file` scope. No third-party servers, no middleman databases.
+
+---
+
+## 📸 Screenshots & Showcase
+
+| Workspace Dashboard (Split Theme) | Batch Tab Management |
+| :---: | :---: |
+| ![Dashboard](docs/screenshots/dashboard-split.png) | ![Batch Actions](docs/screenshots/batch-actions.png) |
+
+| Appearance & Custom Themes | Google Drive Cloud Sync |
+| :---: | :---: |
+| ![Themes](docs/screenshots/settings-appearance.png) | ![Google Drive Sync](docs/screenshots/google-drive-sync.png) |
+
+| Crimson Rose Light Theme |
+| :---: |
+| ![Crimson Rose Theme](docs/screenshots/dashboard-light-rose.png) |
 
 ---
 
 ## ✨ Features
 
-- 📂 **Workspaces & Spaces:** Organize tabs into project spaces with custom icons and names. Switching spaces closes previous tabs and opens the target space's tabs cleanly.
-- ⚡ **Zero-RAM Cold Restores:** Restoring a space with 50 tabs opens dormant lightweight placeholder tabs (`suspended.html`) consuming only ~1–2 MB each and zero network bandwidth until clicked.
-- 🧹 **Native Chrome Memory Saver:** Automatically discards idle tabs using `chrome.tabs.discard()` without losing tab strip position, favicon, or navigation history.
-- 🎯 **Drag & Drop to Spaces:** Drag any tab (or batch of selected tabs) from the canvas directly onto any Space or the Unsaved session in the sidebar.
-- 📌 **Always-Accessible Dashboard:** An auto-pinned Index Tab at Tab 0 that never gets lost or closed accidentally, accessible anytime via `Alt+Shift+W`.
-- 📝 **Inline Quick-Save:** Click "Unsaved" in the header to instantly name and convert your open browsing session into a permanent Space.
-- 🌐 **Browser Internal Tabs:** Full support for `chrome://extensions`, `chrome://settings`, `chrome://newtab`, etc., with custom category SVG icons.
-- 🔒 **Local-First & Private:** Everything is stored locally in IndexedDB via Dexie. No cloud tracking, no 5-space paywalls.
+### 📂 Workspaces & Spaces
+* **Unlimited Spaces:** Create, rename, color-code, and organize project spaces without limits.
+* **Non-Destructive Space Switching:** Switching spaces cleanly stashes current tabs and restores the target space without losing work.
+* **Multi-Window Support:** Switch spaces inside your current window or launch a dedicated clean window with a single click.
+* **Drag-and-Drop Organization:** Drag tabs from the canvas directly onto any Space or the Unsaved bucket in the sidebar.
+
+### ⚡ Smart Memory Saver
+* **Zero-RAM Cold Restores:** Restoring a space with 50+ tabs loads lightweight dormant placeholders (`suspended.html`) consuming only ~1 MB of RAM each and zero network bandwidth until focused or clicked.
+* **Native Chrome Memory Discarding:** Automatically unloads memory from idle tabs using `chrome.tabs.discard()`, keeping tabs in place with full titles and favicons.
+* **Configurable Auto-Suspend:** Choose inactivity timeouts (15m, 30m, 1h, 2h) or disable auto-suspension.
+* **Domain Whitelisting:** Never suspend critical sites (e.g. YouTube, Google Meet, Slack, GitHub).
+
+### ☁️ Google Drive Cloud Backup & Sync
+* **Direct Cloud Sync:** Bi-directionally sync your spaces, tabs, notes, tasks, and resource bookmarks directly to a dedicated `SpaceTabs_Data` folder in your personal Google Drive.
+* **Zero Middleman Servers:** Direct REST API calls from your browser to Google Drive — your data is never sent to third-party tracking servers.
+* **Tombstone-Aware Merge:** Intelligent conflict resolution keeps track of deleted items so spaces deleted on one machine stay deleted across devices.
+* **Manual & Auto-Sync:** Automated background sync plus one-click **Force Push** (overwrite cloud) and **Force Pull** (restore from cloud).
+* **Local JSON Export/Import:** Instant offline backup and restore of your complete workspace.
+
+### 📋 Space Canvas Tools
+* **Tabs View:** Search, filter, domain grouping, multi-select checkboxes, and bulk move/delete/copy URLs.
+* **Resources Hub:** Organize recurring documentation, links, and assets into categorized sections.
+* **Notes:** Built-in markdown notes scratchpad per space with auto-saving.
+* **Tasks:** Space checklists with completion states and ordering.
+* **Global Search:** Fast fuzzy search across all spaces, open tabs, notes, and resource items.
+
+### 🎨 Themes & Customization
+* **3 Theme Modes:** Split (Dark sidebar + Light canvas), All Dark, or All Light.
+* **Accent Colors:** Crimson Rose, Indigo Blue, Emerald, Violet, Amber, Cyan.
+* **Adjustable Sidebar Width:** Default (260px), Medium (320px), and Wide (380px) for long space titles.
+* **Auto-Pinned Index Dashboard:** Always accessible at Tab 0 or via shortcut `Alt + Shift + W`.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Framework:** [WXT](https://wxt.dev/) (Next-gen Web Extension Framework)
-- **UI:** React 18, TypeScript, Tailwind CSS, Lucide Icons
-- **Database:** Dexie.js (IndexedDB wrapper with live reactive hooks)
-- **State:** Zustand (ephemeral UI state) + Dexie Live Queries
-- **Platform:** Chromium Manifest V3
+* **Framework:** [WXT](https://wxt.dev/) (Vite + Web Extension Tools)
+* **UI:** React 18, TypeScript, Tailwind CSS, Lucide Icons
+* **Local Database:** [Dexie.js](https://dexie.org/) (IndexedDB with live reactive hooks)
+* **Cloud Storage:** Google Drive REST API v3 (OAuth2 via `chrome.identity`)
+* **State Management:** Dexie Live Queries + Zustand (ephemeral UI state)
+* **Drag & Drop:** `@dnd-kit`
 
 ---
 
-## 🚀 Getting Started — Install for Beta Testing
+## 🚀 Installation
 
-### Prerequisites
+### Option 1: Chrome Web Store (Recommended)
+Install the official extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/spacetabs-tab-manager/aiajlcdplbpchfohgekcgafcpghgjojhh).
 
-- [Node.js](https://nodejs.org/) (v18 or newer)
-- npm or pnpm
-
-### 1. Clone & Install
+### Option 2: Install from Source (Developer Mode)
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/abu-dojana/SpaceTabs-TabManager.git
-
-# Go into the project directory
 cd SpaceTabs-TabManager
 
-# Install dependencies
+# 2. Install dependencies
 npm install
-```
 
-<details>
-<summary><b>⚠️ Windows Troubleshooting: Fix <code>PSSecurityException</code> on <code>npm install</code></b></summary>
-
-<br />
-
-If PowerShell blocks `npm install` with the error `File npm.ps1 cannot be loaded because running scripts is disabled on this system`:
-
-#### Method 1: Allow Local Scripts (Recommended)
-Run this command in PowerShell to allow locally installed CLI tools:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-Then run `npm install` again.
-
-#### Method 2: Call `npm.cmd` Directly
-If you don't want to change execution policy, invoke the Windows Command wrapper:
-```powershell
-npm.cmd install
-```
-</details>
-
-### 2. Build the Extension
-
-```bash
-# Compile and build the extension
+# 3. Build the production package
 npm run build
 ```
 
-The compiled extension is output to `.output/chrome-mv3` and mirrored into `dist/`.
-
-### 3. Load into Chrome / Brave / Edge
-
-1. Open your browser and navigate to `chrome://extensions/` (or `brave://extensions/`, `edge://extensions/`).
-2. Toggle on **Developer mode** in the top-right corner.
-3. Click **Load unpacked**.
-4. Select the `dist` folder inside your project directory (e.g. `D:\tab-manager\dist` or wherever you cloned the repo).
-5. **SpaceTabs** is now installed and will automatically pin the dashboard tab at Tab 0!
+1. Open Chrome/Brave/Edge and navigate to `chrome://extensions/`.
+2. Enable **Developer mode** (top-right toggle).
+3. Click **Load unpacked** and select the `dist` folder inside `SpaceTabs-TabManager`.
 
 ---
 
-## ⌨️ Shortcuts
+## ⌨️ Default Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
@@ -104,6 +133,17 @@ The compiled extension is output to `.output/chrome-mv3` and mirrored into `dist
 
 ---
 
+## 💖 Support the Developer
+
+SpaceTabs is free, open-source, and developed independently. If it helps you stay organized and saves your RAM, consider supporting development:
+
+- ☕ **Patreon:** [patreon.com/abudojana](https://patreon.com/abudojana)
+- 🇧🇩 **SupportKori (bKash):** [supportkori.com/abudojana](https://www.supportkori.com/abudojana)
+- ☕ **Ko-fi:** [ko-fi.com/abudojana](https://ko-fi.com/abudojana)
+- ⭐ **GitHub:** Star this repo and follow [@abu-dojana](https://github.com/abu-dojana)
+
+---
+
 ## 📄 License
 
-MIT License. Open-source and free forever.
+Distributed under the [MIT License](LICENSE). Local-first, open-source, and free forever.
