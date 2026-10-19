@@ -540,7 +540,7 @@ export const TabsView: React.FC = () => {
   return (
     <div className="flex-1 overflow-y-auto px-8 py-6 max-w-4xl mx-auto w-full select-none pb-32 relative">
       {/* Tabs Header Block */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 shadow-sm mb-6 relative z-10">
+      <div className="tab-manager-card bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm mb-6 relative z-10">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-2">
           {/* Left: Master Select All Checkbox + Folder Title */}
           <div className="flex items-center gap-2.5">

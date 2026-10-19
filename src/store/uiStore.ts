@@ -9,6 +9,8 @@ interface UIState {
   moveSectionSpaceId: string | null;
   sidebarTheme: 'dark' | 'light';
   dashboardTheme: 'dark' | 'light';
+  isSettingsOpen: boolean;
+  settingsTab: 'general' | 'appearance' | 'suspension' | 'backup' | 'shortcuts' | 'about';
   setActiveSpaceId: (id: string | null) => void;
   setActiveView: (view: 'tabs' | 'resources' | 'notes' | 'tasks') => void;
   setSearchQuery: (query: string) => void;
@@ -19,6 +21,10 @@ interface UIState {
   setMoveSectionSpaceId: (id: string | null) => void;
   setSidebarTheme: (theme: 'dark' | 'light') => void;
   setDashboardTheme: (theme: 'dark' | 'light') => void;
+  setSettingsOpen: (
+    open: boolean,
+    tab?: 'general' | 'appearance' | 'suspension' | 'backup' | 'shortcuts' | 'about'
+  ) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -30,6 +36,8 @@ export const useUIStore = create<UIState>((set) => ({
   moveSectionSpaceId: null,
   sidebarTheme: 'dark',
   dashboardTheme: 'dark',
+  isSettingsOpen: false,
+  settingsTab: 'general',
 
   setActiveSpaceId: (id) =>
     set({ activeSpaceId: id, selectedTabIds: new Set(), searchQuery: '' }),
@@ -50,4 +58,9 @@ export const useUIStore = create<UIState>((set) => ({
   setMoveSectionSpaceId: (id) => set({ moveSectionSpaceId: id }),
   setSidebarTheme: (theme) => set({ sidebarTheme: theme }),
   setDashboardTheme: (theme) => set({ dashboardTheme: theme }),
+  setSettingsOpen: (open, tab) =>
+    set((state) => ({
+      isSettingsOpen: open,
+      settingsTab: tab ?? (open ? state.settingsTab : 'general'),
+    })),
 }));

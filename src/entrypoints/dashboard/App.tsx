@@ -7,6 +7,7 @@ import { NotesView } from '@/components/canvas/NotesView';
 import { TasksView } from '@/components/canvas/TasksView';
 import { CreateSpaceModal } from '@/components/modals/CreateSpaceModal';
 import { MoveToSectionModal } from '@/components/modals/MoveToSectionModal';
+import { SettingsModal } from '@/components/modals/SettingsModal';
 import { useUIStore } from '@/store/uiStore';
 import { getWindowActiveSpaceId } from '@/services/tabManager';
 import { getUserSettings } from '@/services/settings';
@@ -65,6 +66,9 @@ export default function App() {
     dashboardTheme,
     setSidebarTheme,
     setDashboardTheme,
+    isSettingsOpen,
+    settingsTab,
+    setSettingsOpen,
   } = useUIStore();
 
   React.useEffect(() => {
@@ -130,6 +134,11 @@ export default function App() {
         {/* Modals */}
         <CreateSpaceModal />
         <MoveToSectionModal />
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          initialTab={settingsTab}
+        />
       </div>
     </ErrorBoundary>
   );

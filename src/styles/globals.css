@@ -24,12 +24,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.25);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(148, 163, 184, 0.45);
 }
 
 /* =========================================================================
@@ -44,6 +44,7 @@ body {
 
 /* Background surfaces */
 [data-sidebar-theme="light"] .bg-slate-950,
+[data-sidebar-theme="light"] .bg-slate-950\/50,
 [data-sidebar-theme="light"] .bg-slate-950\/60,
 [data-sidebar-theme="light"] .bg-slate-950\/70,
 [data-sidebar-theme="light"] .bg-slate-950\/80 {
@@ -51,8 +52,11 @@ body {
 }
 
 [data-sidebar-theme="light"] .bg-slate-900,
+[data-sidebar-theme="light"] .bg-slate-900\/30,
+[data-sidebar-theme="light"] .bg-slate-900\/40,
 [data-sidebar-theme="light"] .bg-slate-900\/50,
 [data-sidebar-theme="light"] .bg-slate-900\/60,
+[data-sidebar-theme="light"] .bg-slate-900\/70,
 [data-sidebar-theme="light"] .bg-slate-900\/80 {
   background-color: #ffffff !important;
 }
@@ -68,7 +72,7 @@ body {
   border-color: #e2e8f0 !important;
 }
 
-/* Texts */
+/* High contrast text in light sidebar */
 [data-sidebar-theme="light"] .text-slate-100,
 [data-sidebar-theme="light"] .text-slate-200,
 [data-sidebar-theme="light"] .text-white {
@@ -81,11 +85,11 @@ body {
 }
 
 [data-sidebar-theme="light"] .text-slate-500 {
-  color: #64748b !important;
+  color: #475569 !important;
 }
 
 [data-sidebar-theme="light"] .text-slate-600 {
-  color: #94a3b8 !important;
+  color: #64748b !important;
 }
 
 /* Hovers */
@@ -120,10 +124,13 @@ body {
 [data-sidebar-theme="light"] .bg-slate-900\/95,
 [data-sidebar-theme="light"] .bg-slate-900 {
   background-color: #ffffff !important;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
 }
 
 [data-sidebar-theme="light"] input {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
   color: #0f172a !important;
 }
 
@@ -136,47 +143,63 @@ body {
   color: #0f172a !important;
 }
 
-/* Canvas background surfaces */
+/* Canvas background surfaces - all forced to crisp pure white or soft slate */
 [data-dashboard-theme="light"] .bg-slate-950,
 [data-dashboard-theme="light"] .bg-slate-950\/30,
 [data-dashboard-theme="light"] .bg-slate-950\/40,
+[data-dashboard-theme="light"] .bg-slate-950\/50,
 [data-dashboard-theme="light"] .bg-slate-950\/60,
 [data-dashboard-theme="light"] .bg-slate-950\/70,
+[data-dashboard-theme="light"] .bg-slate-950\/80,
 [data-dashboard-theme="light"] .bg-slate-900\/30,
 [data-dashboard-theme="light"] .bg-slate-900\/40,
-[data-dashboard-theme="light"] .bg-slate-900\/50 {
-  background-color: #f8fafc !important;
-}
-
-/* Card, header & panel backgrounds */
-[data-dashboard-theme="light"] header,
-[data-dashboard-theme="light"] .bg-slate-900,
+[data-dashboard-theme="light"] .bg-slate-900\/50,
+[data-dashboard-theme="light"] .bg-slate-900\/60,
+[data-dashboard-theme="light"] .bg-slate-900\/70,
 [data-dashboard-theme="light"] .bg-slate-900\/80,
-[data-dashboard-theme="light"] .bg-slate-900\/90 {
+[data-dashboard-theme="light"] .bg-slate-900\/90,
+[data-dashboard-theme="light"] .bg-slate-900 {
   background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
 }
 
-/* Secondary surface elements (inputs, search bar, chips) */
-[data-dashboard-theme="light"] .bg-slate-800,
-[data-dashboard-theme="light"] .bg-slate-800\/60,
-[data-dashboard-theme="light"] .bg-slate-800\/80 {
-  background-color: #f1f5f9 !important;
+/* Header bar */
+[data-dashboard-theme="light"] header {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
 }
 
-/* Borders */
+/* Tab Cards & Workspace Panels (Fixes muddy gray box in TabsView) */
+[data-dashboard-theme="light"] .tab-manager-card,
+[data-dashboard-theme="light"] .group.bg-slate-900,
+[data-dashboard-theme="light"] .p-3.bg-slate-900,
+[data-dashboard-theme="light"] .p-4.bg-slate-900,
+[data-dashboard-theme="light"] .rounded-xl.border,
+[data-dashboard-theme="light"] .rounded-2xl.border {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Dividers & Borders */
 [data-dashboard-theme="light"] .border-slate-800,
 [data-dashboard-theme="light"] .border-slate-800\/40,
 [data-dashboard-theme="light"] .border-slate-800\/60,
 [data-dashboard-theme="light"] .border-slate-800\/80,
 [data-dashboard-theme="light"] .border-slate-700,
+[data-dashboard-theme="light"] .border-slate-700\/40,
 [data-dashboard-theme="light"] .border-slate-700\/60,
-[data-dashboard-theme="light"] .border-slate-700\/80 {
+[data-dashboard-theme="light"] .border-slate-700\/80,
+[data-dashboard-theme="light"] .divide-slate-800,
+[data-dashboard-theme="light"] .divide-slate-800\/40,
+[data-dashboard-theme="light"] .divide-slate-800\/60 {
   border-color: #e2e8f0 !important;
 }
 
-/* Text colors */
+/* High-contrast text colors */
 [data-dashboard-theme="light"] .text-slate-100,
-[data-dashboard-theme="light"] .text-slate-200 {
+[data-dashboard-theme="light"] .text-slate-200,
+[data-dashboard-theme="light"] .text-white {
   color: #0f172a !important;
 }
 
@@ -186,19 +209,20 @@ body {
 }
 
 [data-dashboard-theme="light"] .text-slate-500 {
-  color: #64748b !important;
+  color: #475569 !important;
 }
 
 [data-dashboard-theme="light"] .text-slate-600 {
-  color: #94a3b8 !important;
+  color: #64748b !important;
 }
 
-/* Hover effects */
+/* Hover effects (Clean soft light hover, NOT dark gray) */
 [data-dashboard-theme="light"] .hover\:bg-slate-900\/60:hover,
 [data-dashboard-theme="light"] .hover\:bg-slate-800:hover,
+[data-dashboard-theme="light"] .hover\:bg-slate-800\/50:hover,
 [data-dashboard-theme="light"] .hover\:bg-slate-800\/60:hover,
 [data-dashboard-theme="light"] .hover\:bg-slate-700:hover {
-  background-color: #e2e8f0 !important;
+  background-color: #f1f5f9 !important;
 }
 
 [data-dashboard-theme="light"] .hover\:text-white:hover,
@@ -207,17 +231,25 @@ body {
   color: #0f172a !important;
 }
 
-/* Tab Cards & Resource items */
-[data-dashboard-theme="light"] .group.bg-slate-900,
-[data-dashboard-theme="light"] .p-3.bg-slate-900,
-[data-dashboard-theme="light"] .p-4.bg-slate-900 {
-  background-color: #ffffff !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05) !important;
+/* Selected row / item */
+[data-dashboard-theme="light"] .bg-blue-600\/10 {
+  background-color: #eff6ff !important;
+}
+
+/* Secondary surface elements (inputs, search bar, chips) */
+[data-dashboard-theme="light"] .bg-slate-800,
+[data-dashboard-theme="light"] .bg-slate-800\/60,
+[data-dashboard-theme="light"] .bg-slate-800\/80 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
 }
 
 /* Inputs & Search */
 [data-dashboard-theme="light"] input,
 [data-dashboard-theme="light"] textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
   color: #0f172a !important;
 }
 
@@ -226,19 +258,29 @@ body {
   color: #94a3b8 !important;
 }
 
+/* Checkboxes */
+[data-dashboard-theme="light"] input[type="checkbox"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
 /* Codeblocks & Notes Preview */
 [data-dashboard-theme="light"] pre {
-  background-color: #f1f5f9 !important;
-  color: #1e293b !important;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
   border-color: #cbd5e1 !important;
 }
 
 [data-dashboard-theme="light"] code {
   color: #2563eb !important;
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
 }
 
-/* Modals inside light dashboard */
-[data-dashboard-theme="light"] .bg-slate-900.border-slate-800 {
+/* Dropdown popovers in light dashboard */
+[data-dashboard-theme="light"] .shadow-2xl.bg-slate-900,
+[data-dashboard-theme="light"] .z-50.bg-slate-900 {
   background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
 }

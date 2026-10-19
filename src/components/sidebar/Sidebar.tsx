@@ -39,7 +39,6 @@ import {
   Sparkles,
   Palette,
 } from 'lucide-react';
-import { SettingsModal } from '@/components/modals/SettingsModal';
 import {
   exportAllSpacesBackup,
   importSpacesBackup,
@@ -53,6 +52,7 @@ export const Sidebar: React.FC = () => {
     setCreateSpaceOpen,
     clearSelectedTabs,
     setMoveSectionSpaceId,
+    setSettingsOpen,
   } = useUIStore();
 
   const [dragOverSpaceId, setDragOverSpaceId] = React.useState<string | null>(null);
@@ -81,12 +81,8 @@ export const Sidebar: React.FC = () => {
   const [descriptionModalSpace, setDescriptionModalSpace] = React.useState<Space | null>(null);
   const [deleteConfirmSpace, setDeleteConfirmSpace] = React.useState<Space | null>(null);
 
-  // Settings Menu & Modal State
+  // Settings Menu Popover State
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = React.useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = React.useState(false);
-  const [settingsModalTab, setSettingsModalTab] = React.useState<
-    'general' | 'appearance' | 'suspension' | 'backup' | 'shortcuts' | 'about'
-  >('general');
   const [settingsToast, setSettingsToast] = React.useState<string | null>(null);
   const settingsMenuRef = React.useRef<HTMLDivElement>(null);
   const importFileInputRef = React.useRef<HTMLInputElement>(null);
@@ -1118,8 +1114,7 @@ export const Sidebar: React.FC = () => {
               <button
                 onClick={() => {
                   setIsSettingsMenuOpen(false);
-                  setSettingsModalTab('appearance');
-                  setIsSettingsModalOpen(true);
+                  setSettingsOpen(true, 'appearance');
                 }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
               >
@@ -1134,8 +1129,7 @@ export const Sidebar: React.FC = () => {
               <button
                 onClick={() => {
                   setIsSettingsMenuOpen(false);
-                  setSettingsModalTab('general');
-                  setIsSettingsModalOpen(true);
+                  setSettingsOpen(true, 'general');
                 }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
               >
@@ -1150,8 +1144,7 @@ export const Sidebar: React.FC = () => {
               <button
                 onClick={() => {
                   setIsSettingsMenuOpen(false);
-                  setSettingsModalTab('suspension');
-                  setIsSettingsModalOpen(true);
+                  setSettingsOpen(true, 'suspension');
                 }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
               >
@@ -1201,8 +1194,7 @@ export const Sidebar: React.FC = () => {
               <button
                 onClick={() => {
                   setIsSettingsMenuOpen(false);
-                  setSettingsModalTab('shortcuts');
-                  setIsSettingsModalOpen(true);
+                  setSettingsOpen(true, 'shortcuts');
                 }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-slate-800 text-slate-300 hover:text-white transition text-left"
               >
@@ -1238,8 +1230,7 @@ export const Sidebar: React.FC = () => {
             <button
               onClick={() => {
                 setIsSettingsMenuOpen(false);
-                setSettingsModalTab('about');
-                setIsSettingsModalOpen(true);
+                setSettingsOpen(true, 'about');
               }}
               className="w-full pt-1.5 mt-1 border-t border-slate-800/80 px-2.5 py-1.5 flex items-center justify-between text-[11px] text-slate-400 hover:bg-slate-800/50 rounded-lg transition"
             >
@@ -1424,13 +1415,6 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Settings & Preferences Modal */}
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        initialTab={settingsModalTab}
-      />
 
       {/* Settings Quick Action Toast */}
       {settingsToast && (
