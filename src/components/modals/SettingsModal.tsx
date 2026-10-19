@@ -62,6 +62,11 @@ import {
   ArrowDownCircle,
   ChevronDown,
   Heart,
+  Github,
+  Youtube,
+  Linkedin,
+  Mail,
+  MessageCircle,
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -1964,6 +1969,141 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Native Chromium Memory Saver:</strong> Background tabs are safely suspended using Chrome's native discard engine to save up to 80% RAM.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Full Workspace Productivity:</strong> Integrated Tabs, Resources, Notes, and Tasks for each space.</li>
                   </ul>
+                </div>
+
+                {/* Developer Credits & Contact Card */}
+                <div
+                  className={`p-5 rounded-2xl border ${
+                    isLight
+                      ? 'bg-slate-50 border-slate-200 shadow-sm'
+                      : 'bg-slate-950/70 border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0">
+                        AD
+                      </div>
+                      <div>
+                        <h4 className={`text-sm font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          <span>Abu Dojana Tahmid</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                            Creator & Developer
+                          </span>
+                        </h4>
+                        <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                          Full-stack software developer & open-source builder
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                    {/* GitHub */}
+                    <a
+                      href="https://github.com/abu-dojana"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                        isLight
+                          ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
+                          : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Github className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                        <span>GitHub</span>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </a>
+
+                    {/* LinkedIn */}
+                    <a
+                      href="https://www.linkedin.com/in/abu-dojana/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                        isLight
+                          ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
+                          : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Linkedin className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                        <span>LinkedIn</span>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </a>
+
+                    {/* YouTube */}
+                    <a
+                      href="https://www.youtube.com/@abuDojanaTahmid"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                        isLight
+                          ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
+                          : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Youtube className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform" />
+                        <span>YouTube</span>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </a>
+
+                    {/* WhatsApp */}
+                    <a
+                      href="https://wa.me/8801521566157"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                        isLight
+                          ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
+                          : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                      title="+880 1521-566157"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                        <span>WhatsApp (+880 1521-566157)</span>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </a>
+
+                    {/* Primary Email */}
+                    <a
+                      href="mailto:abudojana2001@gmail.com"
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                        isLight
+                          ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
+                          : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Mail className="w-4 h-4 text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                        <span className="truncate">abudojana2001@gmail.com</span>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1" />
+                    </a>
+
+                    {/* Secondary Email */}
+                    <a
+                      href="mailto:abudojanatahmid@gmail.com"
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition group ${
+                        isLight
+                          ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
+                          : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Mail className="w-4 h-4 text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                        <span className="truncate">abudojanatahmid@gmail.com</span>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1" />
+                    </a>
+                  </div>
                 </div>
               </div>
             )}
