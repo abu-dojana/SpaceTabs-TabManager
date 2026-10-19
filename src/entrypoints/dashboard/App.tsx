@@ -90,12 +90,14 @@ export default function App() {
     darkPalette,
     lightPalette,
     sidebarWidth,
+    patreonUrl,
     setSidebarTheme,
     setDashboardTheme,
     setAccentColor,
     setDarkPalette,
     setLightPalette,
     setSidebarWidth,
+    setPatreonUrl,
     isSettingsOpen,
     settingsTab,
     setSettingsOpen,
@@ -109,6 +111,7 @@ export default function App() {
       if (settings.darkPalette) setDarkPalette(settings.darkPalette);
       if (settings.lightPalette) setLightPalette(settings.lightPalette);
       if (settings.sidebarWidth) setSidebarWidth(settings.sidebarWidth);
+      if (settings.patreonUrl) setPatreonUrl(settings.patreonUrl);
     });
 
     async function syncActiveSpaceFromWindow() {

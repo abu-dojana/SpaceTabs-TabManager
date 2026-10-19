@@ -41,6 +41,7 @@ import {
   Cloud,
   RefreshCw,
   User,
+  Heart,
 } from 'lucide-react';
 import {
   exportAllSpacesBackup,
@@ -62,6 +63,7 @@ export const Sidebar: React.FC = () => {
     setMoveSectionSpaceId,
     setSettingsOpen,
     sidebarWidth,
+    patreonUrl,
   } = useUIStore();
 
   const [dragOverSpaceId, setDragOverSpaceId] = React.useState<string | null>(null);
@@ -1176,8 +1178,24 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Settings Footer Trigger (Directly opens Settings Modal) */}
-      <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 flex-shrink-0">
+      {/* Settings & Support Footer Trigger */}
+      <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 flex-shrink-0 space-y-1">
+        {/* Support on Patreon Button */}
+        <a
+          href={patreonUrl || 'https://www.patreon.com'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition group border border-transparent text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 cursor-pointer"
+          title="Support SpaceTabs independent development on Patreon"
+        >
+          <div className="flex items-center gap-2.5">
+            <Heart className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform fill-rose-500/20 group-hover:fill-rose-500" />
+            <span className="font-semibold text-slate-300 group-hover:text-rose-300">Support on Patreon</span>
+          </div>
+          <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-rose-400 opacity-60 group-hover:opacity-100 transition-opacity" />
+        </a>
+
+        {/* Settings Button */}
         <button
           onClick={() => setSettingsOpen(true)}
           className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition group border border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 hover:border-slate-800/80 cursor-pointer"

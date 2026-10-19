@@ -13,6 +13,7 @@ interface UIState {
   darkPalette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso';
   lightPalette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint';
   sidebarWidth: number;
+  patreonUrl: string;
   isSettingsOpen: boolean;
   settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about';
   setActiveSpaceId: (id: string | null) => void;
@@ -29,6 +30,7 @@ interface UIState {
   setDarkPalette: (palette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso') => void;
   setLightPalette: (palette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint') => void;
   setSidebarWidth: (width: number) => void;
+  setPatreonUrl: (url: string) => void;
   setSettingsOpen: (
     open: boolean,
     tab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about'
@@ -48,8 +50,10 @@ export const useUIStore = create<UIState>((set) => ({
   darkPalette: 'slate',
   lightPalette: 'snow',
   sidebarWidth: 260,
+  patreonUrl: 'https://www.patreon.com',
   isSettingsOpen: false,
   settingsTab: 'general',
+  setPatreonUrl: (url) => set({ patreonUrl: url }),
 
   setActiveSpaceId: (id) =>
     set({ activeSpaceId: id, selectedTabIds: new Set(), searchQuery: '' }),

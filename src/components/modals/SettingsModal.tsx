@@ -61,6 +61,7 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   ChevronDown,
+  Heart,
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -85,15 +86,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     darkPalette,
     lightPalette,
     sidebarWidth,
+    patreonUrl,
     setSidebarTheme,
     setDashboardTheme,
     setAccentColor,
     setDarkPalette,
     setLightPalette,
     setSidebarWidth,
+    setPatreonUrl,
   } = useUIStore();
 
   const [settings, setSettings] = React.useState<UserSettings>(DEFAULT_SETTINGS);
+  const [patreonInput, setPatreonInput] = React.useState('');
   const [toastMessage, setToastMessage] = React.useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isSuspending, setIsSuspending] = React.useState(false);
   const [isPurging, setIsPurging] = React.useState(false);
@@ -124,6 +128,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         if (loaded.darkPalette) setDarkPalette(loaded.darkPalette);
         if (loaded.lightPalette) setLightPalette(loaded.lightPalette);
         if (loaded.sidebarWidth) setSidebarWidth(loaded.sidebarWidth);
+        if (loaded.patreonUrl) {
+          setPatreonUrl(loaded.patreonUrl);
+          setPatreonInput(loaded.patreonUrl);
+        } else {
+          setPatreonInput('https://www.patreon.com');
+        }
       });
 
       getDriveSyncInfo().then((info) => {
@@ -225,6 +235,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const updated = await updateUserSettings({ sidebarTheme: sb, dashboardTheme: dbTheme });
     setSettings(updated);
     showToast(`Theme preset applied!`);
+  };
+
+  const handleSavePatreonUrl = async () => {
+    const trimmed = patreonInput.trim() || 'https://www.patreon.com';
+    setPatreonUrl(trimmed);
+    const updated = await updateUserSettings({ patreonUrl: trimmed });
+    setSettings(updated);
+    showToast('Patreon link updated');
   };
 
   const handleInstantSuspend = async () => {
@@ -1949,6 +1967,73 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Native Chromium Memory Saver:</strong> Background tabs are safely suspended using Chrome's native discard engine to save up to 80% RAM.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Full Workspace Productivity:</strong> Integrated Tabs, Resources, Notes, and Tasks for each space.</li>
                   </ul>
+                </div>
+
+                {/* Support & Donations Card */}
+                <div
+                  className={`p-5 rounded-2xl border ${
+                    isLight
+                      ? 'bg-rose-50/70 border-rose-200 shadow-sm'
+                      : 'bg-rose-950/20 border-rose-900/60'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/20 flex-shrink-0">
+                        <Heart className="w-5 h-5 fill-white" />
+                      </div>
+                      <div>
+                        <h4 className={`text-sm font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          <span>Support SpaceTabs on Patreon</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-500/15 text-rose-500 border border-rose-500/20">
+                            Creator Support
+                          </span>
+                        </h4>
+                        <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                          SpaceTabs is 100% free with no paid subscriptions, artificial limits, or data selling.
+                          If SpaceTabs saves you time and tabs, consider supporting independent development on Patreon!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-rose-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <a
+                      href={settings.patreonUrl || patreonUrl || 'https://www.patreon.com'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white shadow-lg shadow-rose-600/25 transition cursor-pointer"
+                    >
+                      <Heart className="w-4 h-4 fill-white" />
+                      <span>Become a Patron on Patreon</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+
+                    <div className="flex items-center gap-1.5 flex-1 max-w-sm">
+                      <input
+                        type="url"
+                        value={patreonInput}
+                        onChange={(e) => setPatreonInput(e.target.value)}
+                        placeholder="https://www.patreon.com/yourname"
+                        className={`text-xs px-3 py-1.5 rounded-lg border flex-1 min-w-0 transition focus:outline-none focus:ring-1 focus:ring-rose-500 ${
+                          isLight
+                            ? 'bg-white border-slate-300 text-slate-800 placeholder-slate-400'
+                            : 'bg-slate-900 border-slate-700 text-slate-200 placeholder-slate-500'
+                        }`}
+                      />
+                      <button
+                        onClick={handleSavePatreonUrl}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                          isLight
+                            ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                        }`}
+                        title="Save your custom Patreon page URL"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

@@ -26,6 +26,7 @@ export interface UserSettings {
   darkPalette: DarkPalette;
   lightPalette: LightPalette;
   sidebarWidth: number;
+  patreonUrl: string;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   darkPalette: 'slate',
   lightPalette: 'snow',
   sidebarWidth: 260,
+  patreonUrl: 'https://www.patreon.com',
 };
 
 const SETTINGS_STORAGE_KEY = 'spacetabs_user_settings';
