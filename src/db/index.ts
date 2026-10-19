@@ -26,6 +26,10 @@ export class TabManagerDB extends Dexie {
       notes: 'id, spaceId, updatedAt',
       tasks: 'id, spaceId, order, updatedAt',
     });
+
+    this.version(2).stores({
+      resourceItems: 'id, sectionId, order, updatedAt',
+    });
   }
 }
 

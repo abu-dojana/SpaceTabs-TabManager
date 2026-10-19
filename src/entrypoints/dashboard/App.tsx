@@ -2,6 +2,7 @@ import React from 'react';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { Header } from '@/components/header/Header';
 import { TabsView } from '@/components/canvas/TabsView';
+import { ResourcesView } from '@/components/canvas/ResourcesView';
 import { CreateSpaceModal } from '@/components/modals/CreateSpaceModal';
 import { MoveToSectionModal } from '@/components/modals/MoveToSectionModal';
 import { useUIStore } from '@/store/uiStore';
@@ -94,18 +95,7 @@ export default function App() {
           <div className="flex-1 overflow-y-auto">
             {activeView === 'tabs' && <TabsView />}
 
-            {activeView === 'resources' && (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                <Bookmark className="w-10 h-10 text-slate-600 mb-3" />
-                <h3 className="text-base font-semibold text-slate-300">
-                  Saved Resources
-                </h3>
-                <p className="text-xs text-slate-500 max-w-sm mt-1">
-                  Pin permanent links, Google Docs, and project assets to this
-                  space.
-                </p>
-              </div>
-            )}
+            {activeView === 'resources' && <ResourcesView />}
 
             {activeView === 'notes' && (
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">

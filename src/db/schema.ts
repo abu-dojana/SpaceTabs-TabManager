@@ -47,6 +47,7 @@ export interface ResourceItem {
   url: string;
   favIconUrl?: string;
   type: 'link' | 'doc' | 'sheet' | 'custom';
+  order: number;
   createdAt: number;
   updatedAt: number;
 }

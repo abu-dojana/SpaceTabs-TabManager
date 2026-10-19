@@ -385,6 +385,7 @@ export const Sidebar: React.FC = () => {
           url: item.url,
           favIconUrl: item.favIconUrl,
           type: item.type,
+          order: item.order ?? 0,
           createdAt: now,
           updatedAt: now,
         });
