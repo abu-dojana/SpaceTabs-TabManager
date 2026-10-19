@@ -8,7 +8,7 @@
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build",
-    "postbuild": "node -e \"const fs=require('fs'); fs.cpSync('.output/chrome-mv3', 'dist', {recursive: true});\"",
+    "postbuild": "node -e \"const fs=require('fs'); fs.rmSync('dist', {recursive: true, force: true}); fs.cpSync('.output/chrome-mv3', 'dist', {recursive: true});\"",
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
