@@ -89,11 +89,13 @@ export default function App() {
     accentColor,
     darkPalette,
     lightPalette,
+    sidebarWidth,
     setSidebarTheme,
     setDashboardTheme,
     setAccentColor,
     setDarkPalette,
     setLightPalette,
+    setSidebarWidth,
     isSettingsOpen,
     settingsTab,
     setSettingsOpen,
@@ -106,6 +108,7 @@ export default function App() {
       if (settings.accentColor) setAccentColor(settings.accentColor);
       if (settings.darkPalette) setDarkPalette(settings.darkPalette);
       if (settings.lightPalette) setLightPalette(settings.lightPalette);
+      if (settings.sidebarWidth) setSidebarWidth(settings.sidebarWidth);
     });
 
     async function syncActiveSpaceFromWindow() {
@@ -137,6 +140,7 @@ export default function App() {
     setAccentColor,
     setDarkPalette,
     setLightPalette,
+    setSidebarWidth,
   ]);
 
   const dynamicStyles = React.useMemo(() => {

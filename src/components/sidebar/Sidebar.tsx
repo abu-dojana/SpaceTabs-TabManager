@@ -61,6 +61,7 @@ export const Sidebar: React.FC = () => {
     clearSelectedTabs,
     setMoveSectionSpaceId,
     setSettingsOpen,
+    sidebarWidth,
   } = useUIStore();
 
   const [dragOverSpaceId, setDragOverSpaceId] = React.useState<string | null>(null);
@@ -787,7 +788,10 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-screen select-none relative">
+    <aside
+      style={{ width: `${sidebarWidth || 260}px` }}
+      className="bg-slate-950 border-r border-slate-800 flex flex-col h-screen select-none relative flex-shrink-0 transition-[width] duration-150 ease-out"
+    >
       {/* Brand & User Profile */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-2.5">

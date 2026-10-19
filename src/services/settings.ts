@@ -25,6 +25,7 @@ export interface UserSettings {
   accentColor: string;
   darkPalette: DarkPalette;
   lightPalette: LightPalette;
+  sidebarWidth: number;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -38,6 +39,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   accentColor: '#2563eb',
   darkPalette: 'slate',
   lightPalette: 'snow',
+  sidebarWidth: 260,
 };
 
 const SETTINGS_STORAGE_KEY = 'spacetabs_user_settings';

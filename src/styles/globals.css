@@ -137,7 +137,7 @@ body {
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
 }
 
-[data-sidebar-theme="light"] input:not([type="checkbox"]):not([type="radio"]) {
+[data-sidebar-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
   background-color: #ffffff !important;
   border-color: #cbd5e1 !important;
   color: #0f172a !important;
@@ -261,7 +261,7 @@ body {
 }
 
 /* Inputs & Search */
-[data-dashboard-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+[data-dashboard-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 [data-dashboard-theme="light"] textarea {
   background-color: #ffffff !important;
   border-color: #cbd5e1 !important;
@@ -271,6 +271,52 @@ body {
 [data-dashboard-theme="light"] input::placeholder,
 [data-dashboard-theme="light"] textarea::placeholder {
   color: #94a3b8 !important;
+}
+
+/* Range Slider Styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #334155 !important;
+  border: none !important;
+  outline: none;
+  padding: 0 !important;
+  cursor: pointer;
+}
+
+[data-dashboard-theme="light"] input[type="range"] {
+  background-color: #cbd5e1 !important;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background-color: var(--accent-color, #2563eb) !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background-color: var(--accent-color, #2563eb) !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
 }
 
 /* =========================================================================

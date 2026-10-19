@@ -48,6 +48,7 @@ import {
   Moon,
   Layout,
   Columns,
+  PanelLeft,
   Pipette,
   Cloud,
   RefreshCw,
@@ -83,11 +84,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     accentColor,
     darkPalette,
     lightPalette,
+    sidebarWidth,
     setSidebarTheme,
     setDashboardTheme,
     setAccentColor,
     setDarkPalette,
     setLightPalette,
+    setSidebarWidth,
   } = useUIStore();
 
   const [settings, setSettings] = React.useState<UserSettings>(DEFAULT_SETTINGS);
@@ -120,6 +123,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         if (loaded.accentColor) setAccentColor(loaded.accentColor);
         if (loaded.darkPalette) setDarkPalette(loaded.darkPalette);
         if (loaded.lightPalette) setLightPalette(loaded.lightPalette);
+        if (loaded.sidebarWidth) setSidebarWidth(loaded.sidebarWidth);
       });
 
       getDriveSyncInfo().then((info) => {
@@ -179,6 +183,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const updated = await updateUserSettings({ sidebarTheme: theme });
     setSettings(updated);
     showToast(`Sidebar set to ${theme} mode`);
+  };
+
+  const handleSidebarWidthChange = async (width: number) => {
+    setSidebarWidth(width);
+    const updated = await updateUserSettings({ sidebarWidth: width });
+    setSettings(updated);
   };
 
   const handleDashboardThemeChange = async (theme: 'dark' | 'light') => {
@@ -779,6 +789,90 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             </span>
                           )}
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Sidebar Width Slider */}
+                  <div className={`mb-7 p-4 rounded-xl border ${isLight
+                    ? 'bg-slate-50 border-slate-200 shadow-sm'
+                    : 'bg-slate-950 border-slate-750'
+                    }`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <PanelLeft className="w-4 h-4 text-blue-500" />
+                        <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                          Sidebar Width
+                        </h4>
+                      </div>
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                        sidebarWidth >= 340
+                          ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                          : sidebarWidth <= 270
+                            ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                            : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        }`}>
+                        {sidebarWidth <= 270 ? 'Default' : sidebarWidth >= 340 ? 'Wide' : 'Expanded'} ({sidebarWidth || 260}px)
+                      </span>
+                    </div>
+
+                    <p className={`text-xs mb-4 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                      Slide the width of the sidebar from default to wide so longer space titles and labels are completely visible.
+                    </p>
+
+                    <div className="space-y-3">
+                      <input
+                        type="range"
+                        min={240}
+                        max={400}
+                        step={4}
+                        value={sidebarWidth || 260}
+                        onChange={(e) => handleSidebarWidthChange(Number(e.target.value))}
+                        className="w-full h-2 rounded-lg cursor-pointer"
+                      />
+
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleSidebarWidthChange(260)}
+                          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold border transition cursor-pointer text-center ${
+                            sidebarWidth <= 270
+                              ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                              : isLight
+                                ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                            }`}
+                        >
+                          Default (260px)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSidebarWidthChange(320)}
+                          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold border transition cursor-pointer text-center ${
+                            sidebarWidth > 270 && sidebarWidth < 340
+                              ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                              : isLight
+                                ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                            }`}
+                        >
+                          Medium (320px)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSidebarWidthChange(380)}
+                          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold border transition cursor-pointer text-center ${
+                            sidebarWidth >= 340
+                              ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                              : isLight
+                                ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                            }`}
+                        >
+                          Wide (380px)
+                        </button>
                       </div>
                     </div>
                   </div>

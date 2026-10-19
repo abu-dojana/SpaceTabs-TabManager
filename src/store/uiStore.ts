@@ -12,6 +12,7 @@ interface UIState {
   accentColor: string;
   darkPalette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso';
   lightPalette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint';
+  sidebarWidth: number;
   isSettingsOpen: boolean;
   settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about';
   setActiveSpaceId: (id: string | null) => void;
@@ -27,6 +28,7 @@ interface UIState {
   setAccentColor: (color: string) => void;
   setDarkPalette: (palette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso') => void;
   setLightPalette: (palette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint') => void;
+  setSidebarWidth: (width: number) => void;
   setSettingsOpen: (
     open: boolean,
     tab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about'
@@ -45,6 +47,7 @@ export const useUIStore = create<UIState>((set) => ({
   accentColor: '#2563eb',
   darkPalette: 'slate',
   lightPalette: 'snow',
+  sidebarWidth: 260,
   isSettingsOpen: false,
   settingsTab: 'general',
 
@@ -70,6 +73,7 @@ export const useUIStore = create<UIState>((set) => ({
   setAccentColor: (color) => set({ accentColor: color }),
   setDarkPalette: (palette) => set({ darkPalette: palette }),
   setLightPalette: (palette) => set({ lightPalette: palette }),
+  setSidebarWidth: (width) => set({ sidebarWidth: width }),
   setSettingsOpen: (open, tab) =>
     set((state) => ({
       isSettingsOpen: open,
