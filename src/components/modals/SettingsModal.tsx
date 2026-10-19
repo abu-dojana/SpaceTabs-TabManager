@@ -1326,7 +1326,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             Connect Your Personal Google Drive
                           </h4>
                           <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                            Keep your spaces, saved tabs, notes, tasks, and bookmarks synchronized across all your computers. Everything is stored directly in your private Google Drive under <span className="font-mono text-blue-400 font-semibold">SpaceTabs_Data</span> with zero intermediate servers.
+                            Keep your spaces, saved tabs, notes, tasks, and bookmarks synchronized across all your computers. Everything is stored directly in your private Google Drive under <span className="font-mono text-blue-400 font-semibold">SpaceTabs</span> with zero intermediate servers.
                           </p>
                         </div>
                       </div>
@@ -1405,7 +1405,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </div>
                           <div>
                             <div className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                              SpaceTabs_Data
+                              SpaceTabs
                             </div>
                             <div className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                               Google Drive Folder
