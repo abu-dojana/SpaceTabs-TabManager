@@ -437,9 +437,9 @@ export async function signInDemoAccount(
   await setGoogleProfile(profile);
   await updateCloudSyncSettings({ enabled: true });
   await updateSyncMeta({
-    folderId: 'mock_folder_spacetabs',
+    folderId: 'mock_folder_spacetabs_data',
     fileId: 'mock_file_data_json',
-    folderUrl: 'https://drive.google.com/drive/folders/SpaceTabs',
+    folderUrl: 'https://drive.google.com/drive/folders/SpaceTabs_Data',
     lastSyncTime: Date.now(),
     lastError: null,
   });
@@ -452,7 +452,7 @@ export async function signInDemoAccount(
 // GOOGLE DRIVE REST API v3 ENGINE
 // ==========================================
 
-const DRIVE_FOLDER_NAME = 'SpaceTabs';
+const DRIVE_FOLDER_NAME = 'SpaceTabs_Data';
 const DATA_FILE_NAME = 'data.json';
 
 /**
@@ -893,9 +893,9 @@ export async function syncNow(): Promise<{
       await updateSyncMeta({
         lastSyncTime: now,
         lastError: null,
-        folderId: 'mock_folder_spacetabs',
+        folderId: 'mock_folder_spacetabs_data',
         fileId: 'mock_file_data_json',
-        folderUrl: 'https://drive.google.com/drive/folders/SpaceTabs',
+        folderUrl: 'https://drive.google.com/drive/folders/SpaceTabs_Data',
       });
 
       setSyncStatus('synced');
