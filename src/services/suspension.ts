@@ -209,9 +209,19 @@ export async function discardAllInactiveTabsInWindow(windowId: number) {
  * Registers the alarm listener synchronously for Service Worker lifecycle resilience
  */
 export function initSuspensionListener() {
-  chrome.alarms.onAlarm.addListener((alarm) => {
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === SUSPENSION_ALARM_NAME) {
-      discardInactiveTabs();
+      try {
+        const data = await chrome.storage.local.get('spacetabs_user_settings');
+        const settings = data?.spacetabs_user_settings;
+        if (settings && settings.autoSuspendEnabled === false) {
+          return;
+        }
+        const threshold = settings?.idleThresholdMinutes || DEFAULT_IDLE_MINUTES;
+        await discardInactiveTabs(threshold);
+      } catch {
+        await discardInactiveTabs(DEFAULT_IDLE_MINUTES);
+      }
     }
   });
 }
