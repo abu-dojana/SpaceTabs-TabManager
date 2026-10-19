@@ -107,8 +107,11 @@ export default defineBackground(() => {
 
   chrome.windows.onRemoved.addListener(async (windowId) => {
     try {
-      await chrome.storage.session.remove(`window_${windowId}_space`);
-      await chrome.storage.session.remove(`transition_lock_${windowId}`);
+      const sessionStore = chrome?.storage?.session || chrome?.storage?.local;
+      if (sessionStore) {
+        await sessionStore.remove(`window_${windowId}_space`);
+        await sessionStore.remove(`transition_lock_${windowId}`);
+      }
     } catch {
       // Ignored
     }
