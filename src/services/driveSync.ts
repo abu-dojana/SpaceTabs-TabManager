@@ -359,29 +359,41 @@ export async function signInWithGoogle(
     setSyncStatus('syncing');
     const token = await getAuthToken(interactive);
 
-    // Fetch user info from Google endpoint
-    const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Google profile fetch failed: HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-    const profile: GoogleUserProfile = {
-      id: data.id || 'google_user',
-      email: data.email || 'user@gmail.com',
-      name: data.name || data.email?.split('@')[0] || 'Google User',
-      picture: data.picture,
+    let profile: GoogleUserProfile = {
+      id: 'google_user',
+      email: 'Google Account',
+      name: 'Google User',
       connectedAt: Date.now(),
       isDemoAccount: false,
     };
+
+    try {
+      const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        profile = {
+          id: data.id || profile.id,
+          email: data.email || profile.email,
+          name: data.name || data.email?.split('@')[0] || profile.name,
+          picture: data.picture,
+          connectedAt: Date.now(),
+          isDemoAccount: false,
+        };
+      }
+    } catch (e) {
+      console.warn('Could not fetch userinfo, using fallback profile info:', e);
+    }
 
     await setGoogleProfile(profile);
     await updateCloudSyncSettings({ enabled: true });
     await chrome.storage.local.set({ [STORAGE_KEY_TOKEN]: token });
     setSyncStatus('synced');
+
+    // Trigger initial sync to create SpaceTabs_Data folder immediately
+    syncNow().catch((e) => console.warn('Initial Drive sync error:', e));
+
     return { success: true, profile };
   } catch (err: any) {
     const errorMsg = err?.message || 'Google sign-in failed';

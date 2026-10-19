@@ -34,7 +34,11 @@ export default defineConfig({
     },
     oauth2: {
       client_id: '1056488214786-i4nge015dsephtlh0604q88be8s9tc6i.apps.googleusercontent.com',
-      scopes: ['https://www.googleapis.com/auth/drive.file'],
+      scopes: [
+        'https://www.googleapis.com/auth/drive.file',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+      ],
     },
   },
 });
