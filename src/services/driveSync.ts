@@ -295,19 +295,7 @@ async function getAuthToken(interactive = true): Promise<string> {
   // Standard Chrome MV3 getAuthToken
   return new Promise((resolve, reject) => {
     if (!chrome?.identity?.getAuthToken) {
-      // In Firefox or environments where getAuthToken is not supported:
-      // Fallback automatically to launchCustomOAuthFlow with manifest's client_id
-      try {
-        const manifest = chrome.runtime.getManifest() as any;
-        const defaultClientId = manifest?.oauth2?.client_id;
-        if (defaultClientId) {
-          launchCustomOAuthFlow(defaultClientId, interactive).then(resolve, reject);
-          return;
-        }
-      } catch {
-        // Fall through
-      }
-      return reject(new Error('chrome.identity.getAuthToken is not supported in this browser.'));
+      return reject(new Error('chrome.identity API is not available in this environment.'));
     }
 
     chrome.identity.getAuthToken({ interactive }, (token) => {
