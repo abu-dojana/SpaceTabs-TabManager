@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { type Tab as DbTab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { isSystemOrExtensionUrl, decodeRealUrl, isSuspendableUrl } from '@/utils/urlFilter';
-import { recordTombstone } from '@/services/driveSync';
+import { recordTombstone, recordTombstones } from '@/services/driveSync';
 
 export const SUSPENDED_URL_PREFIX = '/suspended.html';
 
@@ -618,6 +618,8 @@ export async function closeTabs(tabIds: string[]) {
     allBrowserTabs = await chrome.tabs.query({});
   } catch {}
 
+  const tombstonesToRecord: { id: string; table: 'tabs' }[] = [];
+
   for (const id of tabIds) {
     const record = await db.tabs.get(id);
     if (!record) {
@@ -662,13 +664,18 @@ export async function closeTabs(tabIds: string[]) {
       }
     }
 
-    // Record tombstone for cloud sync if this is a saved workspace tab
+    // Collect tombstone for cloud sync if this is a saved workspace tab
     if (record && record.spaceId !== UNSAVED_SPACE_ID) {
-      recordTombstone(id, 'tabs').catch(() => {});
+      tombstonesToRecord.push({ id, table: 'tabs' });
     }
 
     // Always delete the record from Dexie
     await db.tabs.delete(id);
+  }
+
+  // Atomically record all tombstones in a single batch to avoid race conditions
+  if (tombstonesToRecord.length > 0) {
+    await recordTombstones(tombstonesToRecord);
   }
 }
 

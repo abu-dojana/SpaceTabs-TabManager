@@ -280,9 +280,79 @@ async function notifyStatusChange() {
 // AUTHENTICATION & GOOGLE ACCOUNT
 // ==========================================
 
+export const WEB_OAUTH_CLIENT_ID =
+  '406048483721-mpfdo15c5v7ras28kovgurkcoiqbq1l4.apps.googleusercontent.com';
+
+function createHttpError(action: string, status: number): Error {
+  const err: any = new Error(`${action}: HTTP ${status}`);
+  err.status = status;
+  return err;
+}
+
+export async function invalidateAuthToken(token?: string): Promise<void> {
+  try {
+    const stored = await chrome.storage.local.get(STORAGE_KEY_TOKEN);
+    const tokenToRemove = token || stored[STORAGE_KEY_TOKEN];
+    if (tokenToRemove && chrome?.identity?.removeCachedAuthToken) {
+      await new Promise<void>((resolve) => {
+        chrome.identity.removeCachedAuthToken({ token: tokenToRemove }, () => resolve());
+      });
+    }
+  } catch (e) {
+    console.warn('[SpaceTabs] Failed to remove cached auth token:', e);
+  }
+  try {
+    await chrome.storage.local.remove([STORAGE_KEY_TOKEN]);
+  } catch {}
+}
+
 /**
- * Requests an access token from Chrome Identity API.
- * Handles custom client ID fallback and token caching.
+ * Detects whether the current environment is strictly official Google Chrome (which supports native GAIA getAuthToken)
+ * or an alternative/privacy Chromium browser (Brave, Vivaldi, Helium, Edge, Opera, Arc) which does not.
+ */
+async function isOfficialGoogleChrome(): Promise<boolean> {
+  try {
+    if (typeof navigator === 'undefined') return false;
+
+    // 1. Check for Brave
+    if ((navigator as any)?.brave && typeof (navigator as any).brave.isBrave === 'function') {
+      const isBrave = await (navigator as any).brave.isBrave();
+      if (isBrave) return false;
+    }
+
+    // 2. Check for Vivaldi
+    if ((typeof window !== 'undefined' && (window as any).vivaldi) || navigator.userAgent.includes('Vivaldi')) {
+      return false;
+    }
+
+    // 3. Check for Edge, Opera, or other Chromium wrappers
+    const ua = navigator.userAgent || '';
+    if (ua.includes('Edg/') || ua.includes('OPR/') || (typeof window !== 'undefined' && (window as any).opr)) {
+      return false;
+    }
+
+    // 4. Check User-Agent Client Hints brands: MUST explicitly contain "Google Chrome"
+    // Generic Chromium forks (Helium, Thorium, Ungoogled Chromium) only report "Chromium", NOT "Google Chrome"
+    const brands = (navigator as any)?.userAgentData?.brands;
+    if (Array.isArray(brands)) {
+      const isBrandChrome = brands.some((b: any) => b.brand === 'Google Chrome');
+      if (!isBrandChrome) return false;
+    } else {
+      // Fallback: vendor check
+      if (navigator.vendor !== 'Google Inc.') return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Universal Chrome Identity & WebAuthFlow token retriever.
+ * 1. Honors user custom Client ID if provided in settings.
+ * 2. In Google Chrome, attempts native chrome.identity.getAuthToken with a 1.5s timeout for 1-click silent sign-in.
+ * 3. In Brave, Vivaldi, Helium, Edge, Arc, Opera, goes directly to launchCustomOAuthFlow to prevent hangs and error windows.
  */
 async function getAuthToken(interactive = true): Promise<string> {
   const settings = await getCloudSyncSettings();
@@ -292,22 +362,53 @@ async function getAuthToken(interactive = true): Promise<string> {
     return launchCustomOAuthFlow(settings.customClientId.trim(), interactive);
   }
 
-  // Standard Chrome MV3 getAuthToken
-  return new Promise((resolve, reject) => {
-    if (!chrome?.identity?.getAuthToken) {
-      return reject(new Error('chrome.identity API is not available in this environment.'));
-    }
+  // 1. In official Google Chrome ONLY, try native chrome.identity.getAuthToken with a safety timeout
+  const isChrome = await isOfficialGoogleChrome();
+  if (isChrome && chrome?.identity?.getAuthToken) {
+    try {
+      const nativeTokenPromise = new Promise<string>((resolve, reject) => {
+        chrome.identity.getAuthToken({ interactive }, (res) => {
+          if (chrome.runtime.lastError || !res) {
+            return reject(new Error(chrome.runtime.lastError?.message || 'No token returned from getAuthToken'));
+          }
+          resolve(res);
+        });
+      });
 
-    chrome.identity.getAuthToken({ interactive }, (token) => {
-      if (chrome.runtime.lastError) {
-        return reject(new Error(chrome.runtime.lastError.message || 'Failed to authenticate with Google'));
-      }
-      if (!token) {
-        return reject(new Error('No OAuth token returned from Google'));
-      }
-      resolve(token);
-    });
-  });
+      // Safety timeout: Never hang indefinitely if a browser has an unresponsive getAuthToken stub
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Native getAuthToken timeout')), 1500);
+      });
+
+      return await Promise.race([nativeTokenPromise, timeoutPromise]);
+    } catch (err: any) {
+      console.warn('[SpaceTabs] Native getAuthToken unavailable, timed out, or failed. Falling back to Web OAuth flow:', err?.message);
+    }
+  }
+
+  // 2. Universal WebAuthFlow (Brave, Vivaldi, Helium, Edge, Arc, Opera, or fallback)
+  return launchCustomOAuthFlow(WEB_OAUTH_CLIENT_ID, interactive);
+}
+
+/**
+ * Runs an authenticated Drive operation with automatic token invalidation and single-retry on HTTP 401.
+ */
+async function runWithAuthRetry<T>(
+  operation: (token: string) => Promise<T>,
+  interactive = false
+): Promise<T> {
+  let token = await getAuthToken(interactive);
+  try {
+    return await operation(token);
+  } catch (err: any) {
+    if (err?.status === 401 || (typeof err?.message === 'string' && err.message.includes('401'))) {
+      console.warn('[SpaceTabs] 401 Unauthorized encountered. Invalidating token and retrying...');
+      await invalidateAuthToken(token);
+      token = await getAuthToken(interactive);
+      return await operation(token);
+    }
+    throw err;
+  }
 }
 
 /**
@@ -402,19 +503,7 @@ export async function signInWithGoogle(
  * Signs out and disconnects Google Drive sync
  */
 export async function signOutGoogle(): Promise<void> {
-  try {
-    const stored = await chrome.storage.local.get(STORAGE_KEY_TOKEN);
-    const token = stored[STORAGE_KEY_TOKEN];
-    if (token && chrome?.identity?.removeCachedAuthToken) {
-      try {
-        await new Promise<void>((resolve) => {
-          chrome.identity.removeCachedAuthToken({ token }, () => resolve());
-        });
-      } catch {
-        // Ignored
-      }
-    }
-  } catch {}
+  await invalidateAuthToken();
 
   await setGoogleProfile(null);
   await updateCloudSyncSettings({ enabled: false });
@@ -449,7 +538,7 @@ async function ensureDriveFolder(
   });
 
   if (!searchRes.ok) {
-    throw new Error(`Failed to locate Drive folder: HTTP ${searchRes.status}`);
+    throw createHttpError('Failed to locate Drive folder', searchRes.status);
   }
 
   const searchData = await searchRes.json();
@@ -475,7 +564,7 @@ async function ensureDriveFolder(
   });
 
   if (!createRes.ok) {
-    throw new Error(`Failed to create Drive folder: HTTP ${createRes.status}`);
+    throw createHttpError('Failed to create Drive folder', createRes.status);
   }
 
   const created = await createRes.json();
@@ -500,7 +589,7 @@ async function findDataFile(
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to check Drive data.json: HTTP ${res.status}`);
+    throw createHttpError('Failed to check Drive data.json', res.status);
   }
 
   const data = await res.json();
@@ -520,7 +609,7 @@ async function downloadRemoteData(token: string, fileId: string): Promise<DriveD
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to download data.json: HTTP ${res.status}`);
+    throw createHttpError('Failed to download data.json', res.status);
   }
 
   return (await res.json()) as DriveDataExport;
@@ -550,7 +639,7 @@ async function uploadDataToDrive(
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to update data.json: HTTP ${res.status}`);
+      throw createHttpError('Failed to update data.json', res.status);
     }
 
     const data = await res.json();
@@ -588,7 +677,7 @@ async function uploadDataToDrive(
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to create data.json in Drive: HTTP ${res.status}`);
+      throw createHttpError('Failed to create data.json in Drive', res.status);
     }
 
     const created = await res.json();
@@ -854,36 +943,39 @@ export async function syncNow(): Promise<{
   try {
     const localData = await buildLocalExport();
 
-    // REAL GOOGLE DRIVE REST API FLOW
-    const token = await getAuthToken(false);
-    const { folderId, folderUrl } = await ensureDriveFolder(token);
-    const existingFile = await findDataFile(token, folderId);
+    // REAL GOOGLE DRIVE REST API FLOW (with automatic 401 token refresh)
+    const mergedPayload = await runWithAuthRetry(async (token) => {
+      const { folderId, folderUrl } = await ensureDriveFolder(token);
+      const existingFile = await findDataFile(token, folderId);
 
-    let mergedPayload = localData;
+      let payload = localData;
 
-    if (existingFile) {
-      // Must successfully download and merge remote data before pushing.
-      // If remote download fails, abort to prevent destructive overwrite of remote-only changes.
-      const remoteData = await downloadRemoteData(token, existingFile.fileId);
-      mergedPayload = await mergeRemoteAndLocal(remoteData, localData);
-    }
+      if (existingFile) {
+        // Must successfully download and merge remote data before pushing.
+        // If remote download fails, abort to prevent destructive overwrite of remote-only changes.
+        const remoteData = await downloadRemoteData(token, existingFile.fileId);
+        payload = await mergeRemoteAndLocal(remoteData, localData);
+      }
 
-    // Push merged state to Drive
-    const uploadRes = await uploadDataToDrive(
-      token,
-      folderId,
-      existingFile?.fileId || null,
-      mergedPayload
-    );
+      // Push merged state to Drive
+      const uploadRes = await uploadDataToDrive(
+        token,
+        folderId,
+        existingFile?.fileId || null,
+        payload
+      );
 
-    const now = Date.now();
-    await updateSyncMeta({
-      lastSyncTime: now,
-      folderId,
-      fileId: uploadRes.fileId,
-      folderUrl,
-      lastError: null,
-    });
+      const now = Date.now();
+      await updateSyncMeta({
+        lastSyncTime: now,
+        folderId,
+        fileId: uploadRes.fileId,
+        folderUrl,
+        lastError: null,
+      });
+
+      return payload;
+    }, false);
 
     setSyncStatus('synced');
     return {
@@ -917,24 +1009,25 @@ export async function forcePushToDrive(): Promise<{ success: boolean; message: s
   try {
     const localData = await buildLocalExport();
 
-    const token = await getAuthToken(false);
-    const { folderId, folderUrl } = await ensureDriveFolder(token);
-    const existingFile = await findDataFile(token, folderId);
+    await runWithAuthRetry(async (token) => {
+      const { folderId, folderUrl } = await ensureDriveFolder(token);
+      const existingFile = await findDataFile(token, folderId);
 
-    const uploadRes = await uploadDataToDrive(
-      token,
-      folderId,
-      existingFile?.fileId || null,
-      localData
-    );
+      const uploadRes = await uploadDataToDrive(
+        token,
+        folderId,
+        existingFile?.fileId || null,
+        localData
+      );
 
-    await updateSyncMeta({
-      lastSyncTime: Date.now(),
-      folderId,
-      fileId: uploadRes.fileId,
-      folderUrl,
-      lastError: null,
-    });
+      await updateSyncMeta({
+        lastSyncTime: Date.now(),
+        folderId,
+        fileId: uploadRes.fileId,
+        folderUrl,
+        lastError: null,
+      });
+    }, false);
 
     setSyncStatus('synced');
     return { success: true, message: 'Workspace data uploaded to Google Drive!' };
@@ -955,70 +1048,73 @@ export async function forcePullFromDrive(): Promise<{ success: boolean; message:
   setSyncStatus('syncing');
 
   try {
-    const token = await getAuthToken(false);
-    const meta = await getSyncMeta();
-    let fileId = meta.fileId;
+    const restoredCount = await runWithAuthRetry(async (token) => {
+      const meta = await getSyncMeta();
+      let fileId = meta.fileId;
 
-    if (!fileId) {
-      const { folderId } = await ensureDriveFolder(token);
-      const existing = await findDataFile(token, folderId);
-      fileId = existing?.fileId;
-    }
-
-    if (!fileId) {
-      throw new Error('No backup file found in your Google Drive folder.');
-    }
-
-    const remoteData: DriveDataExport = await downloadRemoteData(token, fileId);
-
-    if (!remoteData || !Array.isArray(remoteData.spaces)) {
-      throw new Error('Remote backup file is empty or invalid.');
-    }
-
-    // Replace local saved tables (preserve unsaved tabs)
-    await db.transaction(
-      'rw',
-      [
-        db.spaces,
-        db.tabs,
-        db.resourceSections,
-        db.resourceItems,
-        db.notes,
-        db.tasks,
-      ],
-      async () => {
-        await db.spaces.clear();
-        await db.tabs.where('spaceId').notEqual(UNSAVED_SPACE_ID).delete();
-        await db.resourceSections.clear();
-        await db.resourceItems.clear();
-        await db.notes.clear();
-        await db.tasks.clear();
-
-        if (remoteData?.spaces?.length) await db.spaces.bulkPut(remoteData.spaces);
-        if (remoteData?.tabs?.length) {
-          const savedTabs = remoteData.tabs.filter((t) => t.spaceId !== UNSAVED_SPACE_ID);
-          if (savedTabs.length > 0) await db.tabs.bulkPut(savedTabs);
-        }
-        if (remoteData?.resourceSections?.length) {
-          await db.resourceSections.bulkPut(remoteData.resourceSections);
-        }
-        if (remoteData?.resourceItems?.length) {
-          await db.resourceItems.bulkPut(remoteData.resourceItems);
-        }
-        if (remoteData?.notes?.length) await db.notes.bulkPut(remoteData.notes);
-        if (remoteData?.tasks?.length) await db.tasks.bulkPut(remoteData.tasks);
+      if (!fileId) {
+        const { folderId } = await ensureDriveFolder(token);
+        const existing = await findDataFile(token, folderId);
+        fileId = existing?.fileId;
       }
-    );
 
-    // Restore remote tombstones (deletion history) to prevent deleted items from reappearing
-    const remoteTombstones = Array.isArray(remoteData.deletedIds) ? remoteData.deletedIds : [];
-    await chrome.storage.local.set({ [STORAGE_KEY_TOMBSTONES]: remoteTombstones });
+      if (!fileId) {
+        throw new Error('No backup file found in your Google Drive folder.');
+      }
 
-    await updateSyncMeta({ lastSyncTime: Date.now(), lastError: null });
+      const remoteData: DriveDataExport = await downloadRemoteData(token, fileId);
+
+      if (!remoteData || !Array.isArray(remoteData.spaces)) {
+        throw new Error('Remote backup file is empty or invalid.');
+      }
+
+      // Replace local saved tables (preserve unsaved tabs)
+      await db.transaction(
+        'rw',
+        [
+          db.spaces,
+          db.tabs,
+          db.resourceSections,
+          db.resourceItems,
+          db.notes,
+          db.tasks,
+        ],
+        async () => {
+          await db.spaces.clear();
+          await db.tabs.where('spaceId').notEqual(UNSAVED_SPACE_ID).delete();
+          await db.resourceSections.clear();
+          await db.resourceItems.clear();
+          await db.notes.clear();
+          await db.tasks.clear();
+
+          if (remoteData?.spaces?.length) await db.spaces.bulkPut(remoteData.spaces);
+          if (remoteData?.tabs?.length) {
+            const savedTabs = remoteData.tabs.filter((t) => t.spaceId !== UNSAVED_SPACE_ID);
+            if (savedTabs.length > 0) await db.tabs.bulkPut(savedTabs);
+          }
+          if (remoteData?.resourceSections?.length) {
+            await db.resourceSections.bulkPut(remoteData.resourceSections);
+          }
+          if (remoteData?.resourceItems?.length) {
+            await db.resourceItems.bulkPut(remoteData.resourceItems);
+          }
+          if (remoteData?.notes?.length) await db.notes.bulkPut(remoteData.notes);
+          if (remoteData?.tasks?.length) await db.tasks.bulkPut(remoteData.tasks);
+        }
+      );
+
+      // Restore remote tombstones (deletion history) to prevent deleted items from reappearing
+      const remoteTombstones = Array.isArray(remoteData.deletedIds) ? remoteData.deletedIds : [];
+      await chrome.storage.local.set({ [STORAGE_KEY_TOMBSTONES]: remoteTombstones });
+
+      await updateSyncMeta({ lastSyncTime: Date.now(), lastError: null });
+      return remoteData.spaces.length;
+    }, false);
+
     setSyncStatus('synced');
     return {
       success: true,
-      message: `Restored ${remoteData.spaces.length} spaces from Google Drive!`,
+      message: `Restored ${restoredCount} spaces from Google Drive!`,
     };
   } catch (err: any) {
     const msg = err?.message || 'Failed to pull from Drive';
