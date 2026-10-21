@@ -2,6 +2,7 @@ import { db } from '@/db';
 import { type Tab as DbTab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { isSystemOrExtensionUrl, decodeRealUrl, isSuspendableUrl } from '@/utils/urlFilter';
 import { recordTombstone, recordTombstones } from '@/services/driveSync';
+import { getUserSettings } from '@/services/settings';
 
 export const SUSPENDED_URL_PREFIX = '/suspended.html';
 
@@ -51,6 +52,44 @@ export async function setWindowActiveSpaceId(
   } catch (err) {
     console.error('Failed to set window active space:', err);
   }
+}
+
+/**
+ * Returns a map of windowId -> activeSpaceId for all normal windows
+ */
+export async function getAllWindowSpaces(): Promise<Map<number, string | null>> {
+  const result = new Map<number, string | null>();
+  try {
+    const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
+    if (windows.length === 0) return result;
+    const keys = windows.map((w) => `window_${w.id}_space`);
+    const sessionData = await chrome.storage.session.get(keys);
+    for (const w of windows) {
+      if (w.id) {
+        const spaceId = sessionData[`window_${w.id}_space`];
+        result.set(w.id, spaceId && spaceId !== UNSAVED_SPACE_ID ? spaceId : null);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to get all window spaces:', err);
+  }
+  return result;
+}
+
+/**
+ * Focuses the window that currently has the specified space active
+ */
+export async function focusSpaceWindow(spaceId: string): Promise<boolean> {
+  const winSpaces = await getAllWindowSpaces();
+  for (const [winId, sId] of winSpaces.entries()) {
+    if (sId === spaceId) {
+      try {
+        await chrome.windows.update(winId, { focused: true });
+        return true;
+      } catch {}
+    }
+  }
+  return false;
 }
 
 /**
@@ -358,10 +397,12 @@ export async function switchWindowToSpace(
       .equals(normalizedTarget)
       .sortBy('order');
 
-    // 5. Open target tabs dormant in the background
+    // 5. Open target tabs (dormant placeholders if discardOnSpaceSwitch is true, or real URLs if false)
+    const settings = await getUserSettings();
     for (let i = 0; i < targetTabs.length; i++) {
       const tabRecord = targetTabs[i];
-      const openUrl = isSuspendableUrl(tabRecord.url)
+      const shouldSuspend = settings.discardOnSpaceSwitch && isSuspendableUrl(tabRecord.url);
+      const openUrl = shouldSuspend
         ? buildSuspendedUrl(tabRecord.url, tabRecord.title)
         : tabRecord.url;
 
@@ -419,9 +460,11 @@ export async function openSpaceInNewWindow(spaceId: string) {
     await setWindowActiveSpaceId(newWindow.id, spaceId);
 
     // Restore space tabs
+    const settings = await getUserSettings();
     for (let i = 0; i < spaceTabs.length; i++) {
       const tabItem = spaceTabs[i];
-      const openUrl = isSuspendableUrl(tabItem.url)
+      const shouldSuspend = settings.discardOnSpaceSwitch && isSuspendableUrl(tabItem.url);
+      const openUrl = shouldSuspend
         ? buildSuspendedUrl(tabItem.url, tabItem.title)
         : tabItem.url;
 

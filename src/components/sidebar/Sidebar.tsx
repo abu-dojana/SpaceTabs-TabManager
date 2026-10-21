@@ -8,6 +8,7 @@ import {
   switchWindowToSpace,
   moveTabsToSpace,
   openSpaceInNewWindow,
+  getAllWindowSpaces,
 } from '@/services/tabManager';
 import {
   Folder,
@@ -18,6 +19,7 @@ import {
   CheckCircle2,
   MoreVertical,
   ExternalLink,
+  Crosshair,
   Pencil,
   Copy,
   FolderInput,
@@ -44,6 +46,7 @@ import {
   Heart,
 } from 'lucide-react';
 import {
+  getUserSettings,
   exportAllSpacesBackup,
   importSpacesBackup,
   purgeStaleUnsavedTabs,
@@ -71,6 +74,55 @@ export const Sidebar: React.FC = () => {
 
   // Cloud Drive Sync live info subscription
   const [syncInfo, setSyncInfo] = React.useState<DriveSyncInfo | null>(null);
+
+  // Multi-window spaces mapping: windowId -> activeSpaceId
+  const [windowSpaces, setWindowSpaces] = React.useState<Map<number, string | null>>(new Map());
+  const [currentWindowId, setCurrentWindowId] = React.useState<number | null>(null);
+
+  const refreshWindowSpaces = React.useCallback(async () => {
+    try {
+      const [spacesMap, curWin] = await Promise.all([
+        getAllWindowSpaces(),
+        chrome.windows.getCurrent(),
+      ]);
+      setWindowSpaces(spacesMap);
+      if (curWin.id) setCurrentWindowId(curWin.id);
+    } catch (err) {
+      console.warn('Failed to refresh window spaces:', err);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshWindowSpaces();
+
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      area: string
+    ) => {
+      if (area === 'session') {
+        const hasWindowSpaceChange = Object.keys(changes).some(
+          (k) => k.startsWith('window_') && k.endsWith('_space')
+        );
+        if (hasWindowSpaceChange) {
+          refreshWindowSpaces();
+        }
+      }
+    };
+
+    const handleWindowEvents = () => {
+      refreshWindowSpaces();
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    chrome.windows.onRemoved.addListener(handleWindowEvents);
+    chrome.windows.onFocusChanged.addListener(handleWindowEvents);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+      chrome.windows.onRemoved.removeListener(handleWindowEvents);
+      chrome.windows.onFocusChanged.removeListener(handleWindowEvents);
+    };
+  }, [refreshWindowSpaces]);
 
   React.useEffect(() => {
     const unsub = subscribeSyncStatus((info) => {
@@ -204,8 +256,32 @@ export const Sidebar: React.FC = () => {
   }, [editingSectionName]);
 
   const handleSelectSpace = async (spaceId: string | null) => {
-    setActiveSpaceId(spaceId);
     try {
+      const settings = await getUserSettings();
+
+      // If "Open Spaces in New Window" is enabled
+      if (settings.defaultOpenInNewWindow && spaceId) {
+        // If the space is already open in another window, simply focus that window!
+        const winSpaces = await getAllWindowSpaces();
+        for (const [wId, sId] of winSpaces.entries()) {
+          if (sId === spaceId) {
+            await chrome.windows.update(wId, { focused: true });
+            return;
+          }
+        }
+        // If already active in the current window, keep focus here
+        const curWin = await chrome.windows.getCurrent();
+        if (curWin.id && winSpaces.get(curWin.id) === spaceId) {
+          setActiveSpaceId(spaceId);
+          return;
+        }
+        // Otherwise, open in a new window
+        await openSpaceInNewWindow(spaceId);
+        return;
+      }
+
+      // Default: switch current window to this space
+      setActiveSpaceId(spaceId);
       const currentWin = await chrome.windows.getCurrent();
       if (currentWin.id) {
         await switchWindowToSpace(currentWin.id, spaceId);
@@ -566,6 +642,17 @@ export const Sidebar: React.FC = () => {
     const isMenuOpen = activeMenuSpaceId === space.id;
     const isRenaming = inlineEditingSpaceId === space.id;
 
+    // Multi-window space awareness
+    let otherWindowId: number | null = null;
+    for (const [wId, sId] of windowSpaces.entries()) {
+      if (sId === space.id && wId !== currentWindowId) {
+        otherWindowId = wId;
+        break;
+      }
+    }
+    const isOpenInThisWindow = currentWindowId !== null && windowSpaces.get(currentWindowId) === space.id;
+    const isOpenInOtherWindow = otherWindowId !== null;
+
     return (
       <div key={space.id} className="relative group">
         {isRenaming ? (
@@ -640,6 +727,18 @@ export const Sidebar: React.FC = () => {
               <span className="truncate" title={space.description || space.name}>
                 {space.name}
               </span>
+              {isOpenInThisWindow && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"
+                  title="This Space is active in this window"
+                />
+              )}
+              {isOpenInOtherWindow && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"
+                  title="This Space is active in another window"
+                />
+              )}
             </div>
 
             {isOver ? (
@@ -653,6 +752,20 @@ export const Sidebar: React.FC = () => {
                 }`}
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* Locate / Switch to Window Button */}
+                {isOpenInOtherWindow && otherWindowId && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await chrome.windows.update(otherWindowId, { focused: true });
+                    }}
+                    className="p-1 hover:bg-purple-500/20 text-purple-400 hover:text-purple-200 rounded transition"
+                    title="Switch to window with this space"
+                  >
+                    <Crosshair className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
                 {/* Quick Action: Open in New Window */}
                 <button
                   onClick={(e) => {

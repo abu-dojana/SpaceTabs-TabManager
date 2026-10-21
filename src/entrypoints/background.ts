@@ -76,6 +76,24 @@ export default defineBackground(() => {
     }
   }
 
+  /**
+   * Initializes all existing normal browser windows by ensuring
+   * the pinned dashboard index tab is present and tabs are synchronized.
+   */
+  async function initializeAllWindows() {
+    try {
+      const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
+      for (const win of windows) {
+        if (win.id) {
+          await ensurePinnedIndexTab(win.id);
+          await syncWindowTabsToUnsaved(win.id);
+        }
+      }
+    } catch (err) {
+      console.warn('[Background] Error initializing windows:', err);
+    }
+  }
+
   // 1. Startup & Window Lifecycle
   chrome.runtime.onStartup.addListener(async () => {
     await setupSuspensionAlarms();
@@ -84,19 +102,13 @@ export default defineBackground(() => {
       syncNow().catch((e) => console.warn('[Background] Startup Drive sync error:', e));
     }
     await setupDriveSyncAlarm(syncSettings.syncIntervalMinutes);
-
-    const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
-    for (const win of windows) {
-      if (win.id) {
-        await ensurePinnedIndexTab(win.id);
-        await syncWindowTabsToUnsaved(win.id);
-      }
-    }
+    await initializeAllWindows();
   });
 
   chrome.runtime.onInstalled.addListener(async () => {
     await setupSuspensionAlarms();
     await setupDriveSyncAlarm();
+    await initializeAllWindows();
   });
 
   chrome.windows.onCreated.addListener((window) => {
@@ -145,7 +157,10 @@ export default defineBackground(() => {
   // 4. Tab Created, Moved & Activated
   chrome.tabs.onCreated.addListener((tab) => {
     if (tab.id) recordTabActivity(tab.id);
-    if (tab.windowId) syncWindowTabsToUnsaved(tab.windowId);
+    if (tab.windowId) {
+      ensurePinnedIndexTab(tab.windowId);
+      syncWindowTabsToUnsaved(tab.windowId);
+    }
   });
 
   chrome.tabs.onMoved.addListener((_tabId, moveInfo) => {
@@ -200,4 +215,7 @@ export default defineBackground(() => {
       }
     }
   });
+
+  // Immediate check on Service Worker startup / load unpacked
+  initializeAllWindows();
 });
