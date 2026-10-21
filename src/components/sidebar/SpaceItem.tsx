@@ -1,0 +1,212 @@
+import React from 'react';
+import { type Space } from '@/db/schema';
+import { Check, X, ExternalLink, MoreVertical, Crosshair } from 'lucide-react';
+import { SpaceContextMenu } from './SpaceContextMenu';
+
+interface SpaceItemProps {
+  space: Space;
+  isActive: boolean;
+  isOver: boolean;
+  isMenuOpen: boolean;
+  isRenaming: boolean;
+  inlineEditingName: string;
+  renameInputRef: React.RefObject<HTMLInputElement>;
+  menuRef: React.RefObject<HTMLDivElement>;
+  isOpenInThisWindow: boolean;
+  isOpenInOtherWindow: boolean;
+  otherWindowId: number | null;
+  onSelectSpace: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragEnter: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onSetRenamingName: (val: string) => void;
+  onCommitRename: () => void;
+  onCancelRename: () => void;
+  onOpenNewWindow: () => void;
+  onToggleMenu: () => void;
+  onStartRename: () => void;
+  onDuplicate: () => void;
+  onMoveToSection: () => void;
+  onEditDescription: () => void;
+  onExport: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}
+
+export const SpaceItem: React.FC<SpaceItemProps> = ({
+  space,
+  isActive,
+  isOver,
+  isMenuOpen,
+  isRenaming,
+  inlineEditingName,
+  renameInputRef,
+  menuRef,
+  isOpenInThisWindow,
+  isOpenInOtherWindow,
+  otherWindowId,
+  onSelectSpace,
+  onDragOver,
+  onDragEnter,
+  onDragLeave,
+  onDrop,
+  onSetRenamingName,
+  onCommitRename,
+  onCancelRename,
+  onOpenNewWindow,
+  onToggleMenu,
+  onStartRename,
+  onDuplicate,
+  onMoveToSection,
+  onEditDescription,
+  onExport,
+  onArchive,
+  onDelete,
+}) => {
+  return (
+    <div key={space.id} className="relative group">
+      {isRenaming ? (
+        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-900 border border-blue-500 rounded-lg">
+          <span className="text-base">{space.icon || '📁'}</span>
+          <input
+            ref={renameInputRef}
+            type="text"
+            value={inlineEditingName}
+            onChange={(e) => onSetRenamingName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onCommitRename();
+              if (e.key === 'Escape') onCancelRename();
+            }}
+            onBlur={onCommitRename}
+            className="flex-1 bg-transparent text-xs text-slate-100 font-medium focus:outline-none min-w-0"
+          />
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onCommitRename();
+            }}
+            className="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded"
+            title="Save Name"
+          >
+            <Check className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onCancelRename();
+            }}
+            className="p-1 text-slate-400 hover:bg-slate-800 rounded"
+            title="Cancel"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={onSelectSpace}
+          onDragOver={onDragOver}
+          onDragEnter={onDragEnter}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
+            isOver
+              ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
+              : isActive || isMenuOpen
+              ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
+              : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
+          }`}
+        >
+          <div className="flex items-center gap-2.5 truncate flex-1 min-w-0 mr-2">
+            <span className="text-base flex-shrink-0">{space.icon || '📁'}</span>
+            <span className="truncate" title={space.description || space.name}>
+              {space.name}
+            </span>
+            {isOpenInThisWindow && (
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"
+                title="This Space is active in this window"
+              />
+            )}
+            {isOpenInOtherWindow && (
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"
+                title="This Space is active in another window"
+              />
+            )}
+          </div>
+
+          {isOver ? (
+            <span className="text-[10px] font-bold text-blue-300 bg-blue-500/30 px-1.5 py-0.5 rounded animate-pulse">
+              Drop
+            </span>
+          ) : (
+            <div
+              className={`flex items-center gap-0.5 transition-opacity ${
+                isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Locate / Switch to Window Button */}
+              {isOpenInOtherWindow && otherWindowId && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await chrome.windows.update(otherWindowId, { focused: true });
+                  }}
+                  className="p-1 hover:bg-purple-500/20 text-purple-400 hover:text-purple-200 rounded transition"
+                  title="Switch to window with this space"
+                >
+                  <Crosshair className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Quick Action: Open in New Window */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenNewWindow();
+                }}
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
+                title="Open in new window (Ctrl+Click)"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+
+              {/* 3-Dot Menu Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleMenu();
+                }}
+                className={`p-1 rounded transition ${
+                  isMenuOpen
+                    ? 'bg-slate-800 text-blue-400'
+                    : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+                title="Space options"
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </button>
+      )}
+
+      {/* Workona-Style Three-Dot Popup Menu */}
+      <SpaceContextMenu
+        isOpen={isMenuOpen}
+        menuRef={menuRef}
+        space={space}
+        onRename={onStartRename}
+        onOpenNewWindow={onOpenNewWindow}
+        onDuplicate={onDuplicate}
+        onMoveToSection={onMoveToSection}
+        onEditDescription={onEditDescription}
+        onExport={onExport}
+        onArchive={onArchive}
+        onDelete={onDelete}
+      />
+    </div>
+  );
+};
