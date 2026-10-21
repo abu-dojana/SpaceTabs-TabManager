@@ -201,8 +201,43 @@ body {
 [data-dashboard-theme="light"] .border-slate-700\/80,
 [data-dashboard-theme="light"] .divide-slate-800,
 [data-dashboard-theme="light"] .divide-slate-800\/40,
-[data-dashboard-theme="light"] .divide-slate-800\/60 {
+[data-dashboard-theme="light"] .divide-slate-800\/50,
+[data-dashboard-theme="light"] .divide-slate-800\/60,
+[data-dashboard-theme="light"] .divide-slate-800\/70,
+[data-dashboard-theme="light"] .divide-slate-800\/80,
+[data-dashboard-theme="light"] .divide-slate-800 > :not([hidden]) ~ :not([hidden]),
+[data-dashboard-theme="light"] .divide-slate-800\/40 > :not([hidden]) ~ :not([hidden]),
+[data-dashboard-theme="light"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]),
+[data-dashboard-theme="light"] .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]),
+[data-dashboard-theme="light"] .divide-slate-800\/70 > :not([hidden]) ~ :not([hidden]),
+[data-dashboard-theme="light"] .divide-slate-800\/80 > :not([hidden]) ~ :not([hidden]) {
   border-color: #e2e8f0 !important;
+}
+
+/* Ensure tab item dividers are straight without curved ends in light mode */
+[data-dashboard-theme="light"] .divide-slate-800\/50 > * {
+  border-radius: 0 !important;
+}
+
+/* High-contrast window status badges in light mode */
+[data-dashboard-theme="light"] .text-emerald-400 {
+  color: #047857 !important;
+}
+[data-dashboard-theme="light"] .bg-emerald-500\/10 {
+  background-color: #ecfdf5 !important;
+}
+[data-dashboard-theme="light"] .border-emerald-500\/20 {
+  border-color: #a7f3d0 !important;
+}
+
+[data-dashboard-theme="light"] .text-purple-300 {
+  color: #6b21a8 !important;
+}
+[data-dashboard-theme="light"] .bg-purple-500\/10 {
+  background-color: #faf5ff !important;
+}
+[data-dashboard-theme="light"] .border-purple-500\/20 {
+  border-color: #e9d5ff !important;
 }
 
 /* High-contrast text colors */
@@ -563,6 +598,9 @@ input[type="checkbox"]:indeterminate,
   background-color: #fdfcf9 !important;
   border-color: #e6e1d4 !important;
 }
+[data-light-palette="paper"] [data-dashboard-theme="light"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e6e1d4 !important;
+}
 [data-light-palette="paper"] [data-dashboard-theme="light"] .hover\:bg-slate-900:hover,
 [data-light-palette="paper"] [data-dashboard-theme="light"] .hover\:bg-slate-900\/60:hover,
 [data-light-palette="paper"] [data-dashboard-theme="light"] .hover\:bg-slate-900\/80:hover,
@@ -587,6 +625,9 @@ input[type="checkbox"]:indeterminate,
 [data-light-palette="zinc"] [data-dashboard-theme="light"] .tab-manager-card,
 [data-light-palette="zinc"] [data-dashboard-theme="light"] .bg-slate-900 {
   background-color: #ffffff !important;
+  border-color: #e4e4e7 !important;
+}
+[data-light-palette="zinc"] [data-dashboard-theme="light"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
   border-color: #e4e4e7 !important;
 }
 [data-light-palette="zinc"] [data-dashboard-theme="light"] .hover\:bg-slate-900:hover,
@@ -615,6 +656,9 @@ input[type="checkbox"]:indeterminate,
   background-color: #ffffff !important;
   border-color: #dbeafe !important;
 }
+[data-light-palette="sky"] [data-dashboard-theme="light"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #dbeafe !important;
+}
 [data-light-palette="sky"] [data-dashboard-theme="light"] .hover\:bg-slate-900:hover,
 [data-light-palette="sky"] [data-dashboard-theme="light"] .hover\:bg-slate-900\/60:hover,
 [data-light-palette="sky"] [data-dashboard-theme="light"] .hover\:bg-slate-900\/80:hover,
@@ -639,6 +683,9 @@ input[type="checkbox"]:indeterminate,
 [data-light-palette="mint"] [data-dashboard-theme="light"] .tab-manager-card,
 [data-light-palette="mint"] [data-dashboard-theme="light"] .bg-slate-900 {
   background-color: #ffffff !important;
+  border-color: #dcfce7 !important;
+}
+[data-light-palette="mint"] [data-dashboard-theme="light"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
   border-color: #dcfce7 !important;
 }
 [data-light-palette="mint"] [data-dashboard-theme="light"] .hover\:bg-slate-900:hover,
