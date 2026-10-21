@@ -201,7 +201,10 @@ body {
 [data-dashboard-theme="light"] .border-slate-700\/80,
 [data-dashboard-theme="light"] .divide-slate-800,
 [data-dashboard-theme="light"] .divide-slate-800\/40,
-[data-dashboard-theme="light"] .divide-slate-800\/60 {
+[data-dashboard-theme="light"] .divide-slate-800\/50,
+[data-dashboard-theme="light"] .divide-slate-800\/60,
+[data-dashboard-theme="light"] .divide-slate-800\/70,
+[data-dashboard-theme="light"] .divide-slate-800\/80 {
   border-color: #e2e8f0 !important;
 }
 

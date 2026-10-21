@@ -532,8 +532,8 @@ export const TabsView: React.FC = () => {
   return (
     <div className="flex-1 overflow-y-auto px-8 py-6 max-w-4xl mx-auto w-full select-none pb-32 relative">
       {/* Tabs Header Block */}
-      <div className="tab-manager-card bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm mb-6 relative z-10">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-2">
+      <div className="tab-manager-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm mb-6 relative z-10">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-2">
           {/* Left: Master Select All Checkbox + Folder Title */}
           <div className="flex items-center gap-2.5">
             {tabs && tabs.length > 0 && (
@@ -551,9 +551,9 @@ export const TabsView: React.FC = () => {
               />
             )}
             <Folder className="w-5 h-5 text-blue-400" />
-            <h2 className="text-base font-semibold text-slate-100">Tabs</h2>
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Tabs</h2>
             {tabs && (
-              <span className="text-xs text-slate-400 font-medium">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 ({tabs.length})
               </span>
             )}
@@ -626,7 +626,7 @@ export const TabsView: React.FC = () => {
         </div>
 
         {/* Tab Items List */}
-        <div className="divide-y divide-slate-800/50">
+        <div className="space-y-0.5">
           {tabs && tabs.length > 0 ? (
             tabs.map((tab, index) => {
               let liveWindowId = tab.chromeTabId
