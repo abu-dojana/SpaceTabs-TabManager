@@ -26,7 +26,7 @@ interface SectionGroupProps {
   onCancelRename: () => void;
   onToggleMenu: () => void;
   onDeleteSection: () => void;
-  renderSpaceItem: (space: Space) => React.ReactNode;
+  renderSpaceItem: (space: Space, sectionName?: string) => React.ReactNode;
 }
 
 export const SectionGroup: React.FC<SectionGroupProps> = ({
@@ -152,7 +152,7 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
       {/* Section Spaces */}
       {!isCollapsed && (
         <div className="space-y-0.5 mt-1 pl-2 border-l border-slate-800/80 ml-2">
-          {spaces.map((space) => renderSpaceItem(space))}
+          {spaces.map((space) => renderSpaceItem(space, sectionName))}
         </div>
       )}
     </div>

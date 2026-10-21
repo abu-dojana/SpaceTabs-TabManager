@@ -23,6 +23,9 @@ import {
   Settings,
   Heart,
   RefreshCw,
+  Lock,
+  Unlock,
+  Crosshair,
 } from 'lucide-react';
 import { getUserSettings } from '@/services/settings';
 import {
@@ -39,6 +42,8 @@ export const Sidebar: React.FC = () => {
   const {
     activeSpaceId,
     setActiveSpaceId,
+    unsavedWindowIdFilter,
+    setUnsavedWindowIdFilter,
     setCreateSpaceOpen,
     clearSelectedTabs,
     setMoveSectionSpaceId,
@@ -48,6 +53,26 @@ export const Sidebar: React.FC = () => {
   } = useUIStore();
 
   const [dragOverSpaceId, setDragOverSpaceId] = React.useState<string | null>(null);
+
+  // Spaces lock / reorder mode state
+  const [isSpacesLocked, setIsSpacesLocked] = React.useState<boolean>(() => {
+    try {
+      return localStorage.getItem('spacetabs_spaces_locked') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [draggedSpaceId, setDraggedSpaceId] = React.useState<string | null>(null);
+  const [dragOverTargetSpaceId, setDragOverTargetSpaceId] = React.useState<string | null>(null);
+  const [dropPosition, setDropPosition] = React.useState<'before' | 'after' | null>(null);
+
+  const toggleSpacesLock = () => {
+    const next = !isSpacesLocked;
+    setIsSpacesLocked(next);
+    try {
+      localStorage.setItem('spacetabs_spaces_locked', String(next));
+    } catch {}
+  };
 
   // Cloud Drive Sync live info subscription
   const [syncInfo, setSyncInfo] = React.useState<DriveSyncInfo | null>(null);
@@ -114,6 +139,37 @@ export const Sidebar: React.FC = () => {
     }
     return top.join(', ');
   }, [unsavedTabs]);
+
+  // Group unsaved tabs by windowId for multi-window support
+  const unsavedByWindow = React.useMemo(() => {
+    if (!unsavedTabs || unsavedTabs.length === 0) return [];
+    const windowMap = new Map<number, typeof unsavedTabs>();
+    for (const tab of unsavedTabs) {
+      const wId = tab.windowId || 0;
+      if (!windowMap.has(wId)) windowMap.set(wId, []);
+      windowMap.get(wId)!.push(tab);
+    }
+
+    return Array.from(windowMap.entries())
+      .map(([wId, tabs]) => {
+        const isThisWindow = currentWindowId !== null && wId === currentWindowId;
+        const domainCounts = new Map<string, number>();
+        for (const t of tabs) {
+          const d = extractDomain(t.url);
+          domainCounts.set(d, (domainCounts.get(d) || 0) + 1);
+        }
+        const sorted = Array.from(domainCounts.entries()).sort((a, b) => b[1] - a[1]);
+        const top = sorted.slice(0, 2).map(([d]) => d);
+        const summary = sorted.length > 2 ? `${top.join(', ')} +${sorted.length - 2}` : top.join(', ');
+        return {
+          windowId: wId,
+          tabs,
+          isThisWindow,
+          domainSummary: summary || 'Empty session',
+        };
+      })
+      .sort((a, b) => (b.isThisWindow ? 1 : 0) - (a.isThisWindow ? 1 : 0));
+  }, [unsavedTabs, currentWindowId]);
 
   // Separate active spaces into Sections Map vs Unsectioned list
   const { unsectionedSpaces, sectionsMap } = React.useMemo(() => {
@@ -506,8 +562,104 @@ export const Sidebar: React.FC = () => {
     setActiveMenuSpaceId(null);
   };
 
+  // Reorder spaces in Dexie
+  const handleReorderSpaces = async (
+    sourceId: string,
+    targetId: string,
+    position: 'before' | 'after',
+    sectionName?: string
+  ) => {
+    if (sourceId === targetId || !spaces) return;
+
+    const currentList = sectionName
+      ? [...(sectionsMap.get(sectionName) || [])]
+      : [...unsectionedSpaces];
+
+    const sourceIdx = currentList.findIndex((s) => s.id === sourceId);
+    const targetIdx = currentList.findIndex((s) => s.id === targetId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const [moved] = currentList.splice(sourceIdx, 1);
+    let insertIdx = currentList.findIndex((s) => s.id === targetId);
+    if (position === 'after') {
+      insertIdx += 1;
+    }
+    currentList.splice(insertIdx, 0, moved);
+
+    const now = Date.now();
+    const updates = currentList.map((space, idx) => ({
+      ...space,
+      order: idx,
+      updatedAt: now,
+    }));
+
+    await db.spaces.bulkPut(updates);
+    setDraggedSpaceId(null);
+    setDragOverTargetSpaceId(null);
+    setDropPosition(null);
+  };
+
+  const handleSpaceDragStart = (e: React.DragEvent, spaceId: string) => {
+    e.dataTransfer.setData('application/x-spacetabs-space-id', spaceId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedSpaceId(spaceId);
+  };
+
+  const handleSpaceDragEnd = () => {
+    setDraggedSpaceId(null);
+    setDragOverTargetSpaceId(null);
+    setDropPosition(null);
+  };
+
+  const handleItemDragOver = (e: React.DragEvent, spaceId: string) => {
+    e.preventDefault();
+    if (draggedSpaceId && draggedSpaceId !== spaceId) {
+      e.dataTransfer.dropEffect = 'move';
+      const rect = e.currentTarget.getBoundingClientRect();
+      const offset = e.clientY - rect.top;
+      const pos: 'before' | 'after' = offset < rect.height / 2 ? 'before' : 'after';
+      if (dragOverTargetSpaceId !== spaceId || dropPosition !== pos) {
+        setDragOverTargetSpaceId(spaceId);
+        setDropPosition(pos);
+      }
+      return;
+    }
+    if (!draggedSpaceId) {
+      e.dataTransfer.dropEffect = 'move';
+      if (dragOverSpaceId !== spaceId) {
+        setDragOverSpaceId(spaceId);
+      }
+    }
+  };
+
+  const handleItemDragLeave = (e: React.DragEvent, spaceId: string) => {
+    const currentTarget = e.currentTarget as HTMLElement;
+    if (!currentTarget.contains(e.relatedTarget as Node)) {
+      if (dragOverTargetSpaceId === spaceId) {
+        setDragOverTargetSpaceId(null);
+        setDropPosition(null);
+      }
+      if (dragOverSpaceId === spaceId) {
+        setDragOverSpaceId(null);
+      }
+    }
+  };
+
+  const handleItemDrop = async (e: React.DragEvent, targetSpaceId: string, sectionName?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedSpaceId && draggedSpaceId !== targetSpaceId) {
+      const pos = dropPosition || 'after';
+      await handleReorderSpaces(draggedSpaceId, targetSpaceId, pos, sectionName);
+      return;
+    }
+    if (!draggedSpaceId) {
+      await handleDropOnSpace(e, targetSpaceId);
+    }
+  };
+
   // Render a Single Space Item
-  const renderSpaceItem = (space: Space) => {
+  const renderSpaceItem = (space: Space, sectionName?: string) => {
     let otherWindowId: number | null = null;
     for (const [wId, sId] of windowSpaces.entries()) {
       if (sId === space.id && wId !== currentWindowId) {
@@ -532,23 +684,16 @@ export const Sidebar: React.FC = () => {
         isOpenInThisWindow={isOpenInThisWindow}
         isOpenInOtherWindow={isOpenInOtherWindow}
         otherWindowId={otherWindowId}
+        isSpacesLocked={isSpacesLocked}
+        isDraggingThisSpace={draggedSpaceId === space.id}
+        dropIndicator={dragOverTargetSpaceId === space.id ? dropPosition : null}
         onSelectSpace={() => handleSelectSpace(space.id)}
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-          if (dragOverSpaceId !== space.id) setDragOverSpaceId(space.id);
-        }}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          setDragOverSpaceId(space.id);
-        }}
-        onDragLeave={(e) => {
-          const currentTarget = e.currentTarget as HTMLElement;
-          if (!currentTarget.contains(e.relatedTarget as Node)) {
-            if (dragOverSpaceId === space.id) setDragOverSpaceId(null);
-          }
-        }}
-        onDrop={(e) => handleDropOnSpace(e, space.id)}
+        onDragOver={(e) => handleItemDragOver(e, space.id)}
+        onDragEnter={(e) => e.preventDefault()}
+        onDragLeave={(e) => handleItemDragLeave(e, space.id)}
+        onDrop={(e) => handleItemDrop(e, space.id, sectionName)}
+        onSpaceDragStart={(e) => handleSpaceDragStart(e, space.id)}
+        onSpaceDragEnd={handleSpaceDragEnd}
         onSetRenamingName={setInlineEditingName}
         onCommitRename={() => handleCommitRename(space.id)}
         onCancelRename={() => setInlineEditingSpaceId(null)}
@@ -697,54 +842,143 @@ export const Sidebar: React.FC = () => {
             )}
           </div>
 
-          <button
-            onClick={() => handleSelectSpace(null)}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = 'move';
-              if (dragOverSpaceId !== UNSAVED_SPACE_ID) {
-                setDragOverSpaceId(UNSAVED_SPACE_ID);
-              }
-            }}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              setDragOverSpaceId(UNSAVED_SPACE_ID);
-            }}
-            onDragLeave={(e) => {
-              const currentTarget = e.currentTarget as HTMLElement;
-              if (!currentTarget.contains(e.relatedTarget as Node)) {
-                if (dragOverSpaceId === UNSAVED_SPACE_ID) {
-                  setDragOverSpaceId(null);
+          {unsavedByWindow.length <= 1 ? (
+            <button
+              onClick={() => {
+                handleSelectSpace(null);
+                setUnsavedWindowIdFilter(null);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (dragOverSpaceId !== UNSAVED_SPACE_ID) {
+                  setDragOverSpaceId(UNSAVED_SPACE_ID);
                 }
-              }
-            }}
-            onDrop={(e) => handleDropOnSpace(e, null)}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
-              dragOverSpaceId === UNSAVED_SPACE_ID
-                ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
-                : activeSpaceId === null
-                ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
-                : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
-            }`}
-          >
-            <div className="flex items-center gap-2.5 truncate">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  unsavedTabs && unsavedTabs.length > 0
-                    ? 'bg-amber-400'
-                    : 'bg-slate-600'
-                }`}
-              />
-              <span className="truncate italic">
-                {domainSummary || 'Empty session'}
-              </span>
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setDragOverSpaceId(UNSAVED_SPACE_ID);
+              }}
+              onDragLeave={(e) => {
+                const currentTarget = e.currentTarget as HTMLElement;
+                if (!currentTarget.contains(e.relatedTarget as Node)) {
+                  if (dragOverSpaceId === UNSAVED_SPACE_ID) {
+                    setDragOverSpaceId(null);
+                  }
+                }
+              }}
+              onDrop={(e) => handleDropOnSpace(e, null)}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
+                dragOverSpaceId === UNSAVED_SPACE_ID
+                  ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
+                  : activeSpaceId === null
+                  ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
+                  : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    unsavedTabs && unsavedTabs.length > 0
+                      ? 'bg-amber-400'
+                      : 'bg-slate-600'
+                  }`}
+                />
+                <span className="truncate italic">
+                  {domainSummary || 'Empty session'}
+                </span>
+              </div>
+              {dragOverSpaceId === UNSAVED_SPACE_ID && (
+                <span className="text-[10px] font-bold text-blue-300 bg-blue-500/30 px-1.5 py-0.5 rounded animate-pulse">
+                  Drop
+                </span>
+              )}
+            </button>
+          ) : (
+            <div className="space-y-1">
+              {unsavedByWindow.map((session) => {
+                const isSelected =
+                  activeSpaceId === null &&
+                  (unsavedWindowIdFilter === session.windowId ||
+                    (unsavedWindowIdFilter === null && session.isThisWindow));
+                return (
+                  <button
+                    key={session.windowId}
+                    onClick={() => {
+                      handleSelectSpace(null);
+                      setUnsavedWindowIdFilter(session.windowId);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragOverSpaceId !== UNSAVED_SPACE_ID) {
+                        setDragOverSpaceId(UNSAVED_SPACE_ID);
+                      }
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      setDragOverSpaceId(UNSAVED_SPACE_ID);
+                    }}
+                    onDragLeave={(e) => {
+                      const currentTarget = e.currentTarget as HTMLElement;
+                      if (!currentTarget.contains(e.relatedTarget as Node)) {
+                        if (dragOverSpaceId === UNSAVED_SPACE_ID) {
+                          setDragOverSpaceId(null);
+                        }
+                      }
+                    }}
+                    onDrop={(e) => handleDropOnSpace(e, null)}
+                    className={`group w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all relative ${
+                      dragOverSpaceId === UNSAVED_SPACE_ID
+                        ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
+                        : isSelected
+                        ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
+                        : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate min-w-0 flex-1 mr-1">
+                      <div
+                        className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          session.isThisWindow
+                            ? 'bg-emerald-400 animate-pulse'
+                            : 'bg-amber-400'
+                        }`}
+                      />
+                      <div className="flex flex-col text-left truncate min-w-0">
+                        <span className="font-semibold text-slate-200 truncate flex items-center gap-1.5">
+                          {session.isThisWindow ? 'This Window' : `Window #${session.windowId}`}
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            ({session.tabs.length})
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 italic truncate">
+                          {session.domainSummary}
+                        </span>
+                      </div>
+                    </div>
+
+                    {!session.isThisWindow && (
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            await chrome.windows.update(session.windowId, { focused: true });
+                          } catch (err) {
+                            console.error('Failed to focus window:', err);
+                          }
+                        }}
+                        className="p-1 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded transition opacity-0 group-hover:opacity-100 flex-shrink-0"
+                        title="Switch to this window"
+                      >
+                        <Crosshair className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-            {dragOverSpaceId === UNSAVED_SPACE_ID && (
-              <span className="text-[10px] font-bold text-blue-300 bg-blue-500/30 px-1.5 py-0.5 rounded animate-pulse">
-                Drop
-              </span>
-            )}
-          </button>
+          )}
         </div>
 
         {/* Spaces Section */}
@@ -760,6 +994,26 @@ export const Sidebar: React.FC = () => {
                   {unsectionedSpaces.length}
                 </span>
               )}
+              {/* Lock / Unlock Toggle Button */}
+              <button
+                onClick={toggleSpacesLock}
+                className={`p-1 rounded transition ${
+                  !isSpacesLocked
+                    ? 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                }`}
+                title={
+                  isSpacesLocked
+                    ? 'Spaces locked. Click to reorder spaces.'
+                    : 'Spaces unlocked. Drag spaces to reorder, click to lock.'
+                }
+              >
+                {isSpacesLocked ? (
+                  <Lock className="w-3.5 h-3.5" />
+                ) : (
+                  <Unlock className="w-3.5 h-3.5 text-amber-400" />
+                )}
+              </button>
               <button
                 onClick={() => setCreateSpaceOpen(true)}
                 className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
-import { Check, X, ExternalLink, MoreVertical, Crosshair } from 'lucide-react';
+import { Check, X, ExternalLink, MoreVertical, Crosshair, GripVertical } from 'lucide-react';
 import { SpaceContextMenu } from './SpaceContextMenu';
 
 interface SpaceItemProps {
@@ -15,11 +15,16 @@ interface SpaceItemProps {
   isOpenInThisWindow: boolean;
   isOpenInOtherWindow: boolean;
   otherWindowId: number | null;
+  isSpacesLocked?: boolean;
+  isDraggingThisSpace?: boolean;
+  dropIndicator?: 'before' | 'after' | null;
   onSelectSpace: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragEnter: (e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
+  onSpaceDragStart?: (e: React.DragEvent) => void;
+  onSpaceDragEnd?: (e: React.DragEvent) => void;
   onSetRenamingName: (val: string) => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
@@ -46,11 +51,16 @@ export const SpaceItem: React.FC<SpaceItemProps> = ({
   isOpenInThisWindow,
   isOpenInOtherWindow,
   otherWindowId,
+  isSpacesLocked = true,
+  isDraggingThisSpace = false,
+  dropIndicator = null,
   onSelectSpace,
   onDragOver,
   onDragEnter,
   onDragLeave,
   onDrop,
+  onSpaceDragStart,
+  onSpaceDragEnd,
   onSetRenamingName,
   onCommitRename,
   onCancelRename,
@@ -105,19 +115,33 @@ export const SpaceItem: React.FC<SpaceItemProps> = ({
       ) : (
         <button
           onClick={onSelectSpace}
+          draggable={!isSpacesLocked && !isRenaming}
+          onDragStart={onSpaceDragStart}
+          onDragEnd={onSpaceDragEnd}
           onDragOver={onDragOver}
           onDragEnter={onDragEnter}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
-            isOver
+            isDraggingThisSpace
+              ? 'opacity-40 scale-[0.98]'
+              : isOver
               ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
               : isActive || isMenuOpen
               ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
               : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
-          }`}
+          } ${
+            dropIndicator === 'before'
+              ? 'before:absolute before:top-0 before:left-1 before:right-1 before:h-0.5 before:bg-blue-500 before:rounded-full before:z-20 before:shadow-[0_0_8px_rgba(59,130,246,0.8)]'
+              : dropIndicator === 'after'
+              ? 'after:absolute after:bottom-0 after:left-1 after:right-1 after:h-0.5 after:bg-blue-500 after:rounded-full after:z-20 after:shadow-[0_0_8px_rgba(59,130,246,0.8)]'
+              : ''
+          } ${!isSpacesLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}
         >
           <div className="flex items-center gap-2.5 truncate flex-1 min-w-0 mr-2">
+            {!isSpacesLocked && (
+              <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 flex-shrink-0 -ml-1 cursor-grab active:cursor-grabbing" />
+            )}
             <span className="text-base flex-shrink-0">{space.icon || '📁'}</span>
             <span className="truncate" title={space.description || space.name}>
               {space.name}
