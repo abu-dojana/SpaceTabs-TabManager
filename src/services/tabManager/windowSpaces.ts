@@ -44,8 +44,7 @@ export async function getAllWindowSpaces(): Promise<Map<number, string | null>> 
   try {
     const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
     if (windows.length === 0) return result;
-    const keys = windows.map((w) => `window_${w.id}_space`);
-    const sessionData = await chrome.storage.session.get(keys);
+    const sessionData = await chrome.storage.session.get(null);
     for (const w of windows) {
       if (w.id) {
         const spaceId = sessionData[`window_${w.id}_space`];

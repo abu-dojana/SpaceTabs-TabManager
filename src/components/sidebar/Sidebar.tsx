@@ -22,6 +22,7 @@ import {
   RotateCcw,
   Settings,
   Heart,
+  RefreshCw,
 } from 'lucide-react';
 import { getUserSettings } from '@/services/settings';
 import {
@@ -43,6 +44,7 @@ export const Sidebar: React.FC = () => {
     setMoveSectionSpaceId,
     setSettingsOpen,
     sidebarWidth,
+    accentColor,
   } = useUIStore();
 
   const [dragOverSpaceId, setDragOverSpaceId] = React.useState<string | null>(null);
@@ -85,13 +87,17 @@ export const Sidebar: React.FC = () => {
   const [deleteConfirmSpace, setDeleteConfirmSpace] = React.useState<Space | null>(null);
 
   // Live Queries for Spaces & Tabs
-  const spaces = useLiveQuery(() => db.spaces.orderBy('order').toArray());
+  const spaces = useLiveQuery(async () => {
+    const list = await db.spaces.orderBy('order').toArray();
+    return list.filter((s) => !s.isArchived);
+  });
   const unsavedTabs = useLiveQuery(() =>
     db.tabs.where('spaceId').equals(UNSAVED_SPACE_ID).toArray()
   );
-  const archivedSpaces = useLiveQuery(() =>
-    db.spaces.filter((s) => !!s.isArchived).toArray()
-  );
+  const archivedSpaces = useLiveQuery(async () => {
+    const list = await db.spaces.orderBy('order').toArray();
+    return list.filter((s) => !!s.isArchived);
+  });
 
   // Build domain summary for Unsaved section
   const domainSummary = React.useMemo(() => {
@@ -168,12 +174,20 @@ export const Sidebar: React.FC = () => {
         const winSpaces = await getAllWindowSpaces();
         for (const [wId, sId] of winSpaces.entries()) {
           if (sId === spaceId) {
-            await chrome.windows.update(wId, { focused: true });
-            return;
+            try {
+              await chrome.windows.update(wId, { focused: true });
+              return;
+            } catch {
+              // Stale window ID, proceed to open new window
+            }
           }
         }
-        const curWin = await chrome.windows.getCurrent();
-        if (curWin.id && winSpaces.get(curWin.id) === spaceId) {
+        let curWinId = currentWindowId;
+        if (!curWinId) {
+          const curTab = await chrome.tabs.getCurrent().catch(() => null);
+          curWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
+        }
+        if (curWinId && winSpaces.get(curWinId) === spaceId) {
           setActiveSpaceId(spaceId);
           return;
         }
@@ -182,9 +196,13 @@ export const Sidebar: React.FC = () => {
       }
 
       setActiveSpaceId(spaceId);
-      const currentWin = await chrome.windows.getCurrent();
-      if (currentWin.id) {
-        await switchWindowToSpace(currentWin.id, spaceId);
+      let targetWinId = currentWindowId;
+      if (!targetWinId) {
+        const curTab = await chrome.tabs.getCurrent().catch(() => null);
+        targetWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
+      }
+      if (targetWinId) {
+        await switchWindowToSpace(targetWinId, spaceId);
       }
     } catch (e) {
       console.error('Failed to switch space in window:', e);
@@ -568,17 +586,58 @@ export const Sidebar: React.FC = () => {
       {/* Brand & User Profile */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-150 bg-blue-600">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-150"
+            style={{
+              backgroundColor: accentColor || '#f43f5e',
+              boxShadow: `0 4px 14px 0 ${accentColor || '#f43f5e'}40`,
+            }}
+          >
             <Layers className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+            <span className="font-bold text-slate-100 tracking-tight text-base">
               SpaceTabs
-            </h1>
-            <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Local-First
-            </p>
+            </span>
+            {syncInfo?.profile ? (
+              syncInfo.status === 'syncing' ? (
+                <button
+                  onClick={() => setSettingsOpen(true, 'cloud')}
+                  className="text-[11px] text-amber-400 flex items-center gap-1 font-medium hover:underline cursor-pointer"
+                  title="Syncing in progress — Click to open Cloud Sync settings"
+                >
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                  <span>Syncing...</span>
+                </button>
+              ) : syncInfo.status === 'error' ? (
+                <button
+                  onClick={() => setSettingsOpen(true, 'cloud')}
+                  className="text-[11px] text-rose-400 flex items-center gap-1 font-medium hover:underline cursor-pointer"
+                  title={syncInfo.lastSyncError || 'Sync Error — Click to configure'}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  <span>Sync Error</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setSettingsOpen(true, 'cloud')}
+                  className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium hover:underline cursor-pointer"
+                  title="Google Drive connected & synced — Click to view"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>Drive Synced</span>
+                </button>
+              )
+            ) : (
+              <button
+                onClick={() => setSettingsOpen(true, 'cloud')}
+                className="text-[11px] text-slate-500 hover:text-slate-400 flex items-center gap-1 font-medium transition cursor-pointer"
+                title="Cloud Sync inactive — Sign in with Google Drive"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                <span>Local-First</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -588,14 +647,14 @@ export const Sidebar: React.FC = () => {
           className="relative group p-0.5 rounded-full hover:ring-2 hover:ring-blue-500/50 transition cursor-pointer"
           title={
             syncInfo?.profile
-              ? `Connected: ${syncInfo.profile.email} (${syncInfo.status})`
-              : 'Sign in to Google Drive Sync'
+              ? `${syncInfo.profile.name} (${syncInfo.profile.email})\nClick to manage Google Drive sync`
+              : 'Connect Google Account to enable Cloud Sync'
           }
         >
           {syncInfo?.profile?.picture ? (
             <img
               src={syncInfo.profile.picture}
-              alt={syncInfo.profile.name || 'User'}
+              alt={syncInfo.profile.name}
               className="w-7 h-7 rounded-full object-cover border border-blue-400/40 group-hover:border-blue-400 transition shadow-sm"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';

@@ -71,6 +71,7 @@ export const TabsView: React.FC = () => {
   const [draggingTabId, setDraggingTabId] = React.useState<string | null>(null);
   const [currentWindowId, setCurrentWindowId] = React.useState<number | null>(null);
   const [liveTabsMap, setLiveTabsMap] = React.useState<Map<number, number>>(new Map()); // chromeTabId -> windowId
+  const [allLiveTabsList, setAllLiveTabsList] = React.useState<chrome.tabs.Tab[]>([]);
   const dropdownRef = React.useRef<HTMLDivElement>(null!);
 
   // On-the-fly "Move to a New Space" creation state
@@ -95,11 +96,26 @@ export const TabsView: React.FC = () => {
   React.useEffect(() => {
     let isMounted = true;
 
-    const refreshLiveTabs = async () => {
+    // Anchor host window ID reliably from the dashboard's own tab context
+    const initHostWindow = async () => {
+      try {
+        const curTab = await chrome.tabs.getCurrent();
+        if (isMounted && curTab?.windowId) {
+          setCurrentWindowId(curTab.windowId);
+          return;
+        }
+      } catch {}
       try {
         const curWin = await chrome.windows.getCurrent();
-        if (isMounted && curWin.id) setCurrentWindowId(curWin.id);
+        if (isMounted && curWin?.id) {
+          setCurrentWindowId(curWin.id);
+        }
+      } catch {}
+    };
+    initHostWindow();
 
+    const refreshLiveTabs = async () => {
+      try {
         const all = await chrome.tabs.query({});
         const map = new Map<number, number>();
         for (const t of all) {
@@ -107,7 +123,10 @@ export const TabsView: React.FC = () => {
             map.set(t.id, t.windowId);
           }
         }
-        if (isMounted) setLiveTabsMap(map);
+        if (isMounted) {
+          setLiveTabsMap(map);
+          setAllLiveTabsList(all);
+        }
       } catch {}
     };
 
@@ -121,7 +140,8 @@ export const TabsView: React.FC = () => {
     chrome.tabs.onRemoved.addListener(onEvent);
     chrome.tabs.onUpdated.addListener(onEvent);
     chrome.tabs.onActivated.addListener(onEvent);
-    chrome.windows.onFocusChanged.addListener(onEvent);
+    chrome.tabs.onAttached?.addListener(onEvent);
+    chrome.tabs.onDetached?.addListener(onEvent);
 
     return () => {
       isMounted = false;
@@ -129,7 +149,8 @@ export const TabsView: React.FC = () => {
       chrome.tabs.onRemoved.removeListener(onEvent);
       chrome.tabs.onUpdated.removeListener(onEvent);
       chrome.tabs.onActivated.removeListener(onEvent);
-      chrome.windows.onFocusChanged.removeListener(onEvent);
+      chrome.tabs.onAttached?.removeListener(onEvent);
+      chrome.tabs.onDetached?.removeListener(onEvent);
     };
   }, []);
 
@@ -608,9 +629,25 @@ export const TabsView: React.FC = () => {
         <div className="divide-y divide-slate-800/50">
           {tabs && tabs.length > 0 ? (
             tabs.map((tab, index) => {
-              const liveWindowId = tab.chromeTabId
+              let liveWindowId = tab.chromeTabId
                 ? liveTabsMap.get(tab.chromeTabId)
                 : undefined;
+
+              // Fallback URL match if tab record's chromeTabId is stale or from a prior session
+              if (liveWindowId === undefined && allLiveTabsList.length > 0) {
+                const realUrl = decodeRealUrl(tab.url);
+                const match = allLiveTabsList.find((bt) => {
+                  if (!bt.url || isSystemOrExtensionUrl(bt.url)) return false;
+                  return (
+                    decodeRealUrl(bt.url) === realUrl ||
+                    decodeRealUrl(bt.pendingUrl || '') === realUrl
+                  );
+                });
+                if (match && match.windowId) {
+                  liveWindowId = match.windowId;
+                }
+              }
+
               const isOpenInThisWindow =
                 liveWindowId !== undefined && liveWindowId === currentWindowId;
               const isOpenInOtherWindow =

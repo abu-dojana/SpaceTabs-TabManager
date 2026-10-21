@@ -86,16 +86,17 @@ export async function locateOrOpenTab(tabRecord: {
 
   // 3. Not currently open anywhere: open it in current window
   try {
-    const currentWin = await chrome.windows.getCurrent();
+    const curTab = await chrome.tabs.getCurrent().catch(() => null);
+    const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
     const newTab = await chrome.tabs.create({
       url: realUrl,
-      windowId: currentWin.id,
+      windowId: winId || undefined,
       active: true,
     });
-    if (newTab.id && currentWin.id) {
+    if (newTab.id && winId) {
       await db.tabs.update(tabRecord.id, {
         chromeTabId: newTab.id,
-        windowId: currentWin.id,
+        windowId: winId,
         updatedAt: Date.now(),
       });
     }
@@ -158,8 +159,8 @@ export async function closeTabs(tabIds: string[]) {
 
   let currentWindowId: number | undefined;
   try {
-    const curWin = await chrome.windows.getCurrent();
-    currentWindowId = curWin.id;
+    const curTab = await chrome.tabs.getCurrent().catch(() => null);
+    currentWindowId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
   } catch {}
 
   let allBrowserTabs: chrome.tabs.Tab[] = [];

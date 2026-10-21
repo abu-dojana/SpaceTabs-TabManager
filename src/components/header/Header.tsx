@@ -125,9 +125,10 @@ export const Header: React.FC = () => {
 
       // Bind current window to the newly saved space
       try {
-        const currentWin = await chrome.windows.getCurrent();
-        if (currentWin.id) {
-          await setWindowActiveSpaceId(currentWin.id, newSpaceId);
+        const curTab = await chrome.tabs.getCurrent().catch(() => null);
+        const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
+        if (winId) {
+          await setWindowActiveSpaceId(winId, newSpaceId);
         }
       } catch {
         // Ignored if window closed or session storage not ready

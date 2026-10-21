@@ -116,9 +116,10 @@ export default function App() {
 
     async function syncActiveSpaceFromWindow() {
       try {
-        const currentWin = await chrome.windows.getCurrent();
-        if (currentWin.id) {
-          const spaceId = await getWindowActiveSpaceId(currentWin.id);
+        const curTab = await chrome.tabs.getCurrent().catch(() => null);
+        const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
+        if (winId) {
+          const spaceId = await getWindowActiveSpaceId(winId);
           setActiveSpaceId(spaceId);
         }
       } catch (e) {
