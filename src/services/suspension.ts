@@ -22,15 +22,22 @@ let activityCache: Record<number, number> = {};
 let isHydrated = false;
 let pendingSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
+function getSessionStorage() {
+  return chrome?.storage?.session || chrome?.storage?.local;
+}
+
 /**
  * Hydrates activityCache from chrome.storage.session
  */
 async function ensureHydrated(): Promise<Record<number, number>> {
   if (isHydrated) return activityCache;
   try {
-    const data = await chrome.storage.session.get(STORAGE_KEY);
-    if (data && data[STORAGE_KEY] && typeof data[STORAGE_KEY] === 'object') {
-      activityCache = { ...data[STORAGE_KEY], ...activityCache };
+    const storage = getSessionStorage();
+    if (storage) {
+      const data = await storage.get(STORAGE_KEY);
+      if (data && data[STORAGE_KEY] && typeof data[STORAGE_KEY] === 'object') {
+        activityCache = { ...data[STORAGE_KEY], ...activityCache };
+      }
     }
   } catch (err) {
     console.warn('Failed to hydrate tab activity from session storage:', err);
@@ -47,7 +54,10 @@ function schedulePersist() {
   if (pendingSaveTimer) clearTimeout(pendingSaveTimer);
   pendingSaveTimer = setTimeout(async () => {
     try {
-      await chrome.storage.session.set({ [STORAGE_KEY]: activityCache });
+      const storage = getSessionStorage();
+      if (storage) {
+        await storage.set({ [STORAGE_KEY]: activityCache });
+      }
     } catch {
       // Ignored if session storage unavailable or extension reloading
     }
