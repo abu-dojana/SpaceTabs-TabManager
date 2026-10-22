@@ -163,6 +163,12 @@ export async function openSpaceInNewWindow(spaceId: string) {
   await setTransitionLock(newWindow.id, true);
 
   try {
+    // Identify initial blank tab created by the browser with the new window
+    const initialTabs = await chrome.tabs.query({ windowId: newWindow.id });
+    const initialBlankTab = initialTabs.find(
+      (t) => !t.pinned && (!t.url || t.url === 'chrome://newtab/' || t.pendingUrl === 'chrome://newtab/' || t.url === 'about:blank')
+    );
+
     // Bind active space to new window
     await setWindowActiveSpaceId(newWindow.id, spaceId);
 
@@ -188,6 +194,11 @@ export async function openSpaceInNewWindow(spaceId: string) {
           updatedAt: Date.now(),
         });
       }
+    }
+
+    // Clean up initial blank tab now that space tabs have populated the window
+    if (spaceTabs.length > 0 && initialBlankTab?.id) {
+      await chrome.tabs.remove(initialBlankTab.id).catch(() => {});
     }
   } finally {
     setTimeout(() => {

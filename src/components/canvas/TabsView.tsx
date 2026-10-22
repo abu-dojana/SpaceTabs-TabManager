@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
+import { getUserSettings } from '@/services/settings';
 import {
   focusOrOpenTab,
   moveTabsToSpace,
@@ -93,6 +94,33 @@ export const TabsView: React.FC = () => {
   const [showMoveAllSubmenu, setShowMoveAllSubmenu] = React.useState(false);
   const [isCopiedAll, setIsCopiedAll] = React.useState(false);
   const tabsMenuRef = React.useRef<HTMLDivElement>(null!);
+
+  // Web Favicons Visibility Preference
+  const [showTabFavicons, setShowTabFavicons] = React.useState(true);
+  React.useEffect(() => {
+    getUserSettings().then((s) => {
+      if (typeof s.showTabFavicons === 'boolean') {
+        setShowTabFavicons(s.showTabFavicons);
+      }
+    });
+
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      area: string
+    ) => {
+      if (area === 'local' && changes['spacetabs_user_settings']) {
+        const next = changes['spacetabs_user_settings'].newValue;
+        if (next && typeof next.showTabFavicons === 'boolean') {
+          setShowTabFavicons(next.showTabFavicons);
+        }
+      }
+    };
+
+    chrome.storage?.onChanged?.addListener(handleStorageChange);
+    return () => {
+      chrome.storage?.onChanged?.removeListener(handleStorageChange);
+    };
+  }, []);
 
   // Track live Chrome windows and tabs to show accurate window status badges
   React.useEffect(() => {
@@ -495,6 +523,10 @@ export const TabsView: React.FC = () => {
   };
 
   const renderFavicon = (url: string, storedFavicon?: string) => {
+    if (!showTabFavicons) {
+      return null;
+    }
+
     const isInternal =
       url.startsWith('chrome://') ||
       url.startsWith('about:') ||

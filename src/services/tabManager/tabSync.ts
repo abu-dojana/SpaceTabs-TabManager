@@ -2,6 +2,7 @@ import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
 import { isSystemOrExtensionUrl, decodeRealUrl } from '@/utils/urlFilter';
 import { isTransitioning, getWindowActiveSpaceId, ensureWindowUnsavedSpace } from './windowSpaces';
+import { recordTombstone } from '@/services/driveSync';
 
 const syncDebounceTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
@@ -219,6 +220,12 @@ export async function performSyncWindowTabs(windowId: number) {
         }
 
         if (!stillExistsInBrowser) {
+          if (record.spaceId && record.spaceId !== UNSAVED_SPACE_ID) {
+            const sp = await db.spaces.get(record.spaceId);
+            if (sp && !sp.isUnsaved) {
+              await recordTombstone(record.id, 'tabs');
+            }
+          }
           await db.tabs.delete(record.id);
         }
       }

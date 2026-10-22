@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/uiStore';
 import { recordTombstone, recordTombstones } from '@/services/driveSync';
 import { focusOrOpenTab } from '@/services/tabManager';
 import { decodeRealUrl, extractDomain } from '@/utils/urlFilter';
+import { getUserSettings } from '@/services/settings';
 import {
   Bookmark,
   Plus,
@@ -67,6 +68,33 @@ export const ResourcesView: React.FC = () => {
     () => db.tabs.where('spaceId').equals(targetSpaceId).sortBy('order'),
     [targetSpaceId]
   );
+
+  // Web Favicons Visibility Preference
+  const [showTabFavicons, setShowTabFavicons] = React.useState(true);
+  React.useEffect(() => {
+    getUserSettings().then((s) => {
+      if (typeof s.showTabFavicons === 'boolean') {
+        setShowTabFavicons(s.showTabFavicons);
+      }
+    });
+
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      area: string
+    ) => {
+      if (area === 'local' && changes['spacetabs_user_settings']) {
+        const next = changes['spacetabs_user_settings'].newValue;
+        if (next && typeof next.showTabFavicons === 'boolean') {
+          setShowTabFavicons(next.showTabFavicons);
+        }
+      }
+    };
+
+    chrome.storage?.onChanged?.addListener(handleStorageChange);
+    return () => {
+      chrome.storage?.onChanged?.removeListener(handleStorageChange);
+    };
+  }, []);
 
   // UI state
   const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set());
@@ -376,6 +404,10 @@ export const ResourcesView: React.FC = () => {
     }
     if (item.type === 'custom') {
       return <Presentation className="w-4 h-4 text-amber-400 flex-shrink-0" />;
+    }
+
+    if (!showTabFavicons) {
+      return <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />;
     }
 
     if (item.favIconUrl && item.favIconUrl.startsWith('http')) {

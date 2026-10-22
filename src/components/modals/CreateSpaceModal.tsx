@@ -4,7 +4,12 @@ import { useUIStore } from '@/store/uiStore';
 import { switchWindowToSpace } from '@/services/tabManager';
 import { X, FolderPlus } from 'lucide-react';
 
-const EMOJI_OPTIONS = ['📁', '🚀', '📊', '📚', '💼', '🎧', '⚡', '🔬', '🎨', '📝'];
+export const EMOJI_OPTIONS = [
+  '📁', '🚀', '📊', '📚', '💼', '🎧',
+  '⚡', '🔬', '🎨', '📝', '💡', '🔥',
+  '🎯', '⭐', '🌐', '🛠️', '💻', '🎮',
+  '☕', '✈️'
+];
 
 export const CreateSpaceModal: React.FC = () => {
   const { isCreateSpaceOpen, setCreateSpaceOpen, setActiveSpaceId } = useUIStore();

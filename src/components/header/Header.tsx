@@ -21,7 +21,9 @@ import {
   X,
   BookmarkCheck,
   FolderInput,
+  ChevronDown,
 } from 'lucide-react';
+import { EMOJI_OPTIONS } from '@/components/modals/CreateSpaceModal';
 
 export const Header: React.FC = () => {
   const {
@@ -40,7 +42,10 @@ export const Header: React.FC = () => {
 
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [titleInput, setTitleInput] = React.useState('');
+  const [iconInput, setIconInput] = React.useState('📁');
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const emojiPickerRef = React.useRef<HTMLDivElement>(null);
 
   // Active space query
   const activeSpace = useLiveQuery(
@@ -73,6 +78,7 @@ export const Header: React.FC = () => {
       initial = firstTab?.title || 'New Space';
     }
     setTitleInput(initial);
+    setIconInput(activeSpace?.icon || '📁');
     setIsEditingTitle(true);
   };
 
@@ -83,6 +89,32 @@ export const Header: React.FC = () => {
       inputRef.current.select();
     }
   }, [isEditingTitle]);
+
+  // Click outside to dismiss emoji picker
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setIsEmojiPickerOpen(false);
+      }
+    };
+    if (isEmojiPickerOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isEmojiPickerOpen]);
+
+  const handleDirectChangeEmoji = async (emoji: string) => {
+    setIconInput(emoji);
+    setIsEmojiPickerOpen(false);
+    if (activeSpace?.id) {
+      await db.spaces.update(activeSpace.id, {
+        icon: emoji,
+        updatedAt: Date.now(),
+      });
+    }
+  };
 
   // Commit title change / quick save
   const handleSaveTitle = async () => {
@@ -99,6 +131,7 @@ export const Header: React.FC = () => {
       if (activeSpace?.id) {
         await db.spaces.update(activeSpace.id, {
           name: trimmed,
+          icon: iconInput,
           isUnsaved: false,
           updatedAt: now,
         });
@@ -109,7 +142,7 @@ export const Header: React.FC = () => {
         await db.spaces.add({
           id: newSpaceId,
           name: trimmed,
-          icon: '📁',
+          icon: iconInput,
           color: '#3b82f6',
           createdAt: now,
           updatedAt: now,
@@ -148,11 +181,13 @@ export const Header: React.FC = () => {
       // Rename existing space
       await db.spaces.update(activeSpaceId, {
         name: trimmed,
+        icon: iconInput,
         updatedAt: now,
       });
     }
 
     setIsEditingTitle(false);
+    setIsEmojiPickerOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -172,7 +207,7 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className={`border-b px-4 sm:px-6 pt-4 pb-0 select-none backdrop-blur-md transition-colors ${
+      className={`border-b px-4 sm:px-6 pt-4 pb-0 select-none backdrop-blur-md transition-colors relative z-40 ${
         isLight
           ? 'border-slate-200/90 bg-white/95'
           : 'border-slate-800 bg-slate-950/80'
@@ -184,6 +219,54 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-2 min-w-[150px] sm:min-w-[200px] flex-1 max-w-xl mr-2 sm:mr-3">
           {isEditingTitle ? (
             <div className="flex items-center gap-1.5 min-w-0 w-full max-w-md">
+              <div className="relative flex-shrink-0" ref={emojiPickerRef}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-base font-emoji transition ${
+                    isLight
+                      ? 'bg-white border-slate-300 hover:bg-slate-50 text-slate-800'
+                      : 'bg-slate-900 border-slate-700 hover:bg-slate-800 text-slate-100'
+                  }`}
+                  title="Choose emoji"
+                >
+                  <span>{iconInput}</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
+                {isEmojiPickerOpen && (
+                  <div
+                    onMouseDown={(e) => e.preventDefault()}
+                    className={`absolute left-0 top-full mt-1.5 p-2 rounded-xl shadow-2xl border z-50 grid grid-cols-5 gap-1.5 w-48 ${
+                      isLight
+                        ? 'bg-white border-slate-200 shadow-slate-300/60'
+                        : 'bg-slate-900 border-slate-800 shadow-black/80'
+                    }`}
+                  >
+                    {EMOJI_OPTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          setIconInput(emoji);
+                          setIsEmojiPickerOpen(false);
+                        }}
+                        className={`text-xl p-1.5 rounded-lg hover:scale-110 active:scale-95 transition-all text-center flex items-center justify-center ${
+                          iconInput === emoji
+                            ? isLight
+                              ? 'bg-blue-100 border border-blue-300 ring-1 ring-blue-400'
+                              : 'bg-blue-900/60 border border-blue-500/50 ring-1 ring-blue-400'
+                            : isLight
+                              ? 'hover:bg-slate-100'
+                              : 'hover:bg-slate-800'
+                        }`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <input
                 ref={inputRef}
                 type="text"
@@ -248,7 +331,55 @@ export const Header: React.FC = () => {
                 <h1 className={`text-xl font-bold tracking-tight flex items-center gap-2 min-w-0 ${
                   isLight ? 'text-slate-900' : 'text-slate-100'
                 }`}>
-                  {activeSpace?.icon && <span className="flex-shrink-0">{activeSpace.icon}</span>}
+                  {activeSpace?.icon && (
+                    <div className="relative flex-shrink-0" ref={emojiPickerRef}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsEmojiPickerOpen((prev) => !prev);
+                        }}
+                        className={`flex-shrink-0 p-1 -m-1 rounded-lg hover:scale-110 active:scale-95 transition-all ${
+                          isLight ? 'hover:bg-slate-200/80' : 'hover:bg-slate-800/80'
+                        }`}
+                        title="Click to change emoji"
+                      >
+                        {activeSpace.icon}
+                      </button>
+                      {isEmojiPickerOpen && !isEditingTitle && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className={`absolute left-0 top-full mt-2 p-2 rounded-xl shadow-2xl border z-50 grid grid-cols-5 gap-1.5 w-48 ${
+                            isLight
+                              ? 'bg-white border-slate-200 shadow-slate-300/60'
+                              : 'bg-slate-900 border-slate-800 shadow-black/80'
+                          }`}
+                        >
+                          {EMOJI_OPTIONS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDirectChangeEmoji(emoji);
+                              }}
+                              className={`text-xl p-1.5 rounded-lg hover:scale-110 active:scale-95 transition-all text-center flex items-center justify-center ${
+                                (activeSpace.icon || '📁') === emoji
+                                  ? isLight
+                                    ? 'bg-blue-100 border border-blue-300 ring-1 ring-blue-400'
+                                    : 'bg-blue-900/60 border border-blue-500/50 ring-1 ring-blue-400'
+                                  : isLight
+                                    ? 'hover:bg-slate-100'
+                                    : 'hover:bg-slate-800'
+                              }`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <span className="truncate" title={defaultTitle}>{defaultTitle}</span>
                 </h1>
                 <Pencil className={`w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${

@@ -139,6 +139,7 @@ export default defineBackground(() => {
       }
       await chrome.storage.session.remove(`window_${windowId}_space`);
       await chrome.storage.session.remove(`transition_lock_${windowId}`);
+      await db.tabs.where('windowId').equals(windowId).modify({ chromeTabId: undefined });
     } catch {
       // Ignored
     }

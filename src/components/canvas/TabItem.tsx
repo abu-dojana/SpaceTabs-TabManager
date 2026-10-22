@@ -85,7 +85,7 @@ export const TabItem: React.FC<TabItemProps> = ({
           : isSelected || isDropdownOpen
           ? 'bg-blue-600/10'
           : 'hover:bg-slate-800/50'
-      }`}
+      } ${isDropdownOpen ? 'z-30' : 'z-0'}`}
     >
       {/* Left: Grip + Checkbox + Favicon + Title + Window Status */}
       <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-4">

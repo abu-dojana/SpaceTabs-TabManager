@@ -397,10 +397,17 @@ export const Sidebar: React.FC = () => {
     setDeleteSectionModal(null);
   };
 
-  const handleCommitRename = async (spaceId: string) => {
+  const handleCommitRename = async (spaceId: string, newIcon?: string) => {
     const trimmed = inlineEditingName.trim();
     if (trimmed) {
-      await db.spaces.update(spaceId, { name: trimmed, updatedAt: Date.now() });
+      const updateData: { name: string; updatedAt: number; icon?: string } = {
+        name: trimmed,
+        updatedAt: Date.now(),
+      };
+      if (newIcon) {
+        updateData.icon = newIcon;
+      }
+      await db.spaces.update(spaceId, updateData);
     }
     setInlineEditingSpaceId(null);
   };
@@ -746,7 +753,7 @@ export const Sidebar: React.FC = () => {
         onSpaceDragStart={(e) => handleSpaceDragStart(e, space.id)}
         onSpaceDragEnd={handleSpaceDragEnd}
         onSetRenamingName={setInlineEditingName}
-        onCommitRename={() => handleCommitRename(space.id)}
+        onCommitRename={(newIcon) => handleCommitRename(space.id, newIcon)}
         onCancelRename={() => setInlineEditingSpaceId(null)}
         onOpenNewWindow={() => handleOpenNewWindow(space.id)}
         onToggleMenu={() => setActiveMenuSpaceId(activeMenuSpaceId === space.id ? null : space.id)}

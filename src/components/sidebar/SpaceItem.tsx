@@ -1,7 +1,8 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
-import { Check, X, ExternalLink, MoreVertical, Crosshair, GripVertical } from 'lucide-react';
+import { Check, X, ExternalLink, MoreVertical, Crosshair, GripVertical, ChevronDown } from 'lucide-react';
 import { SpaceContextMenu } from './SpaceContextMenu';
+import { EMOJI_OPTIONS } from '@/components/modals/CreateSpaceModal';
 
 interface SpaceItemProps {
   space: Space;
@@ -26,7 +27,7 @@ interface SpaceItemProps {
   onSpaceDragStart?: (e: React.DragEvent) => void;
   onSpaceDragEnd?: (e: React.DragEvent) => void;
   onSetRenamingName: (val: string) => void;
-  onCommitRename: () => void;
+  onCommitRename: (newIcon?: string) => void;
   onCancelRename: () => void;
   onOpenNewWindow: () => void;
   onToggleMenu: () => void;
@@ -74,27 +75,92 @@ export const SpaceItem: React.FC<SpaceItemProps> = ({
   onArchive,
   onDelete,
 }) => {
+  const [selectedEmoji, setSelectedEmoji] = React.useState(space.icon || '📁');
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = React.useState(false);
+  const emojiPickerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (isRenaming) {
+      setSelectedEmoji(space.icon || '📁');
+      setIsEmojiPickerOpen(false);
+    }
+  }, [isRenaming, space.icon]);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setIsEmojiPickerOpen(false);
+      }
+    };
+    if (isEmojiPickerOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isEmojiPickerOpen]);
+
   return (
     <div key={space.id} className="relative group">
       {isRenaming ? (
-        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-900 border border-blue-500 rounded-lg">
-          <span className="text-base">{space.icon || '📁'}</span>
+        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-900 border border-blue-500 rounded-lg relative">
+          <div className="relative flex-shrink-0" ref={emojiPickerRef}>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+              className="p-1 rounded hover:bg-slate-800 text-base leading-none transition flex items-center gap-0.5 border border-slate-700/60 hover:border-slate-600"
+              title="Change space emoji"
+            >
+              <span>{selectedEmoji}</span>
+              <ChevronDown className="w-2.5 h-2.5 text-slate-400" />
+            </button>
+            {isEmojiPickerOpen && (
+              <div
+                onMouseDown={(e) => e.preventDefault()}
+                className="absolute left-0 top-full mt-1.5 p-2 rounded-xl shadow-2xl bg-slate-900 border border-slate-700 z-50 grid grid-cols-5 gap-1.5 w-48"
+              >
+                {EMOJI_OPTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => {
+                      setSelectedEmoji(emoji);
+                      setIsEmojiPickerOpen(false);
+                    }}
+                    className={`text-xl p-1.5 rounded-lg hover:scale-110 active:scale-95 transition-all text-center flex items-center justify-center ${
+                      selectedEmoji === emoji
+                        ? 'bg-blue-900/60 border border-blue-500/50 ring-1 ring-blue-400'
+                        : 'hover:bg-slate-800'
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input
             ref={renameInputRef}
             type="text"
             value={inlineEditingName}
             onChange={(e) => onSetRenamingName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') onCommitRename();
+              if (e.key === 'Enter') onCommitRename(selectedEmoji);
               if (e.key === 'Escape') onCancelRename();
             }}
-            onBlur={onCommitRename}
+            onBlur={(e) => {
+              if (emojiPickerRef.current && emojiPickerRef.current.contains(e.relatedTarget as Node)) {
+                return;
+              }
+              onCommitRename(selectedEmoji);
+            }}
             className="flex-1 bg-transparent text-xs text-slate-100 font-medium focus:outline-none min-w-0"
           />
           <button
             onMouseDown={(e) => {
               e.preventDefault();
-              onCommitRename();
+              onCommitRename(selectedEmoji);
             }}
             className="p-1 text-emerald-400 hover:bg-emerald-500/20 rounded"
             title="Save Name"
