@@ -27,7 +27,6 @@ export const Header: React.FC = () => {
   const {
     activeSpaceId,
     setActiveSpaceId,
-    unsavedWindowIdFilter,
     activeView,
     setActiveView,
     searchQuery,
@@ -55,21 +54,14 @@ export const Header: React.FC = () => {
   // First tab in current view for quick-save naming
   const firstTab = useLiveQuery(async () => {
     const targetSpace = activeSpaceId || UNSAVED_SPACE_ID;
-    let tabs = await db.tabs
+    const tabs = await db.tabs
       .where('spaceId')
       .equals(targetSpace)
       .sortBy('order');
-    if (!activeSpaceId && unsavedWindowIdFilter !== null) {
-      tabs = tabs.filter((t) => t.windowId === unsavedWindowIdFilter);
-    }
     return tabs[0] || null;
-  }, [activeSpaceId, unsavedWindowIdFilter]);
+  }, [activeSpaceId]);
 
-  const defaultTitle = activeSpace
-    ? activeSpace.name
-    : !activeSpaceId && unsavedWindowIdFilter !== null
-    ? 'Unsaved (Window)'
-    : 'Unsaved';
+  const defaultTitle = activeSpace ? activeSpace.name : 'Unsaved';
 
   // Enter editing mode
   const startEditing = () => {
@@ -118,15 +110,11 @@ export const Header: React.FC = () => {
         isArchived: false,
       });
 
-      // Move current unsaved tabs into this newly created space
-      let unsavedTabs = await db.tabs
+      // Move all current unsaved tabs into this newly created space
+      const unsavedTabs = await db.tabs
         .where('spaceId')
         .equals(UNSAVED_SPACE_ID)
         .toArray();
-
-      if (unsavedWindowIdFilter !== null) {
-        unsavedTabs = unsavedTabs.filter((t) => t.windowId === unsavedWindowIdFilter);
-      }
 
       for (const t of unsavedTabs) {
         await db.tabs.update(t.id, {
@@ -135,10 +123,10 @@ export const Header: React.FC = () => {
         });
       }
 
-      // Bind target window to the newly saved space
+      // Bind current window to the newly saved space
       try {
         const curTab = await chrome.tabs.getCurrent().catch(() => null);
-        const winId = unsavedWindowIdFilter ?? (curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id);
+        const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
         if (winId) {
           await setWindowActiveSpaceId(winId, newSpaceId);
         }

@@ -2,7 +2,6 @@ import { create } from 'zustand';
 
 interface UIState {
   activeSpaceId: string | null;     // null = Unsaved view
-  unsavedWindowIdFilter: number | null; // Filter unsaved tabs to a specific window
   selectedTabIds: Set<string>;
   activeView: 'tabs' | 'resources' | 'notes' | 'tasks';
   searchQuery: string;
@@ -18,7 +17,6 @@ interface UIState {
   isSettingsOpen: boolean;
   settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact';
   setActiveSpaceId: (id: string | null) => void;
-  setUnsavedWindowIdFilter: (windowId: number | null) => void;
   setActiveView: (view: 'tabs' | 'resources' | 'notes' | 'tasks') => void;
   setSearchQuery: (query: string) => void;
   toggleSelectTab: (id: string) => void;
@@ -41,7 +39,6 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   activeSpaceId: null, // default to Unsaved
-  unsavedWindowIdFilter: null,
   selectedTabIds: new Set<string>(),
   activeView: 'tabs',
   searchQuery: '',
@@ -59,17 +56,7 @@ export const useUIStore = create<UIState>((set) => ({
   setPatreonUrl: (url) => set({ patreonUrl: url }),
 
   setActiveSpaceId: (id) =>
-    set((state) => ({
-      activeSpaceId: id,
-      unsavedWindowIdFilter: id !== null ? null : state.unsavedWindowIdFilter,
-      selectedTabIds: new Set(),
-      searchQuery: '',
-    })),
-  setUnsavedWindowIdFilter: (windowId) =>
-    set({
-      unsavedWindowIdFilter: windowId,
-      selectedTabIds: new Set(),
-    }),
+    set({ activeSpaceId: id, selectedTabIds: new Set(), searchQuery: '' }),
   setActiveView: (view) => set({ activeView: view }),
   setSearchQuery: (query) => set({ searchQuery: query }),
 

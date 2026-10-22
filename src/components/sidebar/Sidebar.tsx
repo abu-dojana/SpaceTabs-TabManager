@@ -25,7 +25,6 @@ import {
   RefreshCw,
   Lock,
   Unlock,
-  Crosshair,
 } from 'lucide-react';
 import { getUserSettings } from '@/services/settings';
 import {
@@ -42,8 +41,6 @@ export const Sidebar: React.FC = () => {
   const {
     activeSpaceId,
     setActiveSpaceId,
-    unsavedWindowIdFilter,
-    setUnsavedWindowIdFilter,
     setCreateSpaceOpen,
     clearSelectedTabs,
     setMoveSectionSpaceId,
@@ -139,37 +136,6 @@ export const Sidebar: React.FC = () => {
     }
     return top.join(', ');
   }, [unsavedTabs]);
-
-  // Group unsaved tabs by windowId for multi-window support
-  const unsavedByWindow = React.useMemo(() => {
-    if (!unsavedTabs || unsavedTabs.length === 0) return [];
-    const windowMap = new Map<number, typeof unsavedTabs>();
-    for (const tab of unsavedTabs) {
-      const wId = tab.windowId || 0;
-      if (!windowMap.has(wId)) windowMap.set(wId, []);
-      windowMap.get(wId)!.push(tab);
-    }
-
-    return Array.from(windowMap.entries())
-      .map(([wId, tabs]) => {
-        const isThisWindow = currentWindowId !== null && wId === currentWindowId;
-        const domainCounts = new Map<string, number>();
-        for (const t of tabs) {
-          const d = extractDomain(t.url);
-          domainCounts.set(d, (domainCounts.get(d) || 0) + 1);
-        }
-        const sorted = Array.from(domainCounts.entries()).sort((a, b) => b[1] - a[1]);
-        const top = sorted.slice(0, 2).map(([d]) => d);
-        const summary = sorted.length > 2 ? `${top.join(', ')} +${sorted.length - 2}` : top.join(', ');
-        return {
-          windowId: wId,
-          tabs,
-          isThisWindow,
-          domainSummary: summary || 'Empty session',
-        };
-      })
-      .sort((a, b) => (b.isThisWindow ? 1 : 0) - (a.isThisWindow ? 1 : 0));
-  }, [unsavedTabs, currentWindowId]);
 
   // Separate active spaces into Sections Map vs Unsectioned list
   const { unsectionedSpaces, sectionsMap } = React.useMemo(() => {
@@ -842,143 +808,54 @@ export const Sidebar: React.FC = () => {
             )}
           </div>
 
-          {unsavedByWindow.length <= 1 ? (
-            <button
-              onClick={() => {
-                handleSelectSpace(null);
-                setUnsavedWindowIdFilter(null);
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                if (dragOverSpaceId !== UNSAVED_SPACE_ID) {
-                  setDragOverSpaceId(UNSAVED_SPACE_ID);
-                }
-              }}
-              onDragEnter={(e) => {
-                e.preventDefault();
+          <button
+            onClick={() => handleSelectSpace(null)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (dragOverSpaceId !== UNSAVED_SPACE_ID) {
                 setDragOverSpaceId(UNSAVED_SPACE_ID);
-              }}
-              onDragLeave={(e) => {
-                const currentTarget = e.currentTarget as HTMLElement;
-                if (!currentTarget.contains(e.relatedTarget as Node)) {
-                  if (dragOverSpaceId === UNSAVED_SPACE_ID) {
-                    setDragOverSpaceId(null);
-                  }
+              }
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setDragOverSpaceId(UNSAVED_SPACE_ID);
+            }}
+            onDragLeave={(e) => {
+              const currentTarget = e.currentTarget as HTMLElement;
+              if (!currentTarget.contains(e.relatedTarget as Node)) {
+                if (dragOverSpaceId === UNSAVED_SPACE_ID) {
+                  setDragOverSpaceId(null);
                 }
-              }}
-              onDrop={(e) => handleDropOnSpace(e, null)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
-                dragOverSpaceId === UNSAVED_SPACE_ID
-                  ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
-                  : activeSpaceId === null
-                  ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
-                  : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
-              }`}
-            >
-              <div className="flex items-center gap-2.5 truncate">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    unsavedTabs && unsavedTabs.length > 0
-                      ? 'bg-amber-400'
-                      : 'bg-slate-600'
-                  }`}
-                />
-                <span className="truncate italic">
-                  {domainSummary || 'Empty session'}
-                </span>
-              </div>
-              {dragOverSpaceId === UNSAVED_SPACE_ID && (
-                <span className="text-[10px] font-bold text-blue-300 bg-blue-500/30 px-1.5 py-0.5 rounded animate-pulse">
-                  Drop
-                </span>
-              )}
-            </button>
-          ) : (
-            <div className="space-y-1">
-              {unsavedByWindow.map((session) => {
-                const isSelected =
-                  activeSpaceId === null &&
-                  (unsavedWindowIdFilter === session.windowId ||
-                    (unsavedWindowIdFilter === null && session.isThisWindow));
-                return (
-                  <button
-                    key={session.windowId}
-                    onClick={() => {
-                      handleSelectSpace(null);
-                      setUnsavedWindowIdFilter(session.windowId);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dragOverSpaceId !== UNSAVED_SPACE_ID) {
-                        setDragOverSpaceId(UNSAVED_SPACE_ID);
-                      }
-                    }}
-                    onDragEnter={(e) => {
-                      e.preventDefault();
-                      setDragOverSpaceId(UNSAVED_SPACE_ID);
-                    }}
-                    onDragLeave={(e) => {
-                      const currentTarget = e.currentTarget as HTMLElement;
-                      if (!currentTarget.contains(e.relatedTarget as Node)) {
-                        if (dragOverSpaceId === UNSAVED_SPACE_ID) {
-                          setDragOverSpaceId(null);
-                        }
-                      }
-                    }}
-                    onDrop={(e) => handleDropOnSpace(e, null)}
-                    className={`group w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all relative ${
-                      dragOverSpaceId === UNSAVED_SPACE_ID
-                        ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
-                        : isSelected
-                        ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
-                        : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 truncate min-w-0 flex-1 mr-1">
-                      <div
-                        className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                          session.isThisWindow
-                            ? 'bg-emerald-400 animate-pulse'
-                            : 'bg-amber-400'
-                        }`}
-                      />
-                      <div className="flex flex-col text-left truncate min-w-0">
-                        <span className="font-semibold text-slate-200 truncate flex items-center gap-1.5">
-                          {session.isThisWindow ? 'This Window' : `Window #${session.windowId}`}
-                          <span className="text-[10px] text-slate-400 font-normal">
-                            ({session.tabs.length})
-                          </span>
-                        </span>
-                        <span className="text-[10px] text-slate-400 italic truncate">
-                          {session.domainSummary}
-                        </span>
-                      </div>
-                    </div>
-
-                    {!session.isThisWindow && (
-                      <button
-                        type="button"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            await chrome.windows.update(session.windowId, { focused: true });
-                          } catch (err) {
-                            console.error('Failed to focus window:', err);
-                          }
-                        }}
-                        className="p-1 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded transition opacity-0 group-hover:opacity-100 flex-shrink-0"
-                        title="Switch to this window"
-                      >
-                        <Crosshair className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </button>
-                );
-              })}
+              }
+            }}
+            onDrop={(e) => handleDropOnSpace(e, null)}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
+              dragOverSpaceId === UNSAVED_SPACE_ID
+                ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
+                : activeSpaceId === null
+                ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
+                : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
+            }`}
+          >
+            <div className="flex items-center gap-2.5 truncate">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  unsavedTabs && unsavedTabs.length > 0
+                    ? 'bg-amber-400'
+                    : 'bg-slate-600'
+                }`}
+              />
+              <span className="truncate italic">
+                {domainSummary || 'Empty session'}
+              </span>
             </div>
-          )}
+            {dragOverSpaceId === UNSAVED_SPACE_ID && (
+              <span className="text-[10px] font-bold text-blue-300 bg-blue-500/30 px-1.5 py-0.5 rounded animate-pulse">
+                Drop
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Spaces Section */}

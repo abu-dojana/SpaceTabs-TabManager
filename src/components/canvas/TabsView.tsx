@@ -30,7 +30,6 @@ export const TabsView: React.FC = () => {
   const {
     activeSpaceId,
     setActiveSpaceId,
-    unsavedWindowIdFilter,
     searchQuery,
     selectedTabIds,
     toggleSelectTab,
@@ -47,10 +46,6 @@ export const TabsView: React.FC = () => {
       .equals(targetSpace)
       .sortBy('order');
 
-    if (!activeSpaceId && unsavedWindowIdFilter !== null) {
-      result = result.filter((t) => t.windowId === unsavedWindowIdFilter);
-    }
-
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -59,7 +54,7 @@ export const TabsView: React.FC = () => {
       );
     }
     return result;
-  }, [activeSpaceId, unsavedWindowIdFilter, searchQuery]);
+  }, [activeSpaceId, searchQuery]);
 
   const spaces = useLiveQuery(async () => {
     const list = await db.spaces.orderBy('order').toArray();
