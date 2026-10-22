@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
 import { isSystemOrExtensionUrl, decodeRealUrl } from '@/utils/urlFilter';
-import { isTransitioning, getWindowActiveSpaceId } from './windowSpaces';
+import { isTransitioning, getWindowActiveSpaceId, ensureWindowUnsavedSpace } from './windowSpaces';
 
 const syncDebounceTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
@@ -50,6 +50,46 @@ export function getEffectiveTabTitle(t: chrome.tabs.Tab, realUrl: string): strin
   return t.title || realUrl;
 }
 
+/**
+ * Migrates any legacy tabs stored with spaceId '__unsaved__' into an active unsaved space
+ */
+export async function migrateLegacyUnsavedTabs(): Promise<void> {
+  try {
+    const legacyTabs = await db.tabs
+      .where('spaceId')
+      .equals(UNSAVED_SPACE_ID)
+      .toArray();
+
+    if (legacyTabs.length > 0) {
+      let targetSpace = await db.spaces
+        .filter((s) => !!s.isUnsaved && !s.isArchived)
+        .first();
+
+      if (!targetSpace) {
+        const id = crypto.randomUUID();
+        const now = Date.now();
+        targetSpace = {
+          id,
+          name: '',
+          isUnsaved: true,
+          order: now,
+          createdAt: now,
+          updatedAt: now,
+          isArchived: false,
+        };
+        await db.spaces.add(targetSpace);
+      }
+
+      await db.tabs
+        .where('spaceId')
+        .equals(UNSAVED_SPACE_ID)
+        .modify({ spaceId: targetSpace.id });
+    }
+  } catch (err) {
+    console.warn('Error migrating legacy unsaved tabs:', err);
+  }
+}
+
 export async function performSyncWindowTabs(windowId: number) {
   try {
     if (await isTransitioning(windowId)) return;
@@ -62,9 +102,11 @@ export async function performSyncWindowTabs(windowId: number) {
     }
     if (win.type !== 'normal') return;
 
-    // Determine active space for this window:
-    const activeSpaceId = await getWindowActiveSpaceId(windowId);
-    const targetSpaceId = activeSpaceId || UNSAVED_SPACE_ID;
+    // Determine active space for this window (assign dedicated unsaved space if none yet):
+    let targetSpaceId = await getWindowActiveSpaceId(windowId);
+    if (!targetSpaceId) {
+      targetSpaceId = await ensureWindowUnsavedSpace(windowId);
+    }
 
     const tabs = await chrome.tabs.query({ windowId });
     const dashboardUrl = chrome.runtime.getURL('/dashboard.html');

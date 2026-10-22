@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
-import { type Space, UNSAVED_SPACE_ID } from '@/db/schema';
+import { type Space, type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
 import { extractDomain } from '@/utils/urlFilter';
 import {
@@ -113,33 +113,53 @@ export const Sidebar: React.FC = () => {
     const list = await db.spaces.orderBy('order').toArray();
     return list.filter((s) => !s.isArchived);
   });
-  const unsavedTabs = useLiveQuery(() =>
-    db.tabs.where('spaceId').equals(UNSAVED_SPACE_ID).toArray()
+
+  const unsavedSpaces = React.useMemo(() => {
+    return (spaces || []).filter((s) => !!s.isUnsaved);
+  }, [spaces]);
+
+  const unsavedTabsMap = useLiveQuery(async () => {
+    const list = await db.spaces.filter((s) => !!s.isUnsaved && !s.isArchived).toArray();
+    const map = new Map<string, Tab[]>();
+    for (const s of list) {
+      const t = await db.tabs.where('spaceId').equals(s.id).sortBy('order');
+      map.set(s.id, t);
+    }
+    const legacy = await db.tabs.where('spaceId').equals(UNSAVED_SPACE_ID).sortBy('order');
+    if (legacy.length > 0) {
+      map.set(UNSAVED_SPACE_ID, legacy);
+    }
+    return map;
+  }, [spaces]);
+
+  const totalUnsavedTabsCount = React.useMemo(() => {
+    if (!unsavedTabsMap) return 0;
+    let sum = 0;
+    for (const tabs of unsavedTabsMap.values()) {
+      sum += tabs.length;
+    }
+    return sum;
+  }, [unsavedTabsMap]);
+
+  const getUnsavedTitle = React.useCallback(
+    (spaceId: string) => {
+      const tabs = unsavedTabsMap?.get(spaceId) || [];
+      if (tabs.length === 0) return 'Empty session';
+      const firstDomain = extractDomain(tabs[0].url) || 'New Tab';
+      if (tabs.length === 1) return firstDomain;
+      return `${firstDomain} + ${tabs.length - 1}`;
+    },
+    [unsavedTabsMap]
   );
+
   const archivedSpaces = useLiveQuery(async () => {
     const list = await db.spaces.orderBy('order').toArray();
     return list.filter((s) => !!s.isArchived);
   });
 
-  // Build domain summary for Unsaved section
-  const domainSummary = React.useMemo(() => {
-    if (!unsavedTabs || unsavedTabs.length === 0) return null;
-    const domainCounts = new Map<string, number>();
-    for (const tab of unsavedTabs) {
-      const d = extractDomain(tab.url);
-      domainCounts.set(d, (domainCounts.get(d) || 0) + 1);
-    }
-    const sorted = Array.from(domainCounts.entries()).sort((a, b) => b[1] - a[1]);
-    const top = sorted.slice(0, 2).map(([d]) => d);
-    if (sorted.length > 2) {
-      return `${top.join(', ')} +${sorted.length - 2}`;
-    }
-    return top.join(', ');
-  }, [unsavedTabs]);
-
-  // Separate active spaces into Sections Map vs Unsectioned list
+  // Separate permanent active spaces into Sections Map vs Unsectioned list
   const { unsectionedSpaces, sectionsMap } = React.useMemo(() => {
-    const active = (spaces || []).filter((s) => !s.isArchived);
+    const active = (spaces || []).filter((s) => !s.isArchived && !s.isUnsaved);
     const unsectioned: Space[] = [];
     const secMap = new Map<string, Space[]>();
 
@@ -192,26 +212,26 @@ export const Sidebar: React.FC = () => {
     try {
       const settings = await getUserSettings();
 
-      if (settings.defaultOpenInNewWindow && spaceId) {
+      // If space is already active in another window, focus that window
+      if (spaceId) {
         const winSpaces = await getAllWindowSpaces();
         for (const [wId, sId] of winSpaces.entries()) {
-          if (sId === spaceId) {
+          if (sId === spaceId && wId !== currentWindowId) {
             try {
               await chrome.windows.update(wId, { focused: true });
               return;
             } catch {
-              // Stale window ID, proceed to open new window
+              // Stale window ID, proceed
             }
           }
         }
+      }
+
+      if (settings.defaultOpenInNewWindow && spaceId) {
         let curWinId = currentWindowId;
         if (!curWinId) {
           const curTab = await chrome.tabs.getCurrent().catch(() => null);
           curWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
-        }
-        if (curWinId && winSpaces.get(curWinId) === spaceId) {
-          setActiveSpaceId(spaceId);
-          return;
         }
         await openSpaceInNewWindow(spaceId);
         return;
@@ -228,6 +248,71 @@ export const Sidebar: React.FC = () => {
       }
     } catch (e) {
       console.error('Failed to switch space in window:', e);
+    }
+  };
+
+  const handleCreateNewUnsavedSession = async () => {
+    try {
+      const newId = crypto.randomUUID();
+      const now = Date.now();
+      await db.spaces.add({
+        id: newId,
+        name: '',
+        isUnsaved: true,
+        order: now,
+        createdAt: now,
+        updatedAt: now,
+        isArchived: false,
+      });
+
+      let targetWinId = currentWindowId;
+      if (!targetWinId) {
+        const curTab = await chrome.tabs.getCurrent().catch(() => null);
+        targetWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
+      }
+      if (targetWinId) {
+        await switchWindowToSpace(targetWinId, newId);
+      }
+      setActiveSpaceId(newId);
+    } catch (err) {
+      console.error('Failed to create new unsaved session:', err);
+    }
+  };
+
+  const handleDeleteUnsavedSession = async (spaceId: string) => {
+    try {
+      await db.tabs.where('spaceId').equals(spaceId).delete();
+      await db.spaces.delete(spaceId);
+      if (activeSpaceId === spaceId) {
+        setActiveSpaceId(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete unsaved session:', err);
+    }
+  };
+
+  const handleSelectUnsavedSession = async (spaceId: string) => {
+    try {
+      for (const [wId, sId] of windowSpaces.entries()) {
+        if (sId === spaceId && wId !== currentWindowId) {
+          try {
+            await chrome.windows.update(wId, { focused: true });
+            return;
+          } catch {}
+        }
+      }
+
+      setActiveSpaceId(spaceId);
+      let targetWinId = currentWindowId;
+      if (!targetWinId) {
+        const curTab = await chrome.tabs.getCurrent().catch(() => null);
+        targetWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
+      }
+      if (targetWinId) {
+        await switchWindowToSpace(targetWinId, spaceId);
+      }
+    } catch (err) {
+      console.error('Failed to switch to unsaved session:', err);
     }
   };
 
@@ -801,61 +886,147 @@ export const Sidebar: React.FC = () => {
               <Layers className="w-3.5 h-3.5" />
               <span>Unsaved</span>
             </div>
-            {unsavedTabs && unsavedTabs.length > 0 && (
-              <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300">
-                {unsavedTabs.length}
-              </span>
-            )}
+            <div className="flex items-center gap-1.5">
+              {totalUnsavedTabsCount > 0 && (
+                <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300">
+                  {totalUnsavedTabsCount}
+                </span>
+              )}
+              <button
+                onClick={handleCreateNewUnsavedSession}
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
+                title="New unsaved browsing session (+)"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
-          <button
-            onClick={() => handleSelectSpace(null)}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = 'move';
-              if (dragOverSpaceId !== UNSAVED_SPACE_ID) {
-                setDragOverSpaceId(UNSAVED_SPACE_ID);
-              }
-            }}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              setDragOverSpaceId(UNSAVED_SPACE_ID);
-            }}
-            onDragLeave={(e) => {
-              const currentTarget = e.currentTarget as HTMLElement;
-              if (!currentTarget.contains(e.relatedTarget as Node)) {
-                if (dragOverSpaceId === UNSAVED_SPACE_ID) {
-                  setDragOverSpaceId(null);
-                }
-              }
-            }}
-            onDrop={(e) => handleDropOnSpace(e, null)}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
-              dragOverSpaceId === UNSAVED_SPACE_ID
-                ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
-                : activeSpaceId === null
-                ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
-                : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
-            }`}
-          >
-            <div className="flex items-center gap-2.5 truncate">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  unsavedTabs && unsavedTabs.length > 0
-                    ? 'bg-amber-400'
-                    : 'bg-slate-600'
+          <div className="space-y-1">
+            {(!unsavedSpaces || unsavedSpaces.length === 0) ? (
+              <button
+                onClick={() => handleSelectSpace(null)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverSpaceId !== UNSAVED_SPACE_ID) {
+                    setDragOverSpaceId(UNSAVED_SPACE_ID);
+                  }
+                }}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  setDragOverSpaceId(UNSAVED_SPACE_ID);
+                }}
+                onDragLeave={(e) => {
+                  const currentTarget = e.currentTarget as HTMLElement;
+                  if (!currentTarget.contains(e.relatedTarget as Node)) {
+                    if (dragOverSpaceId === UNSAVED_SPACE_ID) {
+                      setDragOverSpaceId(null);
+                    }
+                  }
+                }}
+                onDrop={(e) => handleDropOnSpace(e, null)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
+                  dragOverSpaceId === UNSAVED_SPACE_ID
+                    ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
+                    : activeSpaceId === null
+                    ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
+                    : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
                 }`}
-              />
-              <span className="truncate italic">
-                {domainSummary || 'Empty session'}
-              </span>
-            </div>
-            {dragOverSpaceId === UNSAVED_SPACE_ID && (
-              <span className="text-[10px] font-bold text-blue-300 bg-blue-500/30 px-1.5 py-0.5 rounded animate-pulse">
-                Drop
-              </span>
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <div className="w-2 h-2 rounded-full bg-slate-600" />
+                  <span className="truncate italic">Empty session</span>
+                </div>
+              </button>
+            ) : (
+              unsavedSpaces.map((uSpace) => {
+                const uTabs = unsavedTabsMap?.get(uSpace.id) || [];
+                const uTitle = getUnsavedTitle(uSpace.id);
+                const isOpenInThisWindow = currentWindowId !== null && windowSpaces.get(currentWindowId) === uSpace.id;
+                let otherWindowId: number | null = null;
+                for (const [wId, sId] of windowSpaces.entries()) {
+                  if (sId === uSpace.id && wId !== currentWindowId) {
+                    otherWindowId = wId;
+                    break;
+                  }
+                }
+                const isOpenInOtherWindow = otherWindowId !== null;
+                const isSelected = activeSpaceId === uSpace.id || (activeSpaceId === null && isOpenInThisWindow);
+
+                return (
+                  <div key={uSpace.id} className="group relative">
+                    <button
+                      onClick={() => handleSelectUnsavedSession(uSpace.id)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragOverSpaceId !== uSpace.id) {
+                          setDragOverSpaceId(uSpace.id);
+                        }
+                      }}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        setDragOverSpaceId(uSpace.id);
+                      }}
+                      onDragLeave={(e) => {
+                        const currentTarget = e.currentTarget as HTMLElement;
+                        if (!currentTarget.contains(e.relatedTarget as Node)) {
+                          if (dragOverSpaceId === uSpace.id) {
+                            setDragOverSpaceId(null);
+                          }
+                        }
+                      }}
+                      onDrop={(e) => handleDropOnSpace(e, uSpace.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all relative ${
+                        dragOverSpaceId === uSpace.id
+                          ? 'bg-blue-600/30 border-2 border-blue-400 text-blue-200 scale-[1.02] shadow-lg shadow-blue-500/20'
+                          : isSelected
+                          ? 'bg-blue-600/15 text-blue-400 font-medium border border-blue-500/30'
+                          : 'text-slate-300 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 truncate min-w-0 flex-1 mr-1">
+                        <div
+                          className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            isOpenInThisWindow
+                              ? 'bg-emerald-400'
+                              : isOpenInOtherWindow
+                              ? 'bg-amber-400'
+                              : uTabs.length > 0
+                              ? 'bg-slate-400'
+                              : 'bg-slate-600'
+                          }`}
+                        />
+                        <span className="truncate italic font-medium">
+                          {uTitle}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {uTabs.length > 0 && (
+                          <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 group-hover:hidden">
+                            {uTabs.length}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteUnsavedSession(uSpace.id);
+                          }}
+                          className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded transition opacity-0 group-hover:opacity-100"
+                          title="Discard session"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </button>
+                  </div>
+                );
+              })
             )}
-          </button>
+          </div>
         </div>
 
         {/* Spaces Section */}

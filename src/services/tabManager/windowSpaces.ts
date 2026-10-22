@@ -1,3 +1,4 @@
+import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
 
 /**
@@ -34,6 +35,52 @@ export async function setWindowActiveSpaceId(
   } catch (err) {
     console.error('Failed to set window active space:', err);
   }
+}
+
+/**
+ * Ensures a normal window has an unsaved space assigned if no active space exists.
+ */
+export async function ensureWindowUnsavedSpace(windowId: number): Promise<string> {
+  const existingSpaceId = await getWindowActiveSpaceId(windowId);
+  if (existingSpaceId) {
+    const space = await db.spaces.get(existingSpaceId);
+    if (space && !space.isArchived) {
+      return existingSpaceId;
+    }
+  }
+
+  // Check if there is an existing unsaved space not currently bound to another window
+  const allWindowSpaces = await getAllWindowSpaces();
+  const activeUnsavedIdsInWindows = new Set(
+    Array.from(allWindowSpaces.entries())
+      .filter(([wId]) => wId !== windowId)
+      .map(([, sId]) => sId)
+  );
+
+  const availableUnsaved = await db.spaces
+    .filter((s) => !!s.isUnsaved && !s.isArchived && !activeUnsavedIdsInWindows.has(s.id))
+    .first();
+
+  if (availableUnsaved) {
+    await setWindowActiveSpaceId(windowId, availableUnsaved.id);
+    return availableUnsaved.id;
+  }
+
+  // Create a new unsaved space for this window
+  const newId = crypto.randomUUID();
+  const now = Date.now();
+  await db.spaces.add({
+    id: newId,
+    name: '',
+    isUnsaved: true,
+    order: now,
+    createdAt: now,
+    updatedAt: now,
+    isArchived: false,
+  });
+
+  await setWindowActiveSpaceId(windowId, newId);
+  return newId;
 }
 
 /**

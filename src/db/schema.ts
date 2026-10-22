@@ -9,6 +9,7 @@ export const UNSAVED_SPACE_ID = '__unsaved__';
 export interface Space {
   id: string;                     // UUID (primary key)
   name: string;                   // e.g. "Power BI", "Audiobook"
+  isUnsaved?: boolean;            // True if this is a temporary/unsaved session
   icon?: string;                  // Emoji or icon name
   color?: string;                 // UI accent color
   description?: string;           // Optional description / purpose

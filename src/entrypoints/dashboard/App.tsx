@@ -9,7 +9,7 @@ import { CreateSpaceModal } from '@/components/modals/CreateSpaceModal';
 import { MoveToSectionModal } from '@/components/modals/MoveToSectionModal';
 import { SettingsModal } from '@/components/modals/SettingsModal';
 import { useUIStore } from '@/store/uiStore';
-import { getWindowActiveSpaceId } from '@/services/tabManager';
+import { getWindowActiveSpaceId, migrateLegacyUnsavedTabs } from '@/services/tabManager';
 import { getUserSettings } from '@/services/settings';
 import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink } from 'lucide-react';
 
@@ -116,6 +116,7 @@ export default function App() {
 
     async function syncActiveSpaceFromWindow() {
       try {
+        await migrateLegacyUnsavedTabs();
         const curTab = await chrome.tabs.getCurrent().catch(() => null);
         const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
         if (winId) {

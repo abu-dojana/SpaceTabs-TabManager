@@ -1,6 +1,11 @@
 import { defineBackground } from 'wxt/sandbox';
 import { db } from '@/db';
-import { syncWindowTabsToUnsaved } from '@/services/tabManager';
+import {
+  syncWindowTabsToUnsaved,
+  ensureWindowUnsavedSpace,
+  getWindowActiveSpaceId,
+  migrateLegacyUnsavedTabs,
+} from '@/services/tabManager';
 import {
   setupSuspensionAlarms,
   initSuspensionListener,
@@ -96,6 +101,7 @@ export default defineBackground(() => {
 
   // 1. Startup & Window Lifecycle
   chrome.runtime.onStartup.addListener(async () => {
+    await migrateLegacyUnsavedTabs();
     await setupSuspensionAlarms();
     const syncSettings = await getCloudSyncSettings();
     if (syncSettings.enabled && syncSettings.syncOnStartup) {
@@ -106,19 +112,31 @@ export default defineBackground(() => {
   });
 
   chrome.runtime.onInstalled.addListener(async () => {
+    await migrateLegacyUnsavedTabs();
     await setupSuspensionAlarms();
     await setupDriveSyncAlarm();
     await initializeAllWindows();
   });
 
-  chrome.windows.onCreated.addListener((window) => {
+  chrome.windows.onCreated.addListener(async (window) => {
     if (window.type === 'normal' && window.id) {
-      ensurePinnedIndexTab(window.id);
+      await ensureWindowUnsavedSpace(window.id);
+      await ensurePinnedIndexTab(window.id);
     }
   });
 
   chrome.windows.onRemoved.addListener(async (windowId) => {
     try {
+      const spaceId = await getWindowActiveSpaceId(windowId);
+      if (spaceId) {
+        const space = await db.spaces.get(spaceId);
+        if (space?.isUnsaved) {
+          const tabCount = await db.tabs.where('spaceId').equals(spaceId).count();
+          if (tabCount === 0) {
+            await db.spaces.delete(spaceId);
+          }
+        }
+      }
       await chrome.storage.session.remove(`window_${windowId}_space`);
       await chrome.storage.session.remove(`transition_lock_${windowId}`);
     } catch {

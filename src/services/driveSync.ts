@@ -701,10 +701,14 @@ export async function buildLocalExport(): Promise<DriveDataExport> {
       getTombstones(),
     ]);
 
+  const unsavedSpaceIds = new Set(spaces.filter((s) => s.isUnsaved).map((s) => s.id));
+  const syncableSpaces = spaces.filter((s) => !s.isUnsaved);
+  const syncableTabs = tabs.filter((t) => !unsavedSpaceIds.has(t.spaceId));
+
   return {
     exportedAt: Date.now(),
-    spaces,
-    tabs,
+    spaces: syncableSpaces,
+    tabs: syncableTabs,
     resourceSections,
     resourceItems,
     notes,
@@ -857,7 +861,7 @@ export async function mergeRemoteAndLocal(
       if (mergedSpaces.length > 0) await db.spaces.bulkPut(mergedSpaces);
       const currentSpaces = await db.spaces.toArray();
       const spacesToDelete = currentSpaces
-        .filter((s) => !spaceMap.has(s.id) || deletedSet.has(s.id))
+        .filter((s) => !s.isUnsaved && (!spaceMap.has(s.id) || deletedSet.has(s.id)))
         .map((s) => s.id);
       if (spacesToDelete.length > 0) await db.spaces.bulkDelete(spacesToDelete);
 
@@ -867,8 +871,9 @@ export async function mergeRemoteAndLocal(
         .where('spaceId')
         .notEqual(UNSAVED_SPACE_ID)
         .toArray();
+      const unsavedSpaceIds = new Set(currentSpaces.filter((s) => s.isUnsaved).map((s) => s.id));
       const tabsToDelete = currentSavedTabs
-        .filter((t) => !tabMap.has(t.id) || deletedSet.has(t.id))
+        .filter((t) => !unsavedSpaceIds.has(t.spaceId) && (!tabMap.has(t.id) || deletedSet.has(t.id)))
         .map((t) => t.id);
       if (tabsToDelete.length > 0) await db.tabs.bulkDelete(tabsToDelete);
 

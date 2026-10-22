@@ -61,12 +61,12 @@ export const Header: React.FC = () => {
     return tabs[0] || null;
   }, [activeSpaceId]);
 
-  const defaultTitle = activeSpace ? activeSpace.name : 'Unsaved';
+  const defaultTitle = activeSpace && !activeSpace.isUnsaved ? activeSpace.name : 'Unsaved';
 
   // Enter editing mode
   const startEditing = () => {
     let initial = '';
-    if (activeSpace) {
+    if (activeSpace && !activeSpace.isUnsaved) {
       initial = activeSpace.name;
     } else {
       // For Unsaved: automatically take the name of the very first tab
@@ -94,48 +94,56 @@ export const Header: React.FC = () => {
 
     const now = Date.now();
 
-    if (!activeSpaceId) {
+    if (!activeSpaceId || activeSpace?.isUnsaved) {
       // QUICK SAVE: Transform Unsaved session into a new permanent Space!
-      const count = await db.spaces.count();
-      const newSpaceId = crypto.randomUUID();
-
-      await db.spaces.add({
-        id: newSpaceId,
-        name: trimmed,
-        icon: '📁',
-        color: '#3b82f6',
-        createdAt: now,
-        updatedAt: now,
-        order: count,
-        isArchived: false,
-      });
-
-      // Move all current unsaved tabs into this newly created space
-      const unsavedTabs = await db.tabs
-        .where('spaceId')
-        .equals(UNSAVED_SPACE_ID)
-        .toArray();
-
-      for (const t of unsavedTabs) {
-        await db.tabs.update(t.id, {
-          spaceId: newSpaceId,
+      if (activeSpace?.id) {
+        await db.spaces.update(activeSpace.id, {
+          name: trimmed,
+          isUnsaved: false,
           updatedAt: now,
         });
-      }
+      } else {
+        const count = await db.spaces.count();
+        const newSpaceId = crypto.randomUUID();
 
-      // Bind current window to the newly saved space
-      try {
-        const curTab = await chrome.tabs.getCurrent().catch(() => null);
-        const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
-        if (winId) {
-          await setWindowActiveSpaceId(winId, newSpaceId);
+        await db.spaces.add({
+          id: newSpaceId,
+          name: trimmed,
+          icon: '📁',
+          color: '#3b82f6',
+          createdAt: now,
+          updatedAt: now,
+          order: count,
+          isArchived: false,
+        });
+
+        // Move all current unsaved tabs into this newly created space
+        const unsavedTabs = await db.tabs
+          .where('spaceId')
+          .equals(UNSAVED_SPACE_ID)
+          .toArray();
+
+        for (const t of unsavedTabs) {
+          await db.tabs.update(t.id, {
+            spaceId: newSpaceId,
+            updatedAt: now,
+          });
         }
-      } catch {
-        // Ignored if window closed or session storage not ready
-      }
 
-      // Transition immediately into the new space
-      setActiveSpaceId(newSpaceId);
+        // Bind current window to the newly saved space
+        try {
+          const curTab = await chrome.tabs.getCurrent().catch(() => null);
+          const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
+          if (winId) {
+            await setWindowActiveSpaceId(winId, newSpaceId);
+          }
+        } catch {
+          // Ignored if window closed or session storage not ready
+        }
+
+        // Transition immediately into the new space
+        setActiveSpaceId(newSpaceId);
+      }
     } else {
       // Rename existing space
       await db.spaces.update(activeSpaceId, {
@@ -224,7 +232,7 @@ export const Header: React.FC = () => {
                   : 'hover:bg-slate-900/80 active:bg-slate-800/80 text-slate-100'
               }`}
               title={
-                activeSpaceId
+                activeSpace && !activeSpace.isUnsaved
                   ? 'Click to rename space'
                   : 'Click to quick-save unsaved tabs as a Space'
               }
@@ -246,7 +254,7 @@ export const Header: React.FC = () => {
                 <Pencil className={`w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ${
                   isLight ? 'text-slate-400 group-hover:text-slate-600' : 'text-slate-500 group-hover:text-slate-300'
                 }`} />
-                {!activeSpaceId && (
+                {(!activeSpace || activeSpace.isUnsaved) && (
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ml-1 transition flex-shrink-0 ${
                     isLight
                       ? 'bg-blue-50 text-blue-600 border border-blue-200'
@@ -286,7 +294,7 @@ export const Header: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           {/* Workona-style Quick SAVE button when on Unsaved */}
-          {!activeSpaceId ? (
+          {(!activeSpace || activeSpace.isUnsaved) ? (
             <button
               onClick={startEditing}
               className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
