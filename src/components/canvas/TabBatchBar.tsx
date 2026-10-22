@@ -1,6 +1,6 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
-import { FolderInput, Trash2, Plus, X } from 'lucide-react';
+import { FolderInput, Trash2, Plus, X, ExternalLink } from 'lucide-react';
 
 interface TabBatchBarProps {
   selectedCount: number;
@@ -16,6 +16,7 @@ interface TabBatchBarProps {
   onSelectAllToggle: () => void;
   onToggleMoveDropdown: (e: React.MouseEvent) => void;
   onMoveSelected: (targetSpaceId: string | null) => void;
+  onOpenSelectedInNewWindow: () => void;
   onDeleteSelected: () => void;
   onStartCreateNewSpace: () => void;
   onCancelCreateNewSpace: () => void;
@@ -37,6 +38,7 @@ export const TabBatchBar: React.FC<TabBatchBarProps> = ({
   onSelectAllToggle,
   onToggleMoveDropdown,
   onMoveSelected,
+  onOpenSelectedInNewWindow,
   onDeleteSelected,
   onStartCreateNewSpace,
   onCancelCreateNewSpace,
@@ -153,6 +155,17 @@ export const TabBatchBar: React.FC<TabBatchBarProps> = ({
           )}
         </div>
       )}
+
+      {/* Button: Open Selected Tabs in a New Window */}
+      <button
+        onClick={onOpenSelectedInNewWindow}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition border border-slate-700/60 shadow-sm cursor-pointer"
+        title="Open selected tabs in a new window"
+      >
+        <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+        <span className="hidden sm:inline">Open in New Window</span>
+        <span className="sm:hidden">Window</span>
+      </button>
 
       <button
         onClick={onDeleteSelected}

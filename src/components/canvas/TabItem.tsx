@@ -30,6 +30,7 @@ interface TabItemProps {
   renderFavicon: (url: string, favIconUrl?: string) => React.ReactNode;
   onToggleSelect: () => void;
   onLocateOrOpen: () => void;
+  onOpenInNewWindow: () => void;
   onCopyUrl: () => void;
   onCloseTab: () => void;
   onToggleDropdown: (e: React.MouseEvent) => void;
@@ -60,6 +61,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   renderFavicon,
   onToggleSelect,
   onLocateOrOpen,
+  onOpenInNewWindow,
   onCopyUrl,
   onCloseTab,
   onToggleDropdown,
@@ -160,6 +162,15 @@ export const TabItem: React.FC<TabItemProps> = ({
           }
         >
           <Crosshair className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Open in New Window Button */}
+        <button
+          onClick={onOpenInNewWindow}
+          className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-slate-200 transition"
+          title="Open this tab in a new window"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
         </button>
 
         <button

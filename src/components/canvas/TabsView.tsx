@@ -7,6 +7,8 @@ import {
   focusOrOpenTab,
   moveTabsToSpace,
   locateOrOpenTab,
+  openTabInNewWindow,
+  openSelectedTabsInNewWindow,
   closeTabs,
   setTransitionLock,
   syncWindowTabsToUnsaved,
@@ -210,6 +212,12 @@ export const TabsView: React.FC = () => {
   const handleDeleteSelected = async () => {
     const ids = Array.from(selectedTabIds);
     await closeTabs(ids);
+    clearSelectedTabs();
+  };
+
+  const handleOpenSelectedInNewWindow = async () => {
+    const ids = Array.from(selectedTabIds);
+    await openSelectedTabsInNewWindow(ids);
     clearSelectedTabs();
   };
 
@@ -530,9 +538,9 @@ export const TabsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6 max-w-4xl mx-auto w-full select-none pb-32 relative">
+    <div className="px-8 py-6 max-w-4xl mx-auto w-full select-none pb-32 relative overflow-visible">
       {/* Tabs Header Block */}
-      <div className="tab-manager-card bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm mb-6 relative z-10">
+      <div className="tab-manager-card bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm mb-6 relative z-10 overflow-visible">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-2">
           {/* Left: Master Select All Checkbox + Folder Title */}
           <div className="flex items-center gap-2.5">
@@ -578,6 +586,7 @@ export const TabsView: React.FC = () => {
                 setMoveDropdownTabId(moveDropdownTabId === 'bulk' ? null : 'bulk');
               }}
               onMoveSelected={handleMoveSelected}
+              onOpenSelectedInNewWindow={handleOpenSelectedInNewWindow}
               onDeleteSelected={handleDeleteSelected}
               onStartCreateNewSpace={() => setIsCreatingNewSpaceForTabs(true)}
               onCancelCreateNewSpace={() => {
@@ -673,6 +682,7 @@ export const TabsView: React.FC = () => {
                   renderFavicon={renderFavicon}
                   onToggleSelect={() => toggleSelectTab(tab.id)}
                   onLocateOrOpen={() => locateOrOpenTab(tab)}
+                  onOpenInNewWindow={() => openTabInNewWindow(tab)}
                   onCopyUrl={() => handleCopyUrl(tab.id, tab.url)}
                   onCloseTab={() => handleDeleteTab(tab.id)}
                   onToggleDropdown={(e) => {

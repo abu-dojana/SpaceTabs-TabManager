@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { UNSAVED_SPACE_ID } from '@/db/schema';
+import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { decodeRealUrl } from '@/utils/urlFilter';
 import { recordTombstones } from '@/services/driveSync';
 
@@ -102,6 +102,62 @@ export async function locateOrOpenTab(tabRecord: {
     }
   } catch (err) {
     console.error('Failed to open tab:', err);
+  }
+}
+
+/**
+ * Opens a single tab in a brand-new Chrome window.
+ * If the tab is currently open, moves it to the new window.
+ */
+export async function openTabInNewWindow(tab: {
+  id: string;
+  url: string;
+  chromeTabId?: number;
+}) {
+  const realUrl = decodeRealUrl(tab.url);
+  try {
+    if (tab.chromeTabId) {
+      const liveTab = await chrome.tabs.get(tab.chromeTabId).catch(() => null);
+      if (liveTab && liveTab.id) {
+        await chrome.windows.create({ tabId: liveTab.id, focused: true });
+        return;
+      }
+    }
+    await chrome.windows.create({ url: realUrl, focused: true });
+  } catch (err) {
+    console.error('Failed to open tab in new window:', err);
+    await chrome.windows.create({ url: realUrl, focused: true }).catch(() => {});
+  }
+}
+
+/**
+ * Opens multiple selected tabs in a brand-new Chrome window.
+ */
+export async function openSelectedTabsInNewWindow(tabIds: string[]) {
+  if (!tabIds || tabIds.length === 0) return;
+  const records = await db.tabs.where('id').anyOf(tabIds).sortBy('order');
+  if (records.length === 0) return;
+
+  const urls = records.map((t) => decodeRealUrl(t.url)).filter(Boolean);
+  if (urls.length === 0) return;
+
+  try {
+    const newWin = await chrome.windows.create({
+      url: urls[0],
+      focused: true,
+    });
+
+    if (newWin.id && urls.length > 1) {
+      for (let i = 1; i < urls.length; i++) {
+        await chrome.tabs.create({
+          windowId: newWin.id,
+          url: urls[i],
+          active: false,
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to open selected tabs in new window:', err);
   }
 }
 
