@@ -10,9 +10,10 @@
 </p>
 
 <p align="center">
-  <a href="https://chromewebstore.google.com/detail/spacetabs-tab-manager/aiajlcdplbpchfohgekcgafcpghgjojhh">
+  <a href="https://chromewebstore.google.com/detail/aiajlcdplbpcfohgekcgafcpghgjojhh?utm_source=item-share-cb">
     <img src="https://img.shields.io/badge/Chrome%20Web%20Store-SpaceTabs-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
   </a>
+  <img src="https://img.shields.io/badge/Version-1.1.0-blue?style=for-the-badge" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/Manifest-V3-success?style=for-the-badge" alt="Manifest V3" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License" />
   <img src="https://img.shields.io/badge/Sync-Google%20Drive-34A853?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive Sync" />
@@ -21,7 +22,7 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-split.png" alt="SpaceTabs Dashboard - Split Theme" width="100%" />
+  <img src="docs/screenshots/dashboard-dark-emerald.png" alt="SpaceTabs Dashboard - Dark Emerald Theme" width="100%" />
 </p>
 
 ---
@@ -33,15 +34,19 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 **SpaceTabs is designed differently:**
 - **Local-First & Unlimited:** Store as many spaces, tabs, notes, and tasks as you need. All data lives in your browser's IndexedDB.
 - **Save Up to 95% Memory:** Suspends cold-restored tabs to lightweight placeholders (~1 MB each) until clicked, with native Chrome `discard()` for idle open tabs.
-- **Private Cloud Backup:** Sync directly with your personal Google Drive account using Google's secure `drive.file` scope. No third-party servers, no middleman databases.
+- **Private Cloud Backup:** Sync directly with your personal Google Drive account using Google's secure `drive.file` scope across Chrome, Brave, and Chromium browsers. No third-party servers, no middleman databases.
 
 ---
 
 ## 📸 Screenshots & Showcase
 
-| Workspace Dashboard (Split Theme) | Batch Tab Management |
+| Workspace Dashboard (Dark Emerald) | Workspace Dashboard (Split Purple) |
 | :---: | :---: |
-| ![Dashboard](docs/screenshots/dashboard-split.png) | ![Batch Actions](docs/screenshots/batch-actions.png) |
+| ![Dark Emerald Theme](docs/screenshots/dashboard-dark-emerald.png) | ![Split Purple Theme](docs/screenshots/dashboard-split-purple.png) |
+
+| Built-in Markdown Notes Editor | Batch Tab Management |
+| :---: | :---: |
+| ![Notes Markdown Editor](docs/screenshots/notes-markdown-editor.png) | ![Batch Actions](docs/screenshots/batch-actions.png) |
 
 | Appearance & Custom Themes | Google Drive Cloud Sync |
 | :---: | :---: |
@@ -57,8 +62,11 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 
 ### 📂 Workspaces & Spaces
 * **Unlimited Spaces:** Create, rename, color-code, and organize project spaces without limits.
+* **Emoji Customization:** Choose custom emojis when creating or renaming spaces to visually identify workspaces at a glance.
+* **Drag-and-Drop Sorting & Locking:** Easily reorder spaces via drag-and-drop, and lock their order with a single click to prevent accidental moves.
+* **Workona-Style Multiple Unsaved Sessions:** Rapidly bucket open tabs into clean local scratchpad sessions with auto-generated domain badges and 1-click Quick-Save to permanent spaces.
 * **Non-Destructive Space Switching:** Switching spaces cleanly stashes current tabs and restores the target space without losing work.
-* **Multi-Window Support:** Switch spaces inside your current window or launch a dedicated clean window with a single click.
+* **Multi-Window Support & Tab Controls:** Open individual tabs or batches of selected tabs in separate clean windows with 1 click.
 * **Drag-and-Drop Organization:** Drag tabs from the canvas directly onto any Space or the Unsaved bucket in the sidebar.
 
 ### ⚡ Smart Memory Saver
@@ -69,6 +77,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 
 ### ☁️ Google Drive Cloud Backup & Sync
 * **Direct Cloud Sync:** Bi-directionally sync your spaces, tabs, notes, tasks, and resource bookmarks directly to a dedicated `SpaceTabs_Data` folder in your personal Google Drive.
+* **Universal Browser Support:** Fully compatible with official Google Chrome, Brave, Edge, and other Chromium browsers.
 * **Zero Middleman Servers:** Direct REST API calls from your browser to Google Drive — your data is never sent to third-party tracking servers.
 * **Tombstone-Aware Merge:** Intelligent conflict resolution keeps track of deleted items so spaces deleted on one machine stay deleted across devices.
 * **Manual & Auto-Sync:** Automated background sync plus one-click **Force Push** (overwrite cloud) and **Force Pull** (restore from cloud).
@@ -76,8 +85,9 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 
 ### 📋 Space Canvas Tools
 * **Tabs View:** Search, filter, domain grouping, multi-select checkboxes, and bulk move/delete/copy URLs.
+* **Distraction-Free Mode:** Toggle web favicons on or off in Settings for a clean, minimalist reading layout.
 * **Resources Hub:** Organize recurring documentation, links, and assets into categorized sections.
-* **Notes:** Built-in markdown notes scratchpad per space with auto-saving.
+* **Notes:** Built-in markdown notes scratchpad per space with auto-saving, live split-pane preview, and formatting toolbar.
 * **Tasks:** Space checklists with completion states and ordering.
 * **Global Search:** Fast fuzzy search across all spaces, open tabs, notes, and resource items.
 
@@ -103,7 +113,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 ## 🚀 Installation
 
 ### Option 1: Chrome Web Store (Recommended)
-Install the official extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/spacetabs-tab-manager/aiajlcdplbpchfohgekcgafcpghgjojhh).
+Install the official extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/aiajlcdplbpcfohgekcgafcpghgjojhh?utm_source=item-share-cb).
 
 ### Option 2: Install from Source (Developer Mode)
 
