@@ -13,7 +13,7 @@
   <a href="https://chromewebstore.google.com/detail/aiajlcdplbpcfohgekcgafcpghgjojhh?utm_source=item-share-cb">
     <img src="https://img.shields.io/badge/Chrome%20Web%20Store-SpaceTabs-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
   </a>
-  <img src="https://img.shields.io/badge/Version-1.1.0-blue?style=for-the-badge" alt="Version 1.1.0" />
+  <img src="https://img.shields.io/badge/Version-1.2.0-blue?style=for-the-badge" alt="Version 1.2.0" />
   <img src="https://img.shields.io/badge/Manifest-V3-success?style=for-the-badge" alt="Manifest V3" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License" />
   <img src="https://img.shields.io/badge/Sync-Google%20Drive-34A853?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive Sync" />

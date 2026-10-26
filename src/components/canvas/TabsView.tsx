@@ -72,6 +72,7 @@ export const TabsView: React.FC = () => {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
   const [moveDropdownTabId, setMoveDropdownTabId] = React.useState<string | null>(null);
   const [draggingTabId, setDraggingTabId] = React.useState<string | null>(null);
+  const [dragOverTabIndex, setDragOverTabIndex] = React.useState<number | null>(null);
   const [currentWindowId, setCurrentWindowId] = React.useState<number | null>(null);
   const [liveTabsMap, setLiveTabsMap] = React.useState<Map<number, number>>(new Map()); // chromeTabId -> windowId
   const [allLiveTabsList, setAllLiveTabsList] = React.useState<chrome.tabs.Tab[]>([]);
@@ -310,9 +311,86 @@ export const TabsView: React.FC = () => {
     }
   };
 
+  // Reorder tabs in Dexie AND synchronously reorder open Chrome tabs in the browser window
+  const reorderTabsAndSyncBrowser = async (sortedTabs: Tab[]) => {
+    const now = Date.now();
+    await db.transaction('rw', db.tabs, async () => {
+      for (let i = 0; i < sortedTabs.length; i++) {
+        await db.tabs.update(sortedTabs[i].id, {
+          order: i,
+          updatedAt: now,
+        });
+      }
+    });
+
+    try {
+      const allBrowserTabs = await chrome.tabs.query({});
+      const windowIds = Array.from(
+        new Set(
+          allBrowserTabs
+            .map((t) => t.windowId)
+            .filter((id): id is number => typeof id === 'number')
+        )
+      );
+
+      for (const winId of windowIds) {
+        const windowTabs = allBrowserTabs.filter((t) => t.windowId === winId);
+        const pinnedCount = windowTabs.filter((t) => t.pinned).length;
+
+        const usedBrowserTabIds = new Set<number>();
+        const orderedTabIds: number[] = [];
+
+        for (const st of sortedTabs) {
+          let match = windowTabs.find(
+            (wt) =>
+              wt.id &&
+              !usedBrowserTabIds.has(wt.id) &&
+              st.chromeTabId &&
+              wt.id === st.chromeTabId
+          );
+          if (!match) {
+            const stRealUrl = decodeRealUrl(st.url);
+            match = windowTabs.find((wt) => {
+              if (!wt.id || usedBrowserTabIds.has(wt.id) || wt.pinned) return false;
+              const wtUrl = wt.url || wt.pendingUrl || '';
+              if (!wtUrl || isSystemOrExtensionUrl(wtUrl)) return false;
+              return decodeRealUrl(wtUrl) === stRealUrl;
+            });
+          }
+          if (match?.id) {
+            usedBrowserTabIds.add(match.id);
+            orderedTabIds.push(match.id);
+          }
+        }
+
+        if (orderedTabIds.length > 0) {
+          await setTransitionLock(winId, true);
+          try {
+            try {
+              await chrome.tabs.move(orderedTabIds, { index: pinnedCount });
+            } catch {
+              for (let idx = 0; idx < orderedTabIds.length; idx++) {
+                try {
+                  await chrome.tabs.move(orderedTabIds[idx], { index: pinnedCount + idx });
+                } catch {}
+              }
+            }
+          } finally {
+            await setTransitionLock(winId, false);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to reorder Chrome tabs:', err);
+    }
+  };
+
   // 2. Sort Alphabetically
   const handleSortAlphabetically = async () => {
-    if (!tabs || tabs.length === 0) return;
+    if (!tabs || tabs.length <= 1) {
+      setIsTabsMenuOpen(false);
+      return;
+    }
     setIsTabsMenuOpen(false);
     const sorted = [...tabs].sort((a, b) =>
       (a.title || a.url).localeCompare(b.title || b.url, undefined, {
@@ -320,15 +398,18 @@ export const TabsView: React.FC = () => {
         numeric: true,
       })
     );
-    const now = Date.now();
-    for (let i = 0; i < sorted.length; i++) {
-      await db.tabs.update(sorted[i].id, { order: i, updatedAt: now });
+    if (sorted.every((t, idx) => t.id === tabs[idx].id)) {
+      sorted.reverse();
     }
+    await reorderTabsAndSyncBrowser(sorted);
   };
 
   // 3. Sort by Domain
   const handleSortByDomain = async () => {
-    if (!tabs || tabs.length === 0) return;
+    if (!tabs || tabs.length <= 1) {
+      setIsTabsMenuOpen(false);
+      return;
+    }
     setIsTabsMenuOpen(false);
     const sorted = [...tabs].sort((a, b) => {
       const domainA = extractDomain(a.url).toLowerCase();
@@ -336,12 +417,15 @@ export const TabsView: React.FC = () => {
       if (domainA !== domainB) {
         return domainA.localeCompare(domainB);
       }
-      return (a.title || a.url).localeCompare(b.title || b.url);
+      return (a.title || a.url).localeCompare(b.title || b.url, undefined, {
+        sensitivity: 'base',
+        numeric: true,
+      });
     });
-    const now = Date.now();
-    for (let i = 0; i < sorted.length; i++) {
-      await db.tabs.update(sorted[i].id, { order: i, updatedAt: now });
+    if (sorted.every((t, idx) => t.id === tabs[idx].id)) {
+      sorted.reverse();
     }
+    await reorderTabsAndSyncBrowser(sorted);
   };
 
   // 4. Export This Space
@@ -376,7 +460,7 @@ export const TabsView: React.FC = () => {
 
     const exportPayload = {
       app: 'SpaceTabs',
-      version: '1.0',
+      version: '1.2.0',
       exportedAt: new Date().toISOString(),
       space: {
         name: spaceName,
@@ -745,7 +829,45 @@ export const TabsView: React.FC = () => {
                     e.dataTransfer.effectAllowed = 'move';
                     setDraggingTabId(tab.id);
                   }}
-                  onDragEnd={() => setDraggingTabId(null)}
+                  onDragEnd={() => {
+                    setDraggingTabId(null);
+                    setDragOverTabIndex(null);
+                  }}
+                  dragOverPosition={
+                    dragOverTabIndex === index && draggingTabId && draggingTabId !== tab.id
+                      ? tabs.findIndex((t) => t.id === draggingTabId) < index
+                        ? 'bottom'
+                        : 'top'
+                      : null
+                  }
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverTabIndex !== index) {
+                      setDragOverTabIndex(index);
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverTabIndex === index) {
+                      setDragOverTabIndex(null);
+                    }
+                  }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    setDragOverTabIndex(null);
+                    const fromId = draggingTabId || e.dataTransfer.getData('text/plain');
+                    setDraggingTabId(null);
+                    if (!fromId || !tabs) return;
+
+                    const fromIndex = tabs.findIndex((t) => t.id === fromId);
+                    if (fromIndex === -1 || fromIndex === index) return;
+
+                    const reordered = [...tabs];
+                    const [moved] = reordered.splice(fromIndex, 1);
+                    reordered.splice(index, 0, moved);
+
+                    await reorderTabsAndSyncBrowser(reordered);
+                  }}
                 />
               );
             })

@@ -41,6 +41,10 @@ interface TabItemProps {
   onMoveToNewSpace: (name: string) => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
+  dragOverPosition?: 'top' | 'bottom' | null;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragLeave?: () => void;
+  onDrop?: (e: React.DragEvent) => void;
 }
 
 export const TabItem: React.FC<TabItemProps> = ({
@@ -72,6 +76,10 @@ export const TabItem: React.FC<TabItemProps> = ({
   onMoveToNewSpace,
   onDragStart,
   onDragEnd,
+  dragOverPosition,
+  onDragOver,
+  onDragLeave,
+  onDrop,
 }) => {
   return (
     <div
@@ -79,19 +87,28 @@ export const TabItem: React.FC<TabItemProps> = ({
       draggable={true}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
       className={`group flex items-center justify-between py-2.5 px-3 rounded-lg transition-all relative ${
         isDragging
           ? 'opacity-40 border border-dashed border-blue-500/60 bg-blue-500/5'
           : isSelected || isDropdownOpen
           ? 'bg-blue-600/10'
           : 'hover:bg-slate-800/50'
+      } ${
+        dragOverPosition === 'top'
+          ? 'border-t-2 border-blue-500'
+          : dragOverPosition === 'bottom'
+          ? 'border-b-2 border-blue-500'
+          : ''
       } ${isDropdownOpen ? 'z-30' : 'z-0'}`}
     >
       {/* Left: Grip + Checkbox + Favicon + Title + Window Status */}
       <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-4">
         <div
           className="text-slate-600 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0 -ml-1"
-          title="Drag tab to a Space in sidebar"
+          title="Drag to reorder or move to a Space in sidebar"
         >
           <GripVertical className="w-3.5 h-3.5" />
         </div>

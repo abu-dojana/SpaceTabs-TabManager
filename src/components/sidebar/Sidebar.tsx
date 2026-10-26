@@ -535,7 +535,7 @@ export const Sidebar: React.FC = () => {
 
     const exportPayload = {
       app: 'SpaceTabs',
-      version: '1.0',
+      version: '1.2.0',
       exportedAt: new Date().toISOString(),
       space: {
         name: space.name,

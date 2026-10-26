@@ -1341,14 +1341,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <Clock className="w-3 h-3" />
                               Last synced:{' '}
                               {syncInfo.lastSyncTime
-                                ? new Date(syncInfo.lastSyncTime).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  second: '2-digit',
-                                }) +
-                                ' (' +
-                                new Date(syncInfo.lastSyncTime).toLocaleDateString() +
-                                ')'
+                                ? (() => {
+                                  const d = new Date(syncInfo.lastSyncTime);
+                                  const timeStr = d.toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                  });
+                                  const day = String(d.getDate()).padStart(2, '0');
+                                  const month = d.toLocaleString('en-US', { month: 'short' });
+                                  const year = d.getFullYear();
+                                  return `${timeStr} (${day} ${month}, ${year})`;
+                                })()
                                 : 'Never'}
                             </p>
                           </div>
@@ -1939,7 +1943,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     SpaceTabs — Tab Manager
                   </h3>
                   <p className="text-xs text-blue-500 font-mono mt-0.5 font-bold">
-                    Version 1.0.0 • Manifest V3
+                    Version {chrome.runtime?.getManifest?.()?.version || '1.2.0'} • Manifest V3
                   </p>
                   <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 text-xs font-bold mt-3">
                     <CheckCircle2 className="w-4 h-4" />
