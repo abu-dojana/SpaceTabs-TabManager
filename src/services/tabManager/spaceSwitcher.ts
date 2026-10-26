@@ -3,8 +3,19 @@ import { UNSAVED_SPACE_ID } from '@/db/schema';
 import { isSystemOrExtensionUrl, decodeRealUrl, isSuspendableUrl } from '@/utils/urlFilter';
 import { getUserSettings } from '@/services/settings';
 import { buildSuspendedUrl } from './suspensionUrls';
-import { getWindowActiveSpaceId, setWindowActiveSpaceId, setTransitionLock } from './windowSpaces';
-import { getEffectiveTabUrl, getEffectiveTabTitle } from './tabSync';
+import {
+  getWindowActiveSpaceId,
+  setWindowActiveSpaceId,
+  setTransitionLock,
+  ensureWindowUnsavedSpace,
+  getAllWindowSpaces,
+  setPendingNewWindowSpace,
+} from './windowSpaces';
+import {
+  getEffectiveTabUrl,
+  getEffectiveTabTitle,
+  syncWindowTabsToUnsaved,
+} from './tabSync';
 
 /**
  * Switches the current window to a target space:
@@ -16,10 +27,13 @@ export async function switchWindowToSpace(
   targetSpaceId: string | null
 ) {
   const currentSpaceId = await getWindowActiveSpaceId(windowId);
-  const normalizedCurrent = currentSpaceId || UNSAVED_SPACE_ID;
-  const normalizedTarget = targetSpaceId || UNSAVED_SPACE_ID;
+  const normalizedCurrent = currentSpaceId || (await ensureWindowUnsavedSpace(windowId));
+  const normalizedTarget = targetSpaceId || (await ensureWindowUnsavedSpace(windowId, true));
 
-  if (normalizedCurrent === normalizedTarget) return;
+  if (normalizedCurrent === normalizedTarget) {
+    await setWindowActiveSpaceId(windowId, normalizedTarget);
+    return;
+  }
 
   await setTransitionLock(windowId, true);
 
@@ -44,6 +58,11 @@ export async function switchWindowToSpace(
     });
 
     const now = Date.now();
+    const existingCurrentTabs = await db.tabs
+      .where('spaceId')
+      .equals(normalizedCurrent)
+      .toArray();
+    const claimedIds = new Set<string>();
 
     // Snapshot existing tabs and unlink their chromeTabId
     for (let i = 0; i < tabsToClose.length; i++) {
@@ -52,12 +71,22 @@ export async function switchWindowToSpace(
       const realUrl = decodeRealUrl(effectiveUrl);
       const title = getEffectiveTabTitle(bt, realUrl);
 
-      const record = await db.tabs
+      let record = await db.tabs
         .where('chromeTabId')
         .equals(bt.id!)
         .first();
 
+      if (!record) {
+        record = existingCurrentTabs.find(
+          (r) =>
+            !claimedIds.has(r.id) &&
+            !r.chromeTabId &&
+            decodeRealUrl(r.url) === realUrl
+        );
+      }
+
       if (record) {
+        claimedIds.add(record.id);
         await db.tabs.update(record.id, {
           title,
           url: realUrl,
@@ -67,8 +96,10 @@ export async function switchWindowToSpace(
           chromeTabId: undefined, // Disassociate from closed tab
         });
       } else {
+        const newId = crypto.randomUUID();
+        claimedIds.add(newId);
         await db.tabs.add({
-          id: crypto.randomUUID(),
+          id: newId,
           spaceId: normalizedCurrent,
           windowId,
           url: realUrl,
@@ -96,7 +127,7 @@ export async function switchWindowToSpace(
     }
 
     // 3. Set the new active space for this window
-    await setWindowActiveSpaceId(windowId, targetSpaceId);
+    await setWindowActiveSpaceId(windowId, normalizedTarget);
 
     // 4. Fetch tabs for the target space
     const targetTabs = await db.tabs
@@ -153,14 +184,28 @@ export async function openSpaceInNewWindow(spaceId: string) {
     .equals(spaceId)
     .sortBy('order');
 
-  const newWindow = await chrome.windows.create({
-    type: 'normal',
-    focused: true,
-  });
+  // Reserve the space ID before chrome.windows.create so onCreated binds the space immediately
+  await setPendingNewWindowSpace(spaceId);
 
-  if (!newWindow.id) return;
+  let newWindow: chrome.windows.Window;
+  try {
+    newWindow = await chrome.windows.create({
+      type: 'normal',
+      focused: true,
+    });
+  } catch (err) {
+    await setPendingNewWindowSpace(null);
+    throw err;
+  }
+
+  if (!newWindow.id) {
+    await setPendingNewWindowSpace(null);
+    return;
+  }
 
   await setTransitionLock(newWindow.id, true);
+  await setWindowActiveSpaceId(newWindow.id, spaceId);
+  await setPendingNewWindowSpace(null);
 
   try {
     // Identify initial blank tab created by the browser with the new window
@@ -169,7 +214,7 @@ export async function openSpaceInNewWindow(spaceId: string) {
       (t) => !t.pinned && (!t.url || t.url === 'chrome://newtab/' || t.pendingUrl === 'chrome://newtab/' || t.url === 'about:blank')
     );
 
-    // Bind active space to new window
+    // Ensure active space remains bound to new window
     await setWindowActiveSpaceId(newWindow.id, spaceId);
 
     // Restore space tabs
@@ -201,8 +246,11 @@ export async function openSpaceInNewWindow(spaceId: string) {
       await chrome.tabs.remove(initialBlankTab.id).catch(() => {});
     }
   } finally {
-    setTimeout(() => {
-      if (newWindow.id) setTransitionLock(newWindow.id, false);
+    setTimeout(async () => {
+      if (newWindow.id) {
+        await setTransitionLock(newWindow.id, false);
+        await syncWindowTabsToUnsaved(newWindow.id);
+      }
     }, 600);
   }
 }

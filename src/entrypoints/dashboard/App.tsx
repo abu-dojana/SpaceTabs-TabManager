@@ -9,7 +9,15 @@ import { CreateSpaceModal } from '@/components/modals/CreateSpaceModal';
 import { MoveToSectionModal } from '@/components/modals/MoveToSectionModal';
 import { SettingsModal } from '@/components/modals/SettingsModal';
 import { useUIStore } from '@/store/uiStore';
-import { getWindowActiveSpaceId, migrateLegacyUnsavedTabs } from '@/services/tabManager';
+import {
+  getWindowActiveSpaceId,
+  setWindowActiveSpaceId,
+  ensureWindowUnsavedSpace,
+  ensureSessionInitialized,
+  getAllWindowSpaces,
+  isTransitioning,
+  migrateLegacyUnsavedTabs,
+} from '@/services/tabManager';
 import { getUserSettings } from '@/services/settings';
 import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink } from 'lucide-react';
 
@@ -114,13 +122,35 @@ export default function App() {
       if (settings.patreonUrl) setPatreonUrl(settings.patreonUrl);
     });
 
+    let hostWinId: number | undefined;
+
     async function syncActiveSpaceFromWindow() {
       try {
+        await ensureSessionInitialized();
         await migrateLegacyUnsavedTabs();
         const curTab = await chrome.tabs.getCurrent().catch(() => null);
         const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
         if (winId) {
-          const spaceId = await getWindowActiveSpaceId(winId);
+          hostWinId = winId;
+          let spaceId = await getWindowActiveSpaceId(winId);
+          if (spaceId) {
+            await setWindowActiveSpaceId(winId, spaceId);
+          } else {
+            if (await isTransitioning(winId)) {
+              return;
+            }
+            const currentActiveSpaceId = useUIStore.getState().activeSpaceId;
+            if (currentActiveSpaceId) {
+              const allWinSpaces = await getAllWindowSpaces();
+              const isOpenElsewhere = Array.from(allWinSpaces.entries()).some(
+                ([wId, sId]) => wId !== winId && sId === currentActiveSpaceId
+              );
+              if (isOpenElsewhere) {
+                return;
+              }
+            }
+            spaceId = await ensureWindowUnsavedSpace(winId);
+          }
           setActiveSpaceId(spaceId);
         }
       } catch (e) {
@@ -134,9 +164,23 @@ export default function App() {
       syncActiveSpaceFromWindow();
     };
 
+    const handleSessionStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      area: string
+    ) => {
+      if (area === 'session' && hostWinId) {
+        const key = `window_${hostWinId}_space`;
+        if (changes[key]) {
+          syncActiveSpaceFromWindow();
+        }
+      }
+    };
+
     window.addEventListener('focus', handleFocus);
+    chrome.storage?.onChanged?.addListener(handleSessionStorageChange);
     return () => {
       window.removeEventListener('focus', handleFocus);
+      chrome.storage?.onChanged?.removeListener(handleSessionStorageChange);
     };
   }, [
     setActiveSpaceId,

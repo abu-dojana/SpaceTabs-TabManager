@@ -14,7 +14,7 @@ import {
   setTransitionLock,
   syncWindowTabsToUnsaved,
 } from '@/services/tabManager';
-import { decodeRealUrl, extractDomain } from '@/utils/urlFilter';
+import { decodeRealUrl, extractDomain, isSystemOrExtensionUrl } from '@/utils/urlFilter';
 import {
   Folder,
   Puzzle,
@@ -61,7 +61,7 @@ export const TabsView: React.FC = () => {
 
   const spaces = useLiveQuery(async () => {
     const list = await db.spaces.orderBy('order').toArray();
-    return list.filter((s) => !s.isArchived);
+    return list.filter((s) => !s.isArchived && !s.isUnsaved);
   });
 
   const activeSpace = useLiveQuery(
@@ -606,7 +606,7 @@ export const TabsView: React.FC = () => {
               totalCount={tabs?.length || 0}
               allSelected={allSelected || false}
               spaces={spaces}
-              activeSpaceId={activeSpaceId}
+              activeSpaceId={activeSpace?.isUnsaved ? null : activeSpaceId}
               isMoveDropdownOpen={moveDropdownTabId === 'bulk'}
               dropdownRef={dropdownRef}
               newSpaceInputRef={newSpaceInputRef}
@@ -638,7 +638,7 @@ export const TabsView: React.FC = () => {
               isCopiedAll={isCopiedAll}
               allSelected={allSelected || false}
               spaces={spaces}
-              activeSpaceId={activeSpaceId}
+              activeSpaceId={activeSpace?.isUnsaved ? null : activeSpaceId}
               showMoveAllSubmenu={showMoveAllSubmenu}
               onToggleMenu={(e) => {
                 e.stopPropagation();
@@ -706,7 +706,7 @@ export const TabsView: React.FC = () => {
                   isOpenInOtherWindow={isOpenInOtherWindow}
                   copiedId={copiedId}
                   spaces={spaces}
-                  activeSpaceId={activeSpaceId}
+                  activeSpaceId={activeSpace?.isUnsaved ? null : activeSpaceId}
                   dropdownRef={dropdownRef}
                   newSpaceInputRef={newSpaceInputRef}
                   isCreatingNewSpace={isCreatingNewSpaceForTabs}

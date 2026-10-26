@@ -187,9 +187,14 @@ export async function purgeStaleUnsavedTabs(): Promise<number> {
       openTabs.map((t) => t.id).filter((id): id is number => typeof id === 'number')
     );
 
+    const unsavedSpaces = await db.spaces
+      .filter((s) => !!s.isUnsaved)
+      .toArray();
+    const unsavedSpaceIds = [UNSAVED_SPACE_ID, ...unsavedSpaces.map((s) => s.id)];
+
     const unsavedTabs = await db.tabs
       .where('spaceId')
-      .equals(UNSAVED_SPACE_ID)
+      .anyOf(unsavedSpaceIds)
       .toArray();
 
     const staleIds = unsavedTabs

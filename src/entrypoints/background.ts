@@ -3,7 +3,13 @@ import { db } from '@/db';
 import {
   syncWindowTabsToUnsaved,
   ensureWindowUnsavedSpace,
+  ensureSessionInitialized,
   getWindowActiveSpaceId,
+  setWindowActiveSpaceId,
+  removeWindowSpaceBinding,
+  setTransitionLock,
+  consumePendingNewWindowSpace,
+  getAllWindowSpaces,
   migrateLegacyUnsavedTabs,
 } from '@/services/tabManager';
 import {
@@ -42,19 +48,25 @@ export default defineBackground(() => {
 
   const DASHBOARD_PAGE = '/dashboard.html';
   const DASHBOARD_URL = chrome.runtime.getURL(DASHBOARD_PAGE);
+  const pinnedCheckLocks = new Set<number>();
+  let initWindowsPromise: Promise<void> | null = null;
 
   /**
    * Idempotent check: ensures exactly one pinned dashboard tab at index 0
    * for a given normal browser window.
    */
   async function ensurePinnedIndexTab(windowId: number) {
+    if (pinnedCheckLocks.has(windowId)) return;
+    pinnedCheckLocks.add(windowId);
     try {
       const win = await chrome.windows.get(windowId);
       // Guard: Skip popups, devtools, and app frames
       if (win.type !== 'normal') return;
 
       const tabs = await chrome.tabs.query({ windowId });
-      const dashboardTabs = tabs.filter((t) => t.url?.startsWith(DASHBOARD_URL));
+      const dashboardTabs = tabs.filter(
+        (t) => t.url?.startsWith(DASHBOARD_URL) || t.pendingUrl?.startsWith(DASHBOARD_URL)
+      );
 
       if (dashboardTabs.length === 0) {
         // None exists: create pinned at index 0
@@ -78,6 +90,8 @@ export default defineBackground(() => {
       }
     } catch {
       // Window may have already closed during async execution
+    } finally {
+      pinnedCheckLocks.delete(windowId);
     }
   }
 
@@ -86,17 +100,33 @@ export default defineBackground(() => {
    * the pinned dashboard index tab is present and tabs are synchronized.
    */
   async function initializeAllWindows() {
-    try {
-      const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
-      for (const win of windows) {
-        if (win.id) {
-          await ensurePinnedIndexTab(win.id);
-          await syncWindowTabsToUnsaved(win.id);
-        }
-      }
-    } catch (err) {
-      console.warn('[Background] Error initializing windows:', err);
+    if (initWindowsPromise) {
+      return initWindowsPromise;
     }
+
+    initWindowsPromise = (async () => {
+      try {
+        await ensureSessionInitialized();
+        await migrateLegacyUnsavedTabs();
+        const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
+        for (const win of windows) {
+          if (win.id) {
+            const activeSpaceId = await getWindowActiveSpaceId(win.id);
+            if (!activeSpaceId) {
+              await ensureWindowUnsavedSpace(win.id);
+            }
+            await ensurePinnedIndexTab(win.id);
+            await syncWindowTabsToUnsaved(win.id);
+          }
+        }
+      } catch (err) {
+        console.warn('[Background] Error initializing windows:', err);
+      } finally {
+        initWindowsPromise = null;
+      }
+    })();
+
+    return initWindowsPromise;
   }
 
   // 1. Startup & Window Lifecycle
@@ -120,7 +150,13 @@ export default defineBackground(() => {
 
   chrome.windows.onCreated.addListener(async (window) => {
     if (window.type === 'normal' && window.id) {
-      await ensureWindowUnsavedSpace(window.id);
+      const pendingSpaceId = await consumePendingNewWindowSpace();
+      if (pendingSpaceId) {
+        await setTransitionLock(window.id, true);
+        await setWindowActiveSpaceId(window.id, pendingSpaceId);
+      } else {
+        await ensureWindowUnsavedSpace(window.id);
+      }
       await ensurePinnedIndexTab(window.id);
     }
   });
@@ -137,9 +173,11 @@ export default defineBackground(() => {
           }
         }
       }
-      await chrome.storage.session.remove(`window_${windowId}_space`);
-      await chrome.storage.session.remove(`transition_lock_${windowId}`);
-      await db.tabs.where('windowId').equals(windowId).modify({ chromeTabId: undefined });
+      await removeWindowSpaceBinding(windowId);
+      await db.tabs
+        .where('windowId')
+        .equals(windowId)
+        .modify({ chromeTabId: undefined, windowId: undefined });
     } catch {
       // Ignored
     }

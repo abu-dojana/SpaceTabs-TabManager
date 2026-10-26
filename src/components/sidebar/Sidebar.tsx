@@ -210,6 +210,15 @@ export const Sidebar: React.FC = () => {
 
   const handleSelectSpace = async (spaceId: string | null) => {
     try {
+      if (!spaceId) {
+        if (unsavedSpaces && unsavedSpaces.length > 0) {
+          await handleSelectUnsavedSession(unsavedSpaces[0].id);
+        } else {
+          await handleCreateNewUnsavedSession();
+        }
+        return;
+      }
+
       const settings = await getUserSettings();
 
       // If space is already active in another window, focus that window
@@ -725,7 +734,10 @@ export const Sidebar: React.FC = () => {
         break;
       }
     }
-    const isOpenInThisWindow = currentWindowId !== null && windowSpaces.get(currentWindowId) === space.id;
+    const isOpenInThisWindow =
+      windowSpaces.size > 1 &&
+      currentWindowId !== null &&
+      windowSpaces.get(currentWindowId) === space.id;
     const isOpenInOtherWindow = otherWindowId !== null;
 
     return (
@@ -912,7 +924,7 @@ export const Sidebar: React.FC = () => {
           <div className="space-y-1">
             {(!unsavedSpaces || unsavedSpaces.length === 0) ? (
               <button
-                onClick={() => handleSelectSpace(null)}
+                onClick={handleCreateNewUnsavedSession}
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.dataTransfer.dropEffect = 'move';

@@ -171,8 +171,28 @@ export async function moveTabsToSpace(
   targetSpaceId: string | null
 ) {
   if (!tabIds || tabIds.length === 0) return;
-  const normalizedTarget = targetSpaceId || UNSAVED_SPACE_ID;
   const now = Date.now();
+  let normalizedTarget = targetSpaceId;
+
+  if (!normalizedTarget || normalizedTarget === UNSAVED_SPACE_ID) {
+    let unsavedSpace = await db.spaces
+      .filter((s) => !!s.isUnsaved && !s.isArchived)
+      .first();
+    if (!unsavedSpace) {
+      const newId = crypto.randomUUID();
+      unsavedSpace = {
+        id: newId,
+        name: '',
+        isUnsaved: true,
+        order: now,
+        createdAt: now,
+        updatedAt: now,
+        isArchived: false,
+      };
+      await db.spaces.add(unsavedSpace);
+    }
+    normalizedTarget = unsavedSpace.id;
+  }
 
   const targetTabs = await db.tabs
     .where('spaceId')

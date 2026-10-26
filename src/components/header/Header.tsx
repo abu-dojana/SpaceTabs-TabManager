@@ -135,6 +135,15 @@ export const Header: React.FC = () => {
           isUnsaved: false,
           updatedAt: now,
         });
+        try {
+          const curTab = await chrome.tabs.getCurrent().catch(() => null);
+          const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
+          if (winId) {
+            await setWindowActiveSpaceId(winId, activeSpace.id);
+          }
+        } catch {
+          // Ignored
+        }
       } else {
         const count = await db.spaces.count();
         const newSpaceId = crypto.randomUUID();
