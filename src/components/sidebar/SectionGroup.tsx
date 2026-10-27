@@ -8,6 +8,9 @@ import {
   Trash2,
   Check,
   X,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 interface SectionGroupProps {
@@ -17,6 +20,11 @@ interface SectionGroupProps {
   isEditing: boolean;
   renamingValue: string;
   isMenuOpen: boolean;
+  isSpacesLocked?: boolean;
+  isDraggingThisSection?: boolean;
+  dropIndicator?: 'before' | 'after' | null;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
   sectionMenuRef: React.RefObject<HTMLDivElement>;
   renameInputRef: React.RefObject<HTMLInputElement>;
   onToggleCollapse: () => void;
@@ -26,6 +34,13 @@ interface SectionGroupProps {
   onCancelRename: () => void;
   onToggleMenu: () => void;
   onDeleteSection: () => void;
+  onSectionDragStart?: (e: React.DragEvent) => void;
+  onSectionDragEnd?: () => void;
+  onSectionDragOver?: (e: React.DragEvent) => void;
+  onSectionDragLeave?: (e: React.DragEvent) => void;
+  onSectionDrop?: (e: React.DragEvent) => void;
+  onMoveSectionUp?: () => void;
+  onMoveSectionDown?: () => void;
   renderSpaceItem: (space: Space, sectionName?: string) => React.ReactNode;
 }
 
@@ -36,6 +51,11 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
   isEditing,
   renamingValue,
   isMenuOpen,
+  isSpacesLocked = true,
+  isDraggingThisSection = false,
+  dropIndicator = null,
+  canMoveUp = false,
+  canMoveDown = false,
   sectionMenuRef,
   renameInputRef,
   onToggleCollapse,
@@ -45,10 +65,31 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
   onCancelRename,
   onToggleMenu,
   onDeleteSection,
+  onSectionDragStart,
+  onSectionDragEnd,
+  onSectionDragOver,
+  onSectionDragLeave,
+  onSectionDrop,
+  onMoveSectionUp,
+  onMoveSectionDown,
   renderSpaceItem,
 }) => {
   return (
-    <div key={sectionName} className="mt-3">
+    <div
+      key={sectionName}
+      onDragOver={onSectionDragOver}
+      onDragLeave={onSectionDragLeave}
+      onDrop={onSectionDrop}
+      className={`mt-3 relative transition-all ${
+        isDraggingThisSection ? 'opacity-40 scale-[0.98]' : ''
+      } ${
+        dropIndicator === 'before'
+          ? 'before:absolute before:-top-1 before:left-1 before:right-1 before:h-0.5 before:bg-blue-500 before:rounded-full before:z-20 before:shadow-[0_0_8px_rgba(59,130,246,0.8)]'
+          : dropIndicator === 'after'
+          ? 'after:absolute after:-bottom-1 after:left-1 after:right-1 after:h-0.5 after:bg-blue-500 after:rounded-full after:z-20 after:shadow-[0_0_8px_rgba(59,130,246,0.8)]'
+          : ''
+      }`}
+    >
       {/* Section Header or Inline Rename Input */}
       {isEditing ? (
         <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-blue-500 rounded-lg">
@@ -89,9 +130,17 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
         <div className="relative">
           <div
             onClick={onToggleCollapse}
-            className="flex items-center justify-between px-2 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-200 cursor-pointer rounded transition group"
+            draggable={!isSpacesLocked && !isEditing}
+            onDragStart={onSectionDragStart}
+            onDragEnd={onSectionDragEnd}
+            className={`flex items-center justify-between px-2 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-200 rounded transition group ${
+              !isSpacesLocked ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+            }`}
           >
             <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
+              {!isSpacesLocked && (
+                <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 flex-shrink-0 -ml-1 cursor-grab active:cursor-grabbing" />
+              )}
               {isCollapsed ? (
                 <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
               ) : (
@@ -129,6 +178,30 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
               className="absolute right-1 top-full mt-1 z-50 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
               onClick={(e) => e.stopPropagation()}
             >
+              {canMoveUp && onMoveSectionUp && (
+                <button
+                  onClick={onMoveSectionUp}
+                  className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                >
+                  <ArrowUp className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Move section up</span>
+                </button>
+              )}
+
+              {canMoveDown && onMoveSectionDown && (
+                <button
+                  onClick={onMoveSectionDown}
+                  className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                >
+                  <ArrowDown className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Move section down</span>
+                </button>
+              )}
+
+              {(canMoveUp || canMoveDown) && (
+                <div className="my-1 border-t border-slate-800" />
+              )}
+
               <button
                 onClick={onStartRename}
                 className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"

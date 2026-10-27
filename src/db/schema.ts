@@ -14,6 +14,7 @@ export interface Space {
   color?: string;                 // UI accent color
   description?: string;           // Optional description / purpose
   section?: string;               // Optional custom section name (e.g. "Business", "Personal")
+  sectionOrder?: number;          // Optional custom section display order in sidebar
   createdAt: number;              // Unix timestamp ms
   updatedAt: number;              // Unix timestamp ms — used for sync conflict resolution
   order: number;                  // Sidebar display order

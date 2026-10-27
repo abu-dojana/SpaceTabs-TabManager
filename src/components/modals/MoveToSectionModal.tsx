@@ -41,8 +41,16 @@ export const MoveToSectionModal: React.FC = () => {
   if (!moveSectionSpaceId || !space) return null;
 
   const handleSelectSection = async (sectionName: string) => {
+    const existingInSection = (spaces || []).filter(
+      (s) => !s.isArchived && s.section?.trim() === sectionName
+    );
+    const existingSectionOrder = existingInSection.find(
+      (s) => typeof s.sectionOrder === 'number'
+    )?.sectionOrder;
+
     await db.spaces.update(space.id, {
       section: sectionName,
+      sectionOrder: existingSectionOrder,
       updatedAt: Date.now(),
     });
     setMoveSectionSpaceId(null);
@@ -51,6 +59,7 @@ export const MoveToSectionModal: React.FC = () => {
   const handleRemoveFromSection = async () => {
     await db.spaces.update(space.id, {
       section: undefined,
+      sectionOrder: undefined,
       updatedAt: Date.now(),
     });
     setMoveSectionSpaceId(null);
@@ -60,8 +69,13 @@ export const MoveToSectionModal: React.FC = () => {
     e.preventDefault();
     const val = newSectionInput.trim();
     if (val) {
+      const maxSecOrder = (spaces || []).reduce(
+        (max, s) => (typeof s.sectionOrder === 'number' ? Math.max(max, s.sectionOrder) : max),
+        -1
+      );
       await db.spaces.update(space.id, {
         section: val,
+        sectionOrder: maxSecOrder >= 0 ? maxSecOrder + 1 : allSections.length,
         updatedAt: Date.now(),
       });
       setNewSectionInput('');

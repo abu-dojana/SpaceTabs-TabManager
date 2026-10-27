@@ -63,6 +63,10 @@ export const Sidebar: React.FC = () => {
   const [dragOverTargetSpaceId, setDragOverTargetSpaceId] = React.useState<string | null>(null);
   const [dropPosition, setDropPosition] = React.useState<'before' | 'after' | null>(null);
 
+  const [draggedSectionName, setDraggedSectionName] = React.useState<string | null>(null);
+  const [dragOverTargetSection, setDragOverTargetSection] = React.useState<string | null>(null);
+  const [sectionDropPosition, setSectionDropPosition] = React.useState<'before' | 'after' | null>(null);
+
   const toggleSpacesLock = () => {
     const next = !isSpacesLocked;
     setIsSpacesLocked(next);
@@ -161,18 +165,51 @@ export const Sidebar: React.FC = () => {
   const { unsectionedSpaces, sectionsMap } = React.useMemo(() => {
     const active = (spaces || []).filter((s) => !s.isArchived && !s.isUnsaved);
     const unsectioned: Space[] = [];
-    const secMap = new Map<string, Space[]>();
+    const rawSecMap = new Map<string, Space[]>();
+    const discoveryOrder = new Map<string, number>();
 
     for (const space of active) {
       if (space.section && space.section.trim()) {
         const sec = space.section.trim();
-        if (!secMap.has(sec)) secMap.set(sec, []);
-        secMap.get(sec)!.push(space);
+        if (!rawSecMap.has(sec)) {
+          rawSecMap.set(sec, []);
+          discoveryOrder.set(sec, discoveryOrder.size);
+        }
+        rawSecMap.get(sec)!.push(space);
       } else {
         unsectioned.push(space);
       }
     }
-    return { unsectionedSpaces: unsectioned, sectionsMap: secMap };
+
+    const sortedEntries = Array.from(rawSecMap.entries()).sort(([secA, listA], [secB, listB]) => {
+      const minOrderA = listA.reduce<number | undefined>(
+        (min, s) =>
+          typeof s.sectionOrder === 'number'
+            ? min === undefined
+              ? s.sectionOrder
+              : Math.min(min, s.sectionOrder)
+            : min,
+        undefined
+      );
+      const minOrderB = listB.reduce<number | undefined>(
+        (min, s) =>
+          typeof s.sectionOrder === 'number'
+            ? min === undefined
+              ? s.sectionOrder
+              : Math.min(min, s.sectionOrder)
+            : min,
+        undefined
+      );
+
+      if (minOrderA !== undefined && minOrderB !== undefined && minOrderA !== minOrderB) {
+        return minOrderA - minOrderB;
+      }
+      if (minOrderA !== undefined && minOrderB === undefined) return -1;
+      if (minOrderA === undefined && minOrderB !== undefined) return 1;
+      return (discoveryOrder.get(secA) ?? 0) - (discoveryOrder.get(secB) ?? 0);
+    });
+
+    return { unsectionedSpaces: unsectioned, sectionsMap: new Map(sortedEntries) };
   }, [spaces]);
 
   // Click outside listener to dismiss context menus
@@ -666,7 +703,116 @@ export const Sidebar: React.FC = () => {
     setDropPosition(null);
   };
 
+  const persistSectionOrder = async (orderedSectionNames: string[]) => {
+    const now = Date.now();
+    const updates: Space[] = [];
+    orderedSectionNames.forEach((secName, secIdx) => {
+      const secSpaces = sectionsMap.get(secName) || [];
+      for (const sp of secSpaces) {
+        updates.push({
+          ...sp,
+          sectionOrder: secIdx,
+          updatedAt: now,
+        });
+      }
+    });
+    if (updates.length > 0) {
+      await db.spaces.bulkPut(updates);
+    }
+  };
+
+  const handleReorderSections = async (
+    sourceSection: string,
+    targetSection: string,
+    position: 'before' | 'after'
+  ) => {
+    if (sourceSection === targetSection) return;
+    const sectionNames = Array.from(sectionsMap.keys());
+    const sourceIdx = sectionNames.indexOf(sourceSection);
+    const targetIdx = sectionNames.indexOf(targetSection);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const [moved] = sectionNames.splice(sourceIdx, 1);
+    let insertIdx = sectionNames.indexOf(targetSection);
+    if (position === 'after') {
+      insertIdx += 1;
+    }
+    sectionNames.splice(insertIdx, 0, moved);
+
+    await persistSectionOrder(sectionNames);
+    setDraggedSectionName(null);
+    setDragOverTargetSection(null);
+    setSectionDropPosition(null);
+  };
+
+  const handleMoveSectionByOffset = async (sectionName: string, offset: -1 | 1) => {
+    setActiveSectionMenu(null);
+    const sectionNames = Array.from(sectionsMap.keys());
+    const idx = sectionNames.indexOf(sectionName);
+    const newIdx = idx + offset;
+    if (idx === -1 || newIdx < 0 || newIdx >= sectionNames.length) return;
+
+    const [moved] = sectionNames.splice(idx, 1);
+    sectionNames.splice(newIdx, 0, moved);
+    await persistSectionOrder(sectionNames);
+  };
+
+  const handleSectionDragStart = (e: React.DragEvent, sectionName: string) => {
+    e.stopPropagation();
+    e.dataTransfer.setData('application/x-spacetabs-section-name', sectionName);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedSectionName(sectionName);
+  };
+
+  const handleSectionDragEnd = () => {
+    setDraggedSectionName(null);
+    setDragOverTargetSection(null);
+    setSectionDropPosition(null);
+  };
+
+  const handleSectionDragOver = (e: React.DragEvent, sectionName: string) => {
+    if (!draggedSectionName) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedSectionName !== sectionName) {
+      e.dataTransfer.dropEffect = 'move';
+      const rect = e.currentTarget.getBoundingClientRect();
+      const offset = e.clientY - rect.top;
+      const pos: 'before' | 'after' = offset < rect.height / 2 ? 'before' : 'after';
+      if (dragOverTargetSection !== sectionName || sectionDropPosition !== pos) {
+        setDragOverTargetSection(sectionName);
+        setSectionDropPosition(pos);
+      }
+    }
+  };
+
+  const handleSectionDragLeave = (e: React.DragEvent, sectionName: string) => {
+    if (!draggedSectionName) return;
+    const currentTarget = e.currentTarget as HTMLElement;
+    if (!currentTarget.contains(e.relatedTarget as Node)) {
+      if (dragOverTargetSection === sectionName) {
+        setDragOverTargetSection(null);
+        setSectionDropPosition(null);
+      }
+    }
+  };
+
+  const handleSectionDrop = async (e: React.DragEvent, targetSectionName: string) => {
+    if (!draggedSectionName) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedSectionName !== targetSectionName) {
+      const pos = sectionDropPosition || 'after';
+      await handleReorderSections(draggedSectionName, targetSectionName, pos);
+    } else {
+      setDraggedSectionName(null);
+      setDragOverTargetSection(null);
+      setSectionDropPosition(null);
+    }
+  };
+
   const handleSpaceDragStart = (e: React.DragEvent, spaceId: string) => {
+    e.stopPropagation();
     e.dataTransfer.setData('application/x-spacetabs-space-id', spaceId);
     e.dataTransfer.effectAllowed = 'move';
     setDraggedSpaceId(spaceId);
@@ -679,6 +825,7 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleItemDragOver = (e: React.DragEvent, spaceId: string) => {
+    if (draggedSectionName) return;
     e.preventDefault();
     if (draggedSpaceId && draggedSpaceId !== spaceId) {
       e.dataTransfer.dropEffect = 'move';
@@ -700,6 +847,7 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleItemDragLeave = (e: React.DragEvent, spaceId: string) => {
+    if (draggedSectionName) return;
     const currentTarget = e.currentTarget as HTMLElement;
     if (!currentTarget.contains(e.relatedTarget as Node)) {
       if (dragOverTargetSpaceId === spaceId) {
@@ -713,6 +861,7 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleItemDrop = async (e: React.DragEvent, targetSpaceId: string, sectionName?: string) => {
+    if (draggedSectionName) return;
     e.preventDefault();
     e.stopPropagation();
     if (draggedSpaceId && draggedSpaceId !== targetSpaceId) {
@@ -1071,8 +1220,8 @@ export const Sidebar: React.FC = () => {
                 }`}
                 title={
                   isSpacesLocked
-                    ? 'Spaces locked. Click to reorder spaces.'
-                    : 'Spaces unlocked. Drag spaces to reorder, click to lock.'
+                    ? 'Order locked. Click to reorder spaces & sections.'
+                    : 'Order unlocked. Drag spaces or sections to reorder, click to lock.'
                 }
               >
                 {isSpacesLocked ? (
@@ -1103,7 +1252,7 @@ export const Sidebar: React.FC = () => {
           </div>
 
           {/* Custom Collapsible Sections */}
-          {Array.from(sectionsMap.entries()).map(([sectionName, sectionSpaces]) => (
+          {Array.from(sectionsMap.entries()).map(([sectionName, sectionSpaces], sectionIdx, entriesArr) => (
             <SectionGroup
               key={sectionName}
               sectionName={sectionName}
@@ -1112,6 +1261,11 @@ export const Sidebar: React.FC = () => {
               isEditing={editingSectionName === sectionName}
               renamingValue={renamingSectionValue}
               isMenuOpen={activeSectionMenu === sectionName}
+              isSpacesLocked={isSpacesLocked}
+              isDraggingThisSection={draggedSectionName === sectionName}
+              dropIndicator={dragOverTargetSection === sectionName ? sectionDropPosition : null}
+              canMoveUp={sectionIdx > 0}
+              canMoveDown={sectionIdx < entriesArr.length - 1}
               sectionMenuRef={sectionMenuRef}
               renameInputRef={renameSectionInputRef}
               onToggleCollapse={() => toggleSection(sectionName)}
@@ -1130,6 +1284,13 @@ export const Sidebar: React.FC = () => {
                 setActiveSectionMenu(null);
                 setDeleteSectionModal(sectionName);
               }}
+              onSectionDragStart={(e) => handleSectionDragStart(e, sectionName)}
+              onSectionDragEnd={handleSectionDragEnd}
+              onSectionDragOver={(e) => handleSectionDragOver(e, sectionName)}
+              onSectionDragLeave={(e) => handleSectionDragLeave(e, sectionName)}
+              onSectionDrop={(e) => handleSectionDrop(e, sectionName)}
+              onMoveSectionUp={() => handleMoveSectionByOffset(sectionName, -1)}
+              onMoveSectionDown={() => handleMoveSectionByOffset(sectionName, 1)}
               renderSpaceItem={renderSpaceItem}
             />
           ))}
