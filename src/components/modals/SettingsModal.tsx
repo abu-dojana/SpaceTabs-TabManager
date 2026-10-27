@@ -1968,7 +1968,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         Support Independent Development
                       </div>
                       <div className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                        SpaceTabs is 100% free with zero paywalls. Support via SupportKori, bKash, Patreon, or Ko-fi!
+                        SpaceTabs is 100% free with zero paywalls. Support via SupportKori, bKash, Patreon, or SociaBuzz!
                       </div>
                     </div>
                   </div>
@@ -2220,7 +2220,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
 
-                    {/* 4. Ko-fi (International) */}
+                    {/* 4. SociaBuzz (International / Global) */}
                     <div
                       className={`p-4 rounded-xl border flex flex-col justify-between transition ${
                         isLight
@@ -2232,25 +2232,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2 font-bold text-xs text-sky-500">
                             <Coffee className="w-4 h-4" />
-                            <span>Ko-fi</span>
+                            <span>SociaBuzz</span>
                           </div>
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-500 border border-sky-500/20">
-                            Tip & Coffee
+                            Global Tip & Tribe
                           </span>
                         </div>
                         <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                          Buy me a coffee or leave a quick tip without signing up for monthly subscriptions.
+                          Leave a quick one-time tip or join the tribe from anywhere in the world with global payment methods.
                         </p>
                       </div>
 
                       <div className="mt-3 pt-3 border-t border-sky-500/15">
                         <a
-                          href="https://ko-fi.com/abudojana"
+                          href="https://sociabuzz.com/abudojana/tribe"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs bg-sky-600 hover:bg-sky-500 text-white shadow-sm transition cursor-pointer"
                         >
-                          <span>Support on Ko-fi</span>
+                          <span>Support on SociaBuzz</span>
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       </div>

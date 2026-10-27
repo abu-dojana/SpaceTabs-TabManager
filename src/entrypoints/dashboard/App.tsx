@@ -255,7 +255,7 @@ export default function App() {
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
                   : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30 hover:shadow-emerald-500/40'
               }`}
-              title="Support Abu Dojana (SupportKori, bKash, Patreon, Ko-fi)"
+              title="Support Abu Dojana (SupportKori, bKash, Patreon, SociaBuzz)"
             >
               <Heart className="w-3.5 h-3.5 fill-white text-white group-hover:scale-110 transition-transform" />
               <span>Support Me!</span>

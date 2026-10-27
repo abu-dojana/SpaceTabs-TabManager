@@ -1368,7 +1368,7 @@ export const Sidebar: React.FC = () => {
         <button
           onClick={() => setSettingsOpen(true, 'contact')}
           className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition group border border-transparent text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20 cursor-pointer"
-          title="Support Abu Dojana (SupportKori, bKash, Patreon, Ko-fi)"
+          title="Support Abu Dojana (SupportKori, bKash, Patreon, SociaBuzz)"
         >
           <div className="flex items-center gap-2.5">
             <Heart className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform fill-rose-500/20 group-hover:fill-rose-500" />

@@ -149,7 +149,7 @@ SpaceTabs is free, open-source, and developed independently. If it helps you sta
 
 - ☕ **Patreon:** [patreon.com/abudojana](https://patreon.com/abudojana)
 - 🇧🇩 **SupportKori (bKash):** [supportkori.com/abudojana](https://www.supportkori.com/abudojana)
-- ☕ **Ko-fi:** [ko-fi.com/abudojana](https://ko-fi.com/abudojana)
+- ☕ **SociaBuzz:** [sociabuzz.com/abudojana/tribe](https://sociabuzz.com/abudojana/tribe)
 - ⭐ **GitHub:** Star this repo and follow [@abu-dojana](https://github.com/abu-dojana)
 
 ---
