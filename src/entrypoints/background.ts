@@ -49,13 +49,21 @@ export default defineBackground(() => {
   const DASHBOARD_PAGE = '/dashboard.html';
   const DASHBOARD_URL = chrome.runtime.getURL(DASHBOARD_PAGE);
   const pinnedCheckLocks = new Set<number>();
+  const dashboardTabIds = new Map<number, number>();
   let initWindowsPromise: Promise<void> | null = null;
+
+  function isDashboardTab(tab: chrome.tabs.Tab): boolean {
+    return Boolean(
+      tab.url?.startsWith(DASHBOARD_URL) ||
+      tab.pendingUrl?.startsWith(DASHBOARD_URL)
+    );
+  }
 
   /**
    * Idempotent check: ensures exactly one pinned dashboard tab at index 0
    * for a given normal browser window.
    */
-  async function ensurePinnedIndexTab(windowId: number) {
+  async function ensurePinnedIndexTab(windowId: number, activateIfCreated?: boolean) {
     if (pinnedCheckLocks.has(windowId)) return;
     pinnedCheckLocks.add(windowId);
     try {
@@ -64,29 +72,46 @@ export default defineBackground(() => {
       if (win.type !== 'normal') return;
 
       const tabs = await chrome.tabs.query({ windowId });
-      const dashboardTabs = tabs.filter(
-        (t) => t.url?.startsWith(DASHBOARD_URL) || t.pendingUrl?.startsWith(DASHBOARD_URL)
-      );
+      const dashboardTabs = tabs.filter(isDashboardTab);
 
       if (dashboardTabs.length === 0) {
         // None exists: create pinned at index 0
-        await chrome.tabs.create({
+        const created = await chrome.tabs.create({
           windowId,
           url: DASHBOARD_URL,
           pinned: true,
           index: 0,
+          active: activateIfCreated ?? tabs.length === 0,
         });
+        if (created.id) {
+          dashboardTabIds.set(windowId, created.id);
+        }
       } else if (dashboardTabs.length > 1) {
         // Deduplicate (e.g. startup "Continue where you left off" + extension init)
         const [keep, ...duplicates] = dashboardTabs;
-        if (!keep.pinned) {
-          await chrome.tabs.update(keep.id!, { pinned: true });
+        if (keep.id) {
+          dashboardTabIds.set(windowId, keep.id);
+          if (!keep.pinned) {
+            await chrome.tabs.update(keep.id, { pinned: true });
+          }
+          if (keep.index !== 0) {
+            await chrome.tabs.move(keep.id, { index: 0 });
+          }
         }
         for (const dup of duplicates) {
           if (dup.id) await chrome.tabs.remove(dup.id);
         }
-      } else if (!dashboardTabs[0].pinned) {
-        await chrome.tabs.update(dashboardTabs[0].id!, { pinned: true });
+      } else {
+        const dash = dashboardTabs[0];
+        if (dash.id) {
+          dashboardTabIds.set(windowId, dash.id);
+          if (!dash.pinned) {
+            await chrome.tabs.update(dash.id, { pinned: true });
+          }
+          if (dash.index !== 0) {
+            await chrome.tabs.move(dash.id, { index: 0 });
+          }
+        }
       }
     } catch {
       // Window may have already closed during async execution
@@ -173,6 +198,7 @@ export default defineBackground(() => {
           }
         }
       }
+      dashboardTabIds.delete(windowId);
       await removeWindowSpaceBinding(windowId);
       await db.tabs
         .where('windowId')
@@ -186,6 +212,9 @@ export default defineBackground(() => {
   // 2. Tab Removed Guard (Prevents Zombie Windows)
   chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     forgetTabActivity(tabId);
+    if (dashboardTabIds.get(removeInfo.windowId) === tabId) {
+      dashboardTabIds.delete(removeInfo.windowId);
+    }
     // Critical Guard: NEVER recreate if the entire window is closing
     if (removeInfo.isWindowClosing) return;
 
@@ -194,18 +223,52 @@ export default defineBackground(() => {
   });
 
   // 3. Tab Updated: Sync immediately and record activity on load/navigation
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (!tab.windowId) return;
 
     if (changeInfo.status === 'complete' || changeInfo.url) {
       recordTabActivity(tabId);
     }
 
-    if (tab.url?.startsWith(DASHBOARD_URL)) {
+    if (isDashboardTab(tab)) {
+      dashboardTabIds.set(tab.windowId, tabId);
       if (changeInfo.status === 'complete') {
         ensurePinnedIndexTab(tab.windowId);
       }
     } else {
+      const currentUrl = tab.url || tab.pendingUrl || changeInfo.url;
+      const wasDashboardTab = dashboardTabIds.get(tab.windowId) === tabId;
+
+      if (
+        currentUrl &&
+        (wasDashboardTab ||
+          (tab.pinned && tab.index === 0 && !dashboardTabIds.has(tab.windowId)))
+      ) {
+        let shouldRescue = wasDashboardTab;
+        if (!shouldRescue) {
+          try {
+            const winTabs = await chrome.tabs.query({ windowId: tab.windowId });
+            const existingDash = winTabs.find(isDashboardTab);
+            if (existingDash?.id) {
+              dashboardTabIds.set(tab.windowId, existingDash.id);
+            } else {
+              shouldRescue = true;
+            }
+          } catch {}
+        }
+
+        if (shouldRescue) {
+          dashboardTabIds.delete(tab.windowId);
+          try {
+            await chrome.tabs.update(tabId, { pinned: false });
+            await chrome.tabs.move(tabId, { index: -1 });
+          } catch {}
+          await ensurePinnedIndexTab(tab.windowId, false);
+          await syncWindowTabsToUnsaved(tab.windowId);
+          return;
+        }
+      }
+
       // Sync immediately on any update (loading, url, title, favIconUrl)
       syncWindowTabsToUnsaved(tab.windowId);
     }
