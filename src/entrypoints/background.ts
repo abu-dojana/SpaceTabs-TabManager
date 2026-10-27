@@ -61,11 +61,17 @@ export default defineBackground(() => {
 
   /**
    * Idempotent check: ensures exactly one pinned dashboard tab at index 0
-   * for a given normal browser window.
+   * for a given normal browser window. Retries automatically if Chromium blocks
+   * tab creation while the user is actively dragging a tab with the mouse.
    */
-  async function ensurePinnedIndexTab(windowId: number, activateIfCreated?: boolean) {
+  async function ensurePinnedIndexTab(
+    windowId: number,
+    activateIfCreated?: boolean,
+    retryCount = 0
+  ) {
     if (pinnedCheckLocks.has(windowId)) return;
     pinnedCheckLocks.add(windowId);
+    let shouldRetry = false;
     try {
       const win = await chrome.windows.get(windowId);
       // Guard: Skip popups, devtools, and app frames
@@ -114,9 +120,25 @@ export default defineBackground(() => {
         }
       }
     } catch {
-      // Window may have already closed during async execution
+      // Chromium blocks tab edits while user's mouse button is held down dragging a tab.
+      // If the window still exists, retry once the mouse drag finishes.
+      if (retryCount < 15) {
+        try {
+          const checkWin = await chrome.windows.get(windowId);
+          if (checkWin && checkWin.type === 'normal') {
+            shouldRetry = true;
+          }
+        } catch {
+          // Window was closed
+        }
+      }
     } finally {
       pinnedCheckLocks.delete(windowId);
+      if (shouldRetry) {
+        setTimeout(() => {
+          ensurePinnedIndexTab(windowId, activateIfCreated, retryCount + 1);
+        }, 200);
+      }
     }
   }
 
@@ -207,7 +229,8 @@ export default defineBackground(() => {
           await ensureWindowUnsavedSpace(window.id);
         }
       }
-      await ensurePinnedIndexTab(window.id);
+      await ensurePinnedIndexTab(window.id, false);
+      await syncWindowTabsToUnsaved(window.id);
     }
   });
 
@@ -306,6 +329,46 @@ export default defineBackground(() => {
       ensurePinnedIndexTab(tab.windowId);
       syncWindowTabsToUnsaved(tab.windowId);
     }
+  });
+
+  chrome.tabs.onAttached.addListener(async (tabId, attachInfo) => {
+    recordTabActivity(tabId);
+    try {
+      const existingRec = await db.tabs.where('chromeTabId').equals(tabId).first();
+      if (existingRec?.spaceId) {
+        await db.tabs.update(existingRec.id, {
+          windowId: attachInfo.newWindowId,
+          updatedAt: Date.now(),
+        });
+
+        const sp = await db.spaces.get(existingRec.spaceId);
+        if (sp && !sp.isUnsaved && !sp.isArchived) {
+          const curWinSpaceId = await getWindowActiveSpaceId(attachInfo.newWindowId);
+          const curWinSpace = curWinSpaceId ? await db.spaces.get(curWinSpaceId) : undefined;
+          if (!curWinSpaceId || curWinSpace?.isUnsaved) {
+            const winTabs = await chrome.tabs.query({ windowId: attachInfo.newWindowId });
+            const nonDashTabs = winTabs.filter((t) => !t.pinned && !isDashboardTab(t));
+            if (nonDashTabs.length === 1 && nonDashTabs[0].id === tabId) {
+              if (curWinSpaceId && curWinSpace?.isUnsaved) {
+                const count = await db.tabs.where('spaceId').equals(curWinSpaceId).count();
+                if (count === 0) {
+                  await db.spaces.delete(curWinSpaceId);
+                }
+              }
+              await setWindowActiveSpaceId(attachInfo.newWindowId, sp.id);
+            }
+          }
+        }
+      }
+    } catch {}
+
+    await ensurePinnedIndexTab(attachInfo.newWindowId, false);
+    await syncWindowTabsToUnsaved(attachInfo.newWindowId);
+  });
+
+  chrome.tabs.onDetached.addListener(async (_tabId, detachInfo) => {
+    await ensurePinnedIndexTab(detachInfo.oldWindowId, false);
+    await syncWindowTabsToUnsaved(detachInfo.oldWindowId);
   });
 
   chrome.tabs.onMoved.addListener((_tabId, moveInfo) => {
