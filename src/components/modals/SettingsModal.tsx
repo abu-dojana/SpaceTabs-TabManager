@@ -1995,6 +1995,65 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Google Drive Cloud Backup:</strong> Optionally sync spaces across multiple machines seamlessly.</li>
                   </ul>
                 </div>
+
+                {/* What's New / Release Changelog */}
+                <div
+                  className={`p-5 rounded-2xl border space-y-4 ${
+                    isLight
+                      ? 'bg-slate-50 border-slate-200 shadow-sm'
+                      : 'bg-slate-950/70 border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between border-b pb-3 border-slate-500/20">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <h4 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        What's New in SpaceTabs
+                      </h4>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                      v1.2.0 Latest
+                    </span>
+                  </div>
+
+                  {/* v1.2.0 Highlights */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        Version 1.2.0 — Stability, Sorting & Session Continuity
+                      </span>
+                    </div>
+                    <ul className={`list-disc pl-5 space-y-1.5 text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Custom Section Sorting:</strong> Reorder sidebar sections via drag-and-drop when unlocked or from the section menu, synced automatically with Google Drive.
+                      </li>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Seamless Space Restore on Browser Startup:</strong> Reopening the browser now restores your active saved Space directly without duplicating tabs into Unsaved sessions.
+                      </li>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Live Tab Reordering & Sorting:</strong> Drag-and-drop tabs or sort alphabetically / by domain to reorder both your SpaceTabs list and live browser tabs.
+                      </li>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Pinned Dashboard Rescue:</strong> Clicking bookmarks or navigating from the Dashboard opens the site in a normal tab while preserving your pinned SpaceTabs tab at index 0.
+                      </li>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Multi-Window Space Sync:</strong> Improved "Open in Window" workspace binding and smart multi-window status indicators.
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* v1.1.0 Highlights */}
+                  <div className="pt-3 border-t border-slate-500/15 space-y-1.5">
+                    <div className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      Version 1.1.0 — Customization & Polish
+                    </div>
+                    <ul className={`list-disc pl-5 space-y-1 text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <li>Interactive emoji picker when renaming Spaces in the Sidebar and Header.</li>
+                      <li>Drag-and-drop Space ordering with a 1-click lock toggle in the Sidebar.</li>
+                      <li>Distraction-free toggle to show or hide web favicons across workspaces.</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             )}
 
