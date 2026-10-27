@@ -1943,7 +1943,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     SpaceTabs — Tab Manager
                   </h3>
                   <p className="text-xs text-blue-500 font-mono mt-0.5 font-bold">
-                    Version {chrome.runtime?.getManifest?.()?.version || '1.2.0'} • Manifest V3
+                    Version {chrome.runtime?.getManifest?.()?.version || '1.2.1'} • Manifest V3
                   </p>
                   <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 text-xs font-bold mt-3">
                     <CheckCircle2 className="w-4 h-4" />
@@ -2012,14 +2012,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </h4>
                     </div>
                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                      v1.2.0 Latest
+                      v1.2.1 Latest
                     </span>
                   </div>
 
-                  {/* v1.2.0 Highlights */}
+                  {/* v1.2.1 Highlights */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        Version 1.2.1 — Side-by-Side Multi-Window Polish
+                      </span>
+                    </div>
+                    <ul className={`list-disc pl-5 space-y-1.5 text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Side-by-Side Space Continuity:</strong> Opening a single tab (or selected tabs) in a new window now keeps both windows bound to the same Space with accurate <code className="text-[11px]">This Window</code> and <code className="text-[11px]">Another Window</code> indicators instead of creating duplicate Unsaved sessions.
+                      </li>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Seamless Tab Drag-Out Support:</strong> Dragging a tab out of a browser window with your mouse now automatically creates the pinned SpaceTabs Dashboard at index 0 and preserves its Space binding as soon as you release the tab.
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* v1.2.0 Highlights */}
+                  <div className="pt-3 border-t border-slate-500/15 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                         Version 1.2.0 — Stability, Sorting & Session Continuity
                       </span>
                     </div>
@@ -2035,9 +2052,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </li>
                       <li>
                         <strong className={isLight ? 'text-slate-900' : 'text-white'}>Pinned Dashboard Rescue:</strong> Clicking bookmarks or navigating from the Dashboard opens the site in a normal tab while preserving your pinned SpaceTabs tab at index 0.
-                      </li>
-                      <li>
-                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Multi-Window Space Sync:</strong> Improved "Open in Window" workspace binding and smart multi-window status indicators.
                       </li>
                     </ul>
                   </div>

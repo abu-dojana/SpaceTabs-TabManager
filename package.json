@@ -1,7 +1,7 @@
 {
   "name": "spacetabs",
   "description": "Local-first, unlimited tab & workspace manager with Google Drive sync.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "type": "module",
   "scripts": {
