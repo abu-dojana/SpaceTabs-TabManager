@@ -180,7 +180,32 @@ export default defineBackground(() => {
         await setTransitionLock(window.id, true);
         await setWindowActiveSpaceId(window.id, pendingSpaceId);
       } else {
-        await ensureWindowUnsavedSpace(window.id);
+        let adoptedSpaceId: string | null = null;
+        try {
+          const winTabs = await chrome.tabs.query({ windowId: window.id });
+          for (const wt of winTabs) {
+            if (wt.id && !wt.pinned && !isDashboardTab(wt)) {
+              const existingRec = await db.tabs.where('chromeTabId').equals(wt.id).first();
+              if (existingRec?.spaceId) {
+                const sp = await db.spaces.get(existingRec.spaceId);
+                if (sp && !sp.isUnsaved && !sp.isArchived) {
+                  adoptedSpaceId = sp.id;
+                  await db.tabs.update(existingRec.id, {
+                    windowId: window.id,
+                    updatedAt: Date.now(),
+                  });
+                  break;
+                }
+              }
+            }
+          }
+        } catch {}
+
+        if (adoptedSpaceId) {
+          await setWindowActiveSpaceId(window.id, adoptedSpaceId);
+        } else {
+          await ensureWindowUnsavedSpace(window.id);
+        }
       }
       await ensurePinnedIndexTab(window.id);
     }

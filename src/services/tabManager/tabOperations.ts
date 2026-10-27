@@ -2,6 +2,12 @@ import { db } from '@/db';
 import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { decodeRealUrl } from '@/utils/urlFilter';
 import { recordTombstones } from '@/services/driveSync';
+import {
+  setPendingNewWindowSpace,
+  setTransitionLock,
+  setWindowActiveSpaceId,
+} from './windowSpaces';
+import { syncWindowTabsToUnsaved } from './tabSync';
 
 /**
  * Single Tab Click: Focus if already open, or create new tab
@@ -107,7 +113,7 @@ export async function locateOrOpenTab(tabRecord: {
 
 /**
  * Opens a single tab in a brand-new Chrome window.
- * If the tab is currently open, moves it to the new window.
+ * If the tab is currently open, moves it to the new window and preserves its Space binding.
  */
 export async function openTabInNewWindow(tab: {
   id: string;
@@ -115,49 +121,189 @@ export async function openTabInNewWindow(tab: {
   chromeTabId?: number;
 }) {
   const realUrl = decodeRealUrl(tab.url);
+  const record = await db.tabs.get(tab.id);
+  const space = record?.spaceId ? await db.spaces.get(record.spaceId) : undefined;
+  const savedSpaceId = space && !space.isUnsaved ? space.id : null;
+
+  if (savedSpaceId) {
+    await setPendingNewWindowSpace(savedSpaceId);
+  }
+
   try {
-    if (tab.chromeTabId) {
-      const liveTab = await chrome.tabs.get(tab.chromeTabId).catch(() => null);
+    const targetChromeTabId = tab.chromeTabId || record?.chromeTabId;
+    if (targetChromeTabId) {
+      const liveTab = await chrome.tabs.get(targetChromeTabId).catch(() => null);
       if (liveTab && liveTab.id) {
-        await chrome.windows.create({ tabId: liveTab.id, focused: true });
+        const sourceWinId = liveTab.windowId;
+        const newWin = await chrome.windows.create({ tabId: liveTab.id, focused: true });
+        if (newWin?.id) {
+          if (savedSpaceId) {
+            await setWindowActiveSpaceId(newWin.id, savedSpaceId);
+            await setPendingNewWindowSpace(null);
+          }
+          await db.tabs.update(tab.id, {
+            chromeTabId: liveTab.id,
+            windowId: newWin.id,
+            updatedAt: Date.now(),
+          });
+          setTimeout(async () => {
+            if (newWin.id) {
+              await setTransitionLock(newWin.id, false);
+              await syncWindowTabsToUnsaved(newWin.id);
+            }
+            if (sourceWinId && sourceWinId !== newWin.id) {
+              await syncWindowTabsToUnsaved(sourceWinId);
+            }
+          }, 300);
+        } else {
+          await setPendingNewWindowSpace(null);
+        }
         return;
       }
     }
-    await chrome.windows.create({ url: realUrl, focused: true });
+
+    const newWin = await chrome.windows.create({ url: realUrl, focused: true });
+    if (newWin?.id) {
+      if (savedSpaceId) {
+        await setWindowActiveSpaceId(newWin.id, savedSpaceId);
+        await setPendingNewWindowSpace(null);
+      }
+      const createdTab = newWin.tabs?.find((t) => !t.pinned) || newWin.tabs?.[0];
+      await db.tabs.update(tab.id, {
+        chromeTabId: createdTab?.id,
+        windowId: newWin.id,
+        updatedAt: Date.now(),
+      });
+      setTimeout(async () => {
+        if (newWin.id) {
+          await setTransitionLock(newWin.id, false);
+          await syncWindowTabsToUnsaved(newWin.id);
+        }
+      }, 300);
+    } else {
+      await setPendingNewWindowSpace(null);
+    }
   } catch (err) {
     console.error('Failed to open tab in new window:', err);
+    await setPendingNewWindowSpace(null);
     await chrome.windows.create({ url: realUrl, focused: true }).catch(() => {});
   }
 }
 
 /**
- * Opens multiple selected tabs in a brand-new Chrome window.
+ * Opens multiple selected tabs in a brand-new Chrome window and preserves their Space binding.
  */
 export async function openSelectedTabsInNewWindow(tabIds: string[]) {
   if (!tabIds || tabIds.length === 0) return;
   const records = await db.tabs.where('id').anyOf(tabIds).sortBy('order');
   if (records.length === 0) return;
 
-  const urls = records.map((t) => decodeRealUrl(t.url)).filter(Boolean);
-  if (urls.length === 0) return;
+  const firstSpaceId = records[0]?.spaceId;
+  const space = firstSpaceId ? await db.spaces.get(firstSpaceId) : undefined;
+  const savedSpaceId = space && !space.isUnsaved ? space.id : null;
+
+  if (savedSpaceId) {
+    await setPendingNewWindowSpace(savedSpaceId);
+  }
+
+  const sourceWindowIds = new Set<number>();
 
   try {
-    const newWin = await chrome.windows.create({
-      url: urls[0],
-      focused: true,
-    });
+    const firstRecord = records[0];
+    const firstUrl = decodeRealUrl(firstRecord.url);
+    let newWin: chrome.windows.Window | undefined;
+    let firstLiveTab: chrome.tabs.Tab | null = null;
 
-    if (newWin.id && urls.length > 1) {
-      for (let i = 1; i < urls.length; i++) {
-        await chrome.tabs.create({
+    if (firstRecord.chromeTabId) {
+      firstLiveTab = await chrome.tabs.get(firstRecord.chromeTabId).catch(() => null);
+    }
+
+    if (firstLiveTab && firstLiveTab.id) {
+      if (firstLiveTab.windowId) sourceWindowIds.add(firstLiveTab.windowId);
+      newWin = await chrome.windows.create({
+        tabId: firstLiveTab.id,
+        focused: true,
+      });
+      if (newWin?.id) {
+        await db.tabs.update(firstRecord.id, {
+          chromeTabId: firstLiveTab.id,
           windowId: newWin.id,
-          url: urls[i],
-          active: false,
+          updatedAt: Date.now(),
+        });
+      }
+    } else {
+      newWin = await chrome.windows.create({
+        url: firstUrl,
+        focused: true,
+      });
+      if (newWin?.id) {
+        const createdTab = newWin.tabs?.find((t) => !t.pinned) || newWin.tabs?.[0];
+        await db.tabs.update(firstRecord.id, {
+          chromeTabId: createdTab?.id,
+          windowId: newWin.id,
+          updatedAt: Date.now(),
         });
       }
     }
+
+    if (!newWin?.id) {
+      await setPendingNewWindowSpace(null);
+      return;
+    }
+
+    if (savedSpaceId) {
+      await setWindowActiveSpaceId(newWin.id, savedSpaceId);
+      await setPendingNewWindowSpace(null);
+    }
+
+    for (let i = 1; i < records.length; i++) {
+      const rec = records[i];
+      const recUrl = decodeRealUrl(rec.url);
+      let moved = false;
+
+      if (rec.chromeTabId) {
+        const liveTab = await chrome.tabs.get(rec.chromeTabId).catch(() => null);
+        if (liveTab && liveTab.id) {
+          if (liveTab.windowId) sourceWindowIds.add(liveTab.windowId);
+          try {
+            await chrome.tabs.move(liveTab.id, { windowId: newWin.id, index: -1 });
+            await db.tabs.update(rec.id, {
+              chromeTabId: liveTab.id,
+              windowId: newWin.id,
+              updatedAt: Date.now(),
+            });
+            moved = true;
+          } catch {}
+        }
+      }
+
+      if (!moved && recUrl) {
+        const created = await chrome.tabs.create({
+          windowId: newWin.id,
+          url: recUrl,
+          active: false,
+        });
+        await db.tabs.update(rec.id, {
+          chromeTabId: created.id,
+          windowId: newWin.id,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+
+    const targetWinId = newWin.id;
+    setTimeout(async () => {
+      await setTransitionLock(targetWinId, false);
+      await syncWindowTabsToUnsaved(targetWinId);
+      for (const sWinId of sourceWindowIds) {
+        if (sWinId !== targetWinId) {
+          await syncWindowTabsToUnsaved(sWinId);
+        }
+      }
+    }, 350);
   } catch (err) {
     console.error('Failed to open selected tabs in new window:', err);
+    await setPendingNewWindowSpace(null);
   }
 }
 

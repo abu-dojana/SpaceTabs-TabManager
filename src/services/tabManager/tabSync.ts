@@ -4,6 +4,7 @@ import { isSystemOrExtensionUrl, decodeRealUrl } from '@/utils/urlFilter';
 import {
   isTransitioning,
   getWindowActiveSpaceId,
+  setWindowActiveSpaceId,
   ensureWindowUnsavedSpace,
   ensureSessionInitialized,
   getAllWindowSpaces,
@@ -170,6 +171,77 @@ async function executeSyncWindowTabs(windowId: number) {
 
     // Determine active space for this window (assign dedicated unsaved space if none yet):
     let targetSpaceId = await getWindowActiveSpaceId(windowId);
+    let targetSpace = targetSpaceId ? await db.spaces.get(targetSpaceId) : undefined;
+    let isUnsavedSpace = !targetSpace || !!targetSpace.isUnsaved;
+
+    const now = Date.now();
+
+    // If this window is currently unbound or bound to an Unsaved space, check whether its open tabs
+    // actually belong to a saved Space (e.g., opened in a new window or detached from a saved Space):
+    if (!targetSpaceId || isUnsavedSpace) {
+      const allSpaces = await db.spaces.toArray();
+      const savedSpaceIds = new Set(
+        allSpaces.filter((s) => !s.isUnsaved && !s.isArchived).map((s) => s.id)
+      );
+
+      if (savedSpaceIds.size > 0 && validTabs.length > 0) {
+        const savedSpaceTabs = await db.tabs
+          .where('spaceId')
+          .anyOf(Array.from(savedSpaceIds))
+          .toArray();
+
+        const savedByChromeTabId = new Map<number, Tab>();
+        for (const st of savedSpaceTabs) {
+          if (typeof st.chromeTabId === 'number') {
+            savedByChromeTabId.set(st.chromeTabId, st);
+          }
+        }
+
+        const matchedSavedSpaceIds = new Set<string>();
+        for (const bt of validTabs) {
+          if (bt.id && savedByChromeTabId.has(bt.id)) {
+            matchedSavedSpaceIds.add(savedByChromeTabId.get(bt.id)!.spaceId);
+          }
+        }
+
+        // If all open tabs in this window belong to a single saved Space, bind this window to that Space
+        // and clean up any empty auto-created Unsaved space:
+        if (
+          matchedSavedSpaceIds.size === 1 &&
+          validTabs.every((bt) => bt.id && savedByChromeTabId.has(bt.id))
+        ) {
+          const [adoptedSpaceId] = Array.from(matchedSavedSpaceIds);
+          if (targetSpaceId && targetSpace?.isUnsaved) {
+            const count = await db.tabs.where('spaceId').equals(targetSpaceId).count();
+            if (count === 0) {
+              await db.spaces.delete(targetSpaceId);
+            }
+          }
+          await setWindowActiveSpaceId(windowId, adoptedSpaceId);
+          targetSpaceId = adoptedSpaceId;
+          targetSpace = await db.spaces.get(targetSpaceId);
+          isUnsavedSpace = false;
+        } else if (savedByChromeTabId.size > 0) {
+          // Otherwise, exclude any tab whose chromeTabId already belongs to a saved Space so it isn't duplicated into Unsaved
+          for (const bt of validTabs) {
+            if (bt.id && savedByChromeTabId.has(bt.id)) {
+              const savedRec = savedByChromeTabId.get(bt.id)!;
+              const effUrl = getEffectiveTabUrl(bt);
+              const rUrl = decodeRealUrl(effUrl);
+              await db.tabs.update(savedRec.id, {
+                windowId,
+                url: rUrl || savedRec.url,
+                title: getEffectiveTabTitle(bt, rUrl) || savedRec.title,
+                favIconUrl: bt.favIconUrl || savedRec.favIconUrl,
+                updatedAt: now,
+              });
+            }
+          }
+          validTabs = validTabs.filter((bt) => !bt.id || !savedByChromeTabId.has(bt.id));
+        }
+      }
+    }
+
     if (!targetSpaceId) {
       const allWinSpaces = await getAllWindowSpaces();
       const otherActiveSpaceIds = Array.from(allWinSpaces.entries())
@@ -192,12 +264,9 @@ async function executeSyncWindowTabs(windowId: number) {
       }
 
       targetSpaceId = await ensureWindowUnsavedSpace(windowId);
+      targetSpace = await db.spaces.get(targetSpaceId);
+      isUnsavedSpace = !targetSpace || !!targetSpace.isUnsaved;
     }
-
-    const targetSpace = await db.spaces.get(targetSpaceId);
-    const isUnsavedSpace = !targetSpace || !!targetSpace.isUnsaved;
-
-    const now = Date.now();
 
     // Read existing tabs in DB for this space
     const existing = await db.tabs
@@ -272,6 +341,20 @@ async function executeSyncWindowTabs(windowId: number) {
       }
     }
 
+    // Preserve relative order slots when a Space's tabs are split across multiple windows
+    const hasTabsOutsideThisWindow = existing.some(
+      (e) =>
+        !matchedRecordIds.has(e.id) &&
+        ((e.chromeTabId && allOpenTabIds.has(e.chromeTabId) && e.windowId !== windowId) ||
+          (!e.chromeTabId && !isUnsavedSpace))
+    );
+    const sortedMatchedOrders = Array.from(tabMatches.values())
+      .map((m) => m.order)
+      .sort((a, b) => a - b);
+    let matchedOrderCursor = 0;
+    let nextNewOrder =
+      existing.length > 0 ? Math.max(...existing.map((e) => e.order)) + 1 : validTabs.length;
+
     // Apply updates or insert new records
     for (let i = 0; i < validTabs.length; i++) {
       const browserTab = validTabs[i];
@@ -293,12 +376,18 @@ async function executeSyncWindowTabs(windowId: number) {
 
         matchedUrls.add(decodeRealUrl(tabUrl));
 
-        // If this record is already bound to a live tab in another window, preserve its binding
+        // If this record was matched by URL to a DIFFERENT live tab in another window, preserve that binding;
+        // if match.chromeTabId === browserTab.id, it is the same tab now located in this window.
         const isLiveInOtherWindow =
           !!match.chromeTabId &&
+          match.chromeTabId !== browserTab.id &&
           allOpenTabIds.has(match.chromeTabId) &&
           !!match.windowId &&
           match.windowId !== windowId;
+
+        const targetOrder = hasTabsOutsideThisWindow
+          ? (sortedMatchedOrders[matchedOrderCursor++] ?? match.order)
+          : i;
 
         await db.tabs.update(match.id, {
           chromeTabId: isLiveInOtherWindow ? match.chromeTabId : browserTab.id,
@@ -306,13 +395,14 @@ async function executeSyncWindowTabs(windowId: number) {
           title: tabTitle,
           url: tabUrl,
           favIconUrl: favIconUrl || match.favIconUrl,
-          order: i,
+          order: targetOrder,
           updatedAt: now,
         });
       } else {
         const newId = crypto.randomUUID();
         matchedRecordIds.add(newId);
         matchedUrls.add(realUrl);
+        const targetOrder = hasTabsOutsideThisWindow ? nextNewOrder++ : i;
         await db.tabs.add({
           id: newId,
           chromeTabId: browserTab.id,
@@ -321,7 +411,7 @@ async function executeSyncWindowTabs(windowId: number) {
           url: realUrl,
           title,
           favIconUrl,
-          order: i,
+          order: targetOrder,
           createdAt: now,
           updatedAt: now,
         });

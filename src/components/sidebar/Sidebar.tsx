@@ -258,9 +258,14 @@ export const Sidebar: React.FC = () => {
 
       const settings = await getUserSettings();
 
-      // If space is already active in another window, focus that window
+      // If space is already active in this window, keep it selected here;
+      // otherwise if it's active in another window, focus that window
       if (spaceId) {
         const winSpaces = await getAllWindowSpaces();
+        if (currentWindowId !== null && winSpaces.get(currentWindowId) === spaceId) {
+          setActiveSpaceId(spaceId);
+          return;
+        }
         for (const [wId, sId] of winSpaces.entries()) {
           if (sId === spaceId && wId !== currentWindowId) {
             try {
