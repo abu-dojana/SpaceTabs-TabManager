@@ -2069,9 +2069,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-500/20 flex-shrink-0">
-                      AD
-                    </div>
+                    <img
+                      src="/developer-pfp.png"
+                      alt="Abu Dojana Tahmid"
+                      className="w-14 h-14 rounded-2xl object-cover border-2 border-indigo-500/40 shadow-lg shadow-indigo-500/20 flex-shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
