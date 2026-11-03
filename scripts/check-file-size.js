@@ -9,7 +9,6 @@ const ERROR_THRESHOLD = 600;
  * Entries are removed as each file is modularized below 600 lines.
  */
 const BASELINE_LIMITS = {
-  'src/components/sidebar/Sidebar.tsx': 1460,
   'src/components/canvas/NotesView.tsx': 1070,
   'src/components/canvas/ResourcesView.tsx': 990,
 };
