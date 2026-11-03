@@ -141,7 +141,7 @@ export const AboutTab: React.FC<AboutTabProps> = ({
             </h4>
           </div>
           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
-            v1.2.2 Latest
+            v{getAppVersion()} Latest
           </span>
         </div>
 

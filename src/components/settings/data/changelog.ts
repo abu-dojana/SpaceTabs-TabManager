@@ -12,6 +12,22 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.3.0',
+    title: 'Version 1.3.0 — Modular Architecture & Space-Switch Isolation',
+    items: [
+      {
+        lead: 'Space-Switch Isolation Hardening:',
+        description:
+          'Added cross-context per-window Web Locks, expiry-based transition locks, scoped outgoing tab stashing, and resilient tab closing so switching spaces never leaks or merges tabs between workspaces.',
+      },
+      {
+        lead: 'Modular Architecture Upgrade:',
+        description:
+          'Refactored the entire codebase into focused, maintainable domain services, hooks, and UI modules with automated file-size enforcement.',
+      },
+    ],
+  },
+  {
     version: '1.2.2',
     title: 'Version 1.2.2 — Data Integrity, Unsaved Session Persistence & Shortcut Polish',
     items: [
