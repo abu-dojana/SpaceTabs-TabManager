@@ -11,7 +11,6 @@ const ERROR_THRESHOLD = 600;
 const BASELINE_LIMITS = {
   'src/components/modals/SettingsModal.tsx': 2600,
   'src/components/sidebar/Sidebar.tsx': 1460,
-  'src/services/driveSync.ts': 1370,
   'src/components/canvas/NotesView.tsx': 1070,
   'src/components/canvas/ResourcesView.tsx': 990,
 };
