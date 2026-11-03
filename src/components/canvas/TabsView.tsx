@@ -1,20 +1,26 @@
 import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
-import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
+import { UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
-import { getUserSettings } from '@/services/settings';
 import {
-  focusOrOpenTab,
   moveTabsToSpace,
   locateOrOpenTab,
   openTabInNewWindow,
   openSelectedTabsInNewWindow,
   closeTabs,
-  setTransitionLock,
-  syncWindowTabsToUnsaved,
+  reorderTabsAndSyncBrowser,
+  sortTabsAlphabetically,
+  sortTabsByDomain,
+  closeDuplicateTabs,
+  suspendAllTabsInCurrentWindow,
+  reloadAllTabsInCurrentWindow,
+  exportSpaceToFile,
 } from '@/services/tabManager';
-import { decodeRealUrl, extractDomain, isSystemOrExtensionUrl } from '@/utils/urlFilter';
+import { decodeRealUrl, isSystemOrExtensionUrl } from '@/utils/urlFilter';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { useAutoFocusSelect } from '@/hooks/useAutoFocusSelect';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import {
   Folder,
   Puzzle,
@@ -28,17 +34,16 @@ import {
 import { TabItem } from './TabItem';
 import { TabBatchBar } from './TabBatchBar';
 import { TabsContainerMenu } from './TabsContainerMenu';
+import { useLiveBrowserTabs } from './hooks/useLiveBrowserTabs';
 
 export const TabsView: React.FC = () => {
   const {
     activeSpaceId,
-    setActiveSpaceId,
     searchQuery,
     selectedTabIds,
     toggleSelectTab,
     selectAllTabs,
     clearSelectedTabs,
-    setCreateSpaceOpen,
   } = useUIStore();
 
   // Query tabs from Dexie using valid string spaceId
@@ -73,9 +78,7 @@ export const TabsView: React.FC = () => {
   const [moveDropdownTabId, setMoveDropdownTabId] = React.useState<string | null>(null);
   const [draggingTabId, setDraggingTabId] = React.useState<string | null>(null);
   const [dragOverTabIndex, setDragOverTabIndex] = React.useState<number | null>(null);
-  const [currentWindowId, setCurrentWindowId] = React.useState<number | null>(null);
-  const [liveTabsMap, setLiveTabsMap] = React.useState<Map<number, number>>(new Map()); // chromeTabId -> windowId
-  const [allLiveTabsList, setAllLiveTabsList] = React.useState<chrome.tabs.Tab[]>([]);
+  const { currentWindowId, liveTabsMap, allLiveTabsList } = useLiveBrowserTabs();
   const dropdownRef = React.useRef<HTMLDivElement>(null!);
 
   // On-the-fly "Move to a New Space" creation state
@@ -83,12 +86,7 @@ export const TabsView: React.FC = () => {
   const [newSpaceNameInput, setNewSpaceNameInput] = React.useState('');
   const newSpaceInputRef = React.useRef<HTMLInputElement>(null!);
 
-  React.useEffect(() => {
-    if (isCreatingNewSpaceForTabs && newSpaceInputRef.current) {
-      newSpaceInputRef.current.focus();
-      newSpaceInputRef.current.select();
-    }
-  }, [isCreatingNewSpaceForTabs]);
+  useAutoFocusSelect(newSpaceInputRef, isCreatingNewSpaceForTabs);
 
   // Tabs 3-Dot Options Menu State
   const [isTabsMenuOpen, setIsTabsMenuOpen] = React.useState(false);
@@ -97,127 +95,29 @@ export const TabsView: React.FC = () => {
   const tabsMenuRef = React.useRef<HTMLDivElement>(null!);
 
   // Web Favicons Visibility Preference
-  const [showTabFavicons, setShowTabFavicons] = React.useState(true);
-  React.useEffect(() => {
-    getUserSettings().then((s) => {
-      if (typeof s.showTabFavicons === 'boolean') {
-        setShowTabFavicons(s.showTabFavicons);
-      }
-    });
-
-    const handleStorageChange = (
-      changes: { [key: string]: chrome.storage.StorageChange },
-      area: string
-    ) => {
-      if (area === 'local' && changes['spacetabs_user_settings']) {
-        const next = changes['spacetabs_user_settings'].newValue;
-        if (next && typeof next.showTabFavicons === 'boolean') {
-          setShowTabFavicons(next.showTabFavicons);
-        }
-      }
-    };
-
-    chrome.storage?.onChanged?.addListener(handleStorageChange);
-    return () => {
-      chrome.storage?.onChanged?.removeListener(handleStorageChange);
-    };
-  }, []);
-
-  // Track live Chrome windows and tabs to show accurate window status badges
-  React.useEffect(() => {
-    let isMounted = true;
-
-    // Anchor host window ID reliably from the dashboard's own tab context
-    const initHostWindow = async () => {
-      try {
-        const curTab = await chrome.tabs.getCurrent();
-        if (isMounted && curTab?.windowId) {
-          setCurrentWindowId(curTab.windowId);
-          return;
-        }
-      } catch {}
-      try {
-        const curWin = await chrome.windows.getCurrent();
-        if (isMounted && curWin?.id) {
-          setCurrentWindowId(curWin.id);
-        }
-      } catch {}
-    };
-    initHostWindow();
-
-    const refreshLiveTabs = async () => {
-      try {
-        const all = await chrome.tabs.query({});
-        const map = new Map<number, number>();
-        for (const t of all) {
-          if (t.id && t.windowId) {
-            map.set(t.id, t.windowId);
-          }
-        }
-        if (isMounted) {
-          setLiveTabsMap(map);
-          setAllLiveTabsList(all);
-        }
-      } catch {}
-    };
-
-    refreshLiveTabs();
-
-    const onEvent = () => {
-      refreshLiveTabs();
-    };
-
-    chrome.tabs.onCreated.addListener(onEvent);
-    chrome.tabs.onRemoved.addListener(onEvent);
-    chrome.tabs.onUpdated.addListener(onEvent);
-    chrome.tabs.onActivated.addListener(onEvent);
-    chrome.tabs.onAttached?.addListener(onEvent);
-    chrome.tabs.onDetached?.addListener(onEvent);
-
-    return () => {
-      isMounted = false;
-      chrome.tabs.onCreated.removeListener(onEvent);
-      chrome.tabs.onRemoved.removeListener(onEvent);
-      chrome.tabs.onUpdated.removeListener(onEvent);
-      chrome.tabs.onActivated.removeListener(onEvent);
-      chrome.tabs.onAttached?.removeListener(onEvent);
-      chrome.tabs.onDetached?.removeListener(onEvent);
-    };
-  }, []);
+  const { showTabFavicons } = useUserSettings();
 
   // Click-away listener to dismiss move dropdowns and Tabs 3-dot menu cleanly
-  React.useEffect(() => {
-    if (!moveDropdownTabId && !isTabsMenuOpen) return;
+  useClickOutside(
+    [dropdownRef],
+    () => {
+      setMoveDropdownTabId(null);
+      setIsCreatingNewSpaceForTabs(false);
+      setNewSpaceNameInput('');
+    },
+    Boolean(moveDropdownTabId),
+    true
+  );
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setMoveDropdownTabId(null);
-        setIsCreatingNewSpaceForTabs(false);
-        setNewSpaceNameInput('');
-      }
-      if (tabsMenuRef.current && !tabsMenuRef.current.contains(e.target as Node)) {
-        setIsTabsMenuOpen(false);
-        setShowMoveAllSubmenu(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setMoveDropdownTabId(null);
-        setIsCreatingNewSpaceForTabs(false);
-        setNewSpaceNameInput('');
-        setIsTabsMenuOpen(false);
-        setShowMoveAllSubmenu(false);
-      }
-    };
-
-    window.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [moveDropdownTabId, isTabsMenuOpen]);
+  useClickOutside(
+    [tabsMenuRef],
+    () => {
+      setIsTabsMenuOpen(false);
+      setShowMoveAllSubmenu(false);
+    },
+    isTabsMenuOpen,
+    true
+  );
 
   const allSelected =
     tabs && tabs.length > 0 && tabs.every((t) => selectedTabIds.has(t.id));
@@ -311,192 +211,27 @@ export const TabsView: React.FC = () => {
     }
   };
 
-  // Reorder tabs in Dexie AND synchronously reorder open Chrome tabs in the browser window
-  const reorderTabsAndSyncBrowser = async (sortedTabs: Tab[]) => {
-    const now = Date.now();
-    await db.transaction('rw', db.tabs, async () => {
-      for (let i = 0; i < sortedTabs.length; i++) {
-        await db.tabs.update(sortedTabs[i].id, {
-          order: i,
-          updatedAt: now,
-        });
-      }
-    });
-
-    try {
-      const allBrowserTabs = await chrome.tabs.query({});
-      const windowIds = Array.from(
-        new Set(
-          allBrowserTabs
-            .map((t) => t.windowId)
-            .filter((id): id is number => typeof id === 'number')
-        )
-      );
-
-      for (const winId of windowIds) {
-        const windowTabs = allBrowserTabs.filter((t) => t.windowId === winId);
-        const pinnedCount = windowTabs.filter((t) => t.pinned).length;
-
-        const usedBrowserTabIds = new Set<number>();
-        const orderedTabIds: number[] = [];
-
-        for (const st of sortedTabs) {
-          let match = windowTabs.find(
-            (wt) =>
-              wt.id &&
-              !usedBrowserTabIds.has(wt.id) &&
-              st.chromeTabId &&
-              wt.id === st.chromeTabId
-          );
-          if (!match) {
-            const stRealUrl = decodeRealUrl(st.url);
-            match = windowTabs.find((wt) => {
-              if (!wt.id || usedBrowserTabIds.has(wt.id) || wt.pinned) return false;
-              const wtUrl = wt.url || wt.pendingUrl || '';
-              if (!wtUrl || isSystemOrExtensionUrl(wtUrl)) return false;
-              return decodeRealUrl(wtUrl) === stRealUrl;
-            });
-          }
-          if (match?.id) {
-            usedBrowserTabIds.add(match.id);
-            orderedTabIds.push(match.id);
-          }
-        }
-
-        if (orderedTabIds.length > 0) {
-          await setTransitionLock(winId, true);
-          try {
-            try {
-              await chrome.tabs.move(orderedTabIds, { index: pinnedCount });
-            } catch {
-              for (let idx = 0; idx < orderedTabIds.length; idx++) {
-                try {
-                  await chrome.tabs.move(orderedTabIds[idx], { index: pinnedCount + idx });
-                } catch {}
-              }
-            }
-          } finally {
-            await setTransitionLock(winId, false);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Failed to reorder Chrome tabs:', err);
-    }
-  };
-
   // 2. Sort Alphabetically
   const handleSortAlphabetically = async () => {
-    if (!tabs || tabs.length <= 1) {
-      setIsTabsMenuOpen(false);
-      return;
-    }
     setIsTabsMenuOpen(false);
-    const sorted = [...tabs].sort((a, b) =>
-      (a.title || a.url).localeCompare(b.title || b.url, undefined, {
-        sensitivity: 'base',
-        numeric: true,
-      })
-    );
-    if (sorted.every((t, idx) => t.id === tabs[idx].id)) {
-      sorted.reverse();
+    if (tabs && tabs.length > 1) {
+      await sortTabsAlphabetically(tabs);
     }
-    await reorderTabsAndSyncBrowser(sorted);
   };
 
   // 3. Sort by Domain
   const handleSortByDomain = async () => {
-    if (!tabs || tabs.length <= 1) {
-      setIsTabsMenuOpen(false);
-      return;
-    }
     setIsTabsMenuOpen(false);
-    const sorted = [...tabs].sort((a, b) => {
-      const domainA = extractDomain(a.url).toLowerCase();
-      const domainB = extractDomain(b.url).toLowerCase();
-      if (domainA !== domainB) {
-        return domainA.localeCompare(domainB);
-      }
-      return (a.title || a.url).localeCompare(b.title || b.url, undefined, {
-        sensitivity: 'base',
-        numeric: true,
-      });
-    });
-    if (sorted.every((t, idx) => t.id === tabs[idx].id)) {
-      sorted.reverse();
+    if (tabs && tabs.length > 1) {
+      await sortTabsByDomain(tabs);
     }
-    await reorderTabsAndSyncBrowser(sorted);
   };
 
   // 4. Export This Space
   const handleExportSpace = async () => {
     if (!tabs) return;
     setIsTabsMenuOpen(false);
-    const spaceName = activeSpace?.name || 'Unsaved Session';
-
-    const notes = activeSpaceId
-      ? await db.notes.where('spaceId').equals(activeSpaceId).toArray()
-      : [];
-    const tasks = activeSpaceId
-      ? await db.tasks.where('spaceId').equals(activeSpaceId).sortBy('order')
-      : [];
-    const sections = activeSpaceId
-      ? await db.resourceSections.where('spaceId').equals(activeSpaceId).sortBy('order')
-      : [];
-
-    const resourcesData = [];
-    for (const sec of sections) {
-      const items = await db.resourceItems.where('sectionId').equals(sec.id).toArray();
-      resourcesData.push({
-        title: sec.title,
-        order: sec.order,
-        items: items.map((it) => ({
-          title: it.title,
-          url: it.url,
-          type: it.type,
-        })),
-      });
-    }
-
-    const exportPayload = {
-      app: 'SpaceTabs',
-      version: chrome.runtime?.getManifest?.()?.version || '1.2.2',
-      exportedAt: new Date().toISOString(),
-      space: {
-        name: spaceName,
-        icon: activeSpace?.icon,
-        description: activeSpace?.description,
-      },
-      tabs: tabs.map((t) => ({
-        title: t.title,
-        url: t.url,
-        favIconUrl: t.favIconUrl,
-        order: t.order,
-      })),
-      notes: notes.map((n) => ({
-        title: n.title,
-        content: n.content,
-      })),
-      tasks: tasks.map((tk) => ({
-        text: tk.text,
-        completed: tk.completed,
-        order: tk.order,
-        dueDate: tk.dueDate,
-      })),
-      resources: resourcesData,
-    };
-
-    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${spaceName.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}-space.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    await exportSpaceToFile(activeSpaceId, activeSpace?.name || 'Unsaved Session');
   };
 
   // 6. Move All Tabs
@@ -514,83 +249,21 @@ export const TabsView: React.FC = () => {
   const handleSuspendAllTabs = async () => {
     if (!tabs || tabs.length === 0) return;
     setIsTabsMenuOpen(false);
-
-    try {
-      const curWin = await chrome.windows.getCurrent();
-      if (!curWin.id) return;
-
-      const browserTabs = await chrome.tabs.query({ windowId: curWin.id });
-      const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
-
-      for (const t of browserTabs) {
-        if (!t.id || !t.url) continue;
-        if (t.pinned) continue;
-        if (t.active) continue;
-        if (t.audible) continue;
-        if (t.url.startsWith(dashboardUrl) || t.url.includes('/suspended.html')) continue;
-
-        try {
-          await chrome.tabs.discard(t.id);
-        } catch {}
-      }
-    } catch (e) {
-      console.warn('Failed to discard all tabs:', e);
-    }
+    await suspendAllTabsInCurrentWindow();
   };
 
   // 8. Reload All Tabs
   const handleReloadAllTabs = async () => {
     if (!tabs || tabs.length === 0) return;
     setIsTabsMenuOpen(false);
-
-    try {
-      const curWin = await chrome.windows.getCurrent();
-      if (!curWin.id) return;
-
-      const browserTabs = await chrome.tabs.query({ windowId: curWin.id });
-      const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
-
-      for (const t of browserTabs) {
-        if (!t.id || !t.url) continue;
-        if (t.url.startsWith(dashboardUrl)) continue;
-
-        try {
-          await chrome.tabs.reload(t.id);
-        } catch {}
-      }
-    } catch (e) {
-      console.warn('Failed to reload all tabs:', e);
-    }
+    await reloadAllTabsInCurrentWindow();
   };
 
   // 9. Close Duplicate Tabs
   const handleCloseDuplicates = async () => {
-    if (!tabs || tabs.length <= 1) {
-      setIsTabsMenuOpen(false);
-      return;
-    }
     setIsTabsMenuOpen(false);
-
-    const seenUrls = new Set<string>();
-    const duplicateTabIds: string[] = [];
-
-    for (const t of tabs) {
-      const real = decodeRealUrl(t.url).trim();
-      let normalized = real;
-      try {
-        normalized = new URL(real).href;
-      } catch {
-        normalized = real;
-      }
-      if (seenUrls.has(normalized)) {
-        duplicateTabIds.push(t.id);
-      } else {
-        seenUrls.add(normalized);
-      }
-    }
-
-    if (duplicateTabIds.length > 0) {
-      await closeTabs(duplicateTabIds);
+    if (tabs && tabs.length > 1) {
+      await closeDuplicateTabs(tabs);
     }
   };
 

@@ -14,7 +14,6 @@ const BASELINE_LIMITS = {
   'src/services/driveSync.ts': 1370,
   'src/components/canvas/NotesView.tsx': 1070,
   'src/components/canvas/ResourcesView.tsx': 990,
-  'src/components/canvas/TabsView.tsx': 900,
 };
 
 function walkDir(dir, results = []) {

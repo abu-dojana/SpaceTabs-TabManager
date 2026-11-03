@@ -10,6 +10,19 @@ import {
   openSpaceInNewWindow,
   getAllWindowSpaces,
   deleteUnsavedSession,
+  duplicateSpace,
+  deleteSpacePermanently,
+  archiveSpace,
+  restoreSpace,
+  renameSpace,
+  updateSpaceDescription,
+  exportSpaceToFile,
+  renameSection,
+  archiveSectionSpaces,
+  keepSectionSpacesUnsectioned,
+  reorderSpacesInList,
+  persistSectionOrder as persistSectionOrderInDb,
+  moveSectionByOffset,
 } from '@/services/tabManager';
 import {
   Folder,
@@ -28,11 +41,10 @@ import {
   Unlock,
 } from 'lucide-react';
 import { getUserSettings } from '@/services/settings';
-import {
-  recordTombstones,
-  subscribeSyncStatus,
-  type DriveSyncInfo,
-} from '@/services/driveSync';
+import { getHostWindowId } from '@/utils/chromeWindow';
+import { useDriveSyncInfo } from '@/hooks/useDriveSyncInfo';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { useAutoFocusSelect } from '@/hooks/useAutoFocusSelect';
 import { useWindowSpaces } from './hooks/useWindowSpaces';
 import { SpaceItem } from './SpaceItem';
 import { SectionGroup } from './SectionGroup';
@@ -77,17 +89,10 @@ export const Sidebar: React.FC = () => {
   };
 
   // Cloud Drive Sync live info subscription
-  const [syncInfo, setSyncInfo] = React.useState<DriveSyncInfo | null>(null);
+  const syncInfo = useDriveSyncInfo();
 
   // Live multi-window active spaces mapping
   const { windowSpaces, currentWindowId } = useWindowSpaces();
-
-  React.useEffect(() => {
-    const unsub = subscribeSyncStatus((info) => {
-      setSyncInfo(info);
-    });
-    return () => unsub();
-  }, []);
 
   // 3-Dot Dropdown & Modals State for Spaces
   const [activeMenuSpaceId, setActiveMenuSpaceId] = React.useState<string | null>(null);
@@ -214,37 +219,12 @@ export const Sidebar: React.FC = () => {
   }, [spaces]);
 
   // Click outside listener to dismiss context menus
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setActiveMenuSpaceId(null);
-      }
-      if (sectionMenuRef.current && !sectionMenuRef.current.contains(e.target as Node)) {
-        setActiveSectionMenu(null);
-      }
-    };
-    if (activeMenuSpaceId || activeSectionMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [activeMenuSpaceId, activeSectionMenu]);
+  useClickOutside([menuRef], () => setActiveMenuSpaceId(null), Boolean(activeMenuSpaceId));
+  useClickOutside([sectionMenuRef], () => setActiveSectionMenu(null), Boolean(activeSectionMenu));
 
   // Focus rename inputs
-  React.useEffect(() => {
-    if (inlineEditingSpaceId && renameInputRef.current) {
-      renameInputRef.current.focus();
-      renameInputRef.current.select();
-    }
-  }, [inlineEditingSpaceId]);
-
-  React.useEffect(() => {
-    if (editingSectionName && renameSectionInputRef.current) {
-      renameSectionInputRef.current.focus();
-      renameSectionInputRef.current.select();
-    }
-  }, [editingSectionName]);
+  useAutoFocusSelect(renameInputRef, Boolean(inlineEditingSpaceId));
+  useAutoFocusSelect(renameSectionInputRef, Boolean(editingSectionName));
 
   const handleSelectSpace = async (spaceId: string | null) => {
     try {
@@ -280,21 +260,12 @@ export const Sidebar: React.FC = () => {
       }
 
       if (settings.defaultOpenInNewWindow && spaceId) {
-        let curWinId = currentWindowId;
-        if (!curWinId) {
-          const curTab = await chrome.tabs.getCurrent().catch(() => null);
-          curWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
-        }
         await openSpaceInNewWindow(spaceId);
         return;
       }
 
       setActiveSpaceId(spaceId);
-      let targetWinId = currentWindowId;
-      if (!targetWinId) {
-        const curTab = await chrome.tabs.getCurrent().catch(() => null);
-        targetWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
-      }
+      const targetWinId = currentWindowId || (await getHostWindowId());
       if (targetWinId) {
         await switchWindowToSpace(targetWinId, spaceId);
       }
@@ -317,11 +288,7 @@ export const Sidebar: React.FC = () => {
         isArchived: false,
       });
 
-      let targetWinId = currentWindowId;
-      if (!targetWinId) {
-        const curTab = await chrome.tabs.getCurrent().catch(() => null);
-        targetWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
-      }
+      const targetWinId = currentWindowId || (await getHostWindowId());
       if (targetWinId) {
         await switchWindowToSpace(targetWinId, newId);
       }
@@ -354,11 +321,7 @@ export const Sidebar: React.FC = () => {
       }
 
       setActiveSpaceId(spaceId);
-      let targetWinId = currentWindowId;
-      if (!targetWinId) {
-        const curTab = await chrome.tabs.getCurrent().catch(() => null);
-        targetWinId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id || null;
-      }
+      const targetWinId = currentWindowId || (await getHostWindowId());
       if (targetWinId) {
         await switchWindowToSpace(targetWinId, spaceId);
       }
@@ -407,13 +370,8 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleCommitRenameSection = async (oldName: string) => {
-    const trimmed = renamingSectionValue.trim();
-    if (trimmed && trimmed !== oldName) {
-      const matching = await db.spaces.filter((s) => s.section === oldName).toArray();
-      const now = Date.now();
-      for (const s of matching) {
-        await db.spaces.update(s.id, { section: trimmed, updatedAt: now });
-      }
+    const trimmed = await renameSection(oldName, renamingSectionValue);
+    if (trimmed) {
       setCollapsedSections((prev) => {
         if (prev.has(oldName)) {
           const next = new Set(prev);
@@ -428,38 +386,20 @@ export const Sidebar: React.FC = () => {
   };
 
   const handleArchiveSectionSpaces = async (sectionName: string) => {
-    const matching = await db.spaces.filter((s) => s.section === sectionName).toArray();
-    const now = Date.now();
-    for (const s of matching) {
-      await db.spaces.update(s.id, { isArchived: true, updatedAt: now });
-    }
-    if (activeSpaceId && matching.some((s) => s.id === activeSpaceId)) {
+    const archivedIds = await archiveSectionSpaces(sectionName);
+    if (activeSpaceId && archivedIds.includes(activeSpaceId)) {
       await handleSelectSpace(null);
     }
     setDeleteSectionModal(null);
   };
 
   const handleKeepSectionSpaces = async (sectionName: string) => {
-    const matching = await db.spaces.filter((s) => s.section === sectionName).toArray();
-    const now = Date.now();
-    for (const s of matching) {
-      await db.spaces.update(s.id, { section: undefined, updatedAt: now });
-    }
+    await keepSectionSpacesUnsectioned(sectionName);
     setDeleteSectionModal(null);
   };
 
   const handleCommitRename = async (spaceId: string, newIcon?: string) => {
-    const trimmed = inlineEditingName.trim();
-    if (trimmed) {
-      const updateData: { name: string; updatedAt: number; icon?: string } = {
-        name: trimmed,
-        updatedAt: Date.now(),
-      };
-      if (newIcon) {
-        updateData.icon = newIcon;
-      }
-      await db.spaces.update(spaceId, updateData);
-    }
+    await renameSpace(spaceId, inlineEditingName, newIcon);
     setInlineEditingSpaceId(null);
   };
 
@@ -470,223 +410,31 @@ export const Sidebar: React.FC = () => {
 
   const handleDuplicateSpace = async (space: Space) => {
     setActiveMenuSpaceId(null);
-    const newSpaceId = crypto.randomUUID();
-    const now = Date.now();
-
-    await db.transaction(
-      'rw',
-      [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
-      async () => {
-        const count = await db.spaces.count();
-        await db.spaces.add({
-          id: newSpaceId,
-          name: `${space.name} (Copy)`,
-          icon: space.icon,
-          color: space.color,
-          description: space.description,
-          section: space.section,
-          order: count,
-          createdAt: now,
-          updatedAt: now,
-          isArchived: false,
-        });
-
-        const spaceTabs = await db.tabs.where('spaceId').equals(space.id).toArray();
-        if (spaceTabs.length > 0) {
-          await db.tabs.bulkAdd(
-            spaceTabs.map((t) => ({
-              id: crypto.randomUUID(),
-              spaceId: newSpaceId,
-              url: t.url,
-              title: t.title,
-              favIconUrl: t.favIconUrl,
-              order: t.order,
-              createdAt: now,
-              updatedAt: now,
-            }))
-          );
-        }
-
-        const spaceNotes = await db.notes.where('spaceId').equals(space.id).toArray();
-        if (spaceNotes.length > 0) {
-          await db.notes.bulkAdd(
-            spaceNotes.map((n) => ({
-              id: crypto.randomUUID(),
-              spaceId: newSpaceId,
-              title: n.title,
-              content: n.content,
-              createdAt: now,
-              updatedAt: now,
-            }))
-          );
-        }
-
-        const spaceTasks = await db.tasks.where('spaceId').equals(space.id).toArray();
-        if (spaceTasks.length > 0) {
-          await db.tasks.bulkAdd(
-            spaceTasks.map((task) => ({
-              id: crypto.randomUUID(),
-              spaceId: newSpaceId,
-              text: task.text,
-              completed: task.completed,
-              order: task.order,
-              dueDate: task.dueDate,
-              createdAt: now,
-              updatedAt: now,
-            }))
-          );
-        }
-
-        const resSections = await db.resourceSections.where('spaceId').equals(space.id).toArray();
-        for (const sec of resSections) {
-          const newSecId = crypto.randomUUID();
-          await db.resourceSections.add({
-            id: newSecId,
-            spaceId: newSpaceId,
-            title: sec.title,
-            order: sec.order,
-            updatedAt: now,
-          });
-          const items = await db.resourceItems.where('sectionId').equals(sec.id).toArray();
-          if (items.length > 0) {
-            await db.resourceItems.bulkAdd(
-              items.map((item) => ({
-                id: crypto.randomUUID(),
-                sectionId: newSecId,
-                title: item.title,
-                url: item.url,
-                favIconUrl: item.favIconUrl,
-                type: item.type,
-                order: item.order ?? 0,
-                createdAt: now,
-                updatedAt: now,
-              }))
-            );
-          }
-        }
-      }
-    );
+    await duplicateSpace(space);
   };
 
   const handleExportSidebarSpace = async (space: Space) => {
     setActiveMenuSpaceId(null);
-    const spaceTabs = await db.tabs.where('spaceId').equals(space.id).sortBy('order');
-    const notes = await db.notes.where('spaceId').equals(space.id).toArray();
-    const tasks = await db.tasks.where('spaceId').equals(space.id).sortBy('order');
-    const sections = await db.resourceSections.where('spaceId').equals(space.id).sortBy('order');
-
-    const resourcesData = [];
-    for (const sec of sections) {
-      const items = await db.resourceItems.where('sectionId').equals(sec.id).toArray();
-      resourcesData.push({
-        title: sec.title,
-        order: sec.order,
-        items: items.map((it) => ({
-          title: it.title,
-          url: it.url,
-          type: it.type,
-        })),
-      });
-    }
-
-    const exportPayload = {
-      app: 'SpaceTabs',
-      version: chrome.runtime?.getManifest?.()?.version || '1.2.2',
-      exportedAt: new Date().toISOString(),
-      space: {
-        name: space.name,
-        icon: space.icon,
-        description: space.description,
-        section: space.section,
-      },
-      tabs: spaceTabs.map((t) => ({
-        title: t.title,
-        url: t.url,
-        favIconUrl: t.favIconUrl,
-        order: t.order,
-      })),
-      notes: notes.map((n) => ({
-        title: n.title,
-        content: n.content,
-      })),
-      tasks: tasks.map((tk) => ({
-        text: tk.text,
-        completed: tk.completed,
-        order: tk.order,
-        dueDate: tk.dueDate,
-      })),
-      resources: resourcesData,
-    };
-
-    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${space.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}-space.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    await exportSpaceToFile(space.id, space.name);
   };
 
   const handleArchiveSpace = async (space: Space) => {
     setActiveMenuSpaceId(null);
-    await db.spaces.update(space.id, { isArchived: true, updatedAt: Date.now() });
+    await archiveSpace(space.id);
     if (activeSpaceId === space.id) {
       await handleSelectSpace(null);
     }
   };
 
   const handleRestoreSpace = async (spaceId: string) => {
-    await db.spaces.update(spaceId, { isArchived: false, updatedAt: Date.now() });
+    await restoreSpace(spaceId);
   };
 
   const handleDeleteSpacePermanently = async (spaceId: string) => {
     if (activeSpaceId === spaceId) {
       await handleSelectSpace(null);
     }
-
-    try {
-      const childTabs = await db.tabs.where('spaceId').equals(spaceId).toArray();
-      const childNotes = await db.notes.where('spaceId').equals(spaceId).toArray();
-      const childTasks = await db.tasks.where('spaceId').equals(spaceId).toArray();
-      const childSections = await db.resourceSections.where('spaceId').equals(spaceId).toArray();
-      const childItemIds: string[] = [];
-      for (const s of childSections) {
-        const items = await db.resourceItems.where('sectionId').equals(s.id).toArray();
-        childItemIds.push(...items.map((it) => it.id));
-      }
-
-      await recordTombstones([
-        { id: spaceId, table: 'spaces' },
-        ...childTabs.map((t) => ({ id: t.id, table: 'tabs' as const })),
-        ...childNotes.map((n) => ({ id: n.id, table: 'notes' as const })),
-        ...childTasks.map((t) => ({ id: t.id, table: 'tasks' as const })),
-        ...childSections.map((s) => ({ id: s.id, table: 'resource_sections' as const })),
-        ...childItemIds.map((id) => ({ id, table: 'resource_items' as const })),
-      ]);
-    } catch (e) {
-      console.warn('Failed to record space tombstones:', e);
-    }
-
-    await db.transaction(
-      'rw',
-      [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
-      async () => {
-        await db.tabs.where('spaceId').equals(spaceId).delete();
-        await db.notes.where('spaceId').equals(spaceId).delete();
-        await db.tasks.where('spaceId').equals(spaceId).delete();
-        const secs = await db.resourceSections.where('spaceId').equals(spaceId).toArray();
-        for (const s of secs) {
-          await db.resourceItems.where('sectionId').equals(s.id).delete();
-        }
-        await db.resourceSections.where('spaceId').equals(spaceId).delete();
-        await db.spaces.delete(spaceId);
-      }
-    );
-
+    await deleteSpacePermanently(spaceId);
     setDeleteConfirmSpace(null);
     setActiveMenuSpaceId(null);
   };
@@ -704,46 +452,10 @@ export const Sidebar: React.FC = () => {
       ? [...(sectionsMap.get(sectionName) || [])]
       : [...unsectionedSpaces];
 
-    const sourceIdx = currentList.findIndex((s) => s.id === sourceId);
-    const targetIdx = currentList.findIndex((s) => s.id === targetId);
-    if (sourceIdx === -1 || targetIdx === -1) return;
-
-    const [moved] = currentList.splice(sourceIdx, 1);
-    let insertIdx = currentList.findIndex((s) => s.id === targetId);
-    if (position === 'after') {
-      insertIdx += 1;
-    }
-    currentList.splice(insertIdx, 0, moved);
-
-    const now = Date.now();
-    const updates = currentList.map((space, idx) => ({
-      ...space,
-      order: idx,
-      updatedAt: now,
-    }));
-
-    await db.spaces.bulkPut(updates);
+    await reorderSpacesInList(currentList, sourceId, targetId, position);
     setDraggedSpaceId(null);
     setDragOverTargetSpaceId(null);
     setDropPosition(null);
-  };
-
-  const persistSectionOrder = async (orderedSectionNames: string[]) => {
-    const now = Date.now();
-    const updates: Space[] = [];
-    orderedSectionNames.forEach((secName, secIdx) => {
-      const secSpaces = sectionsMap.get(secName) || [];
-      for (const sp of secSpaces) {
-        updates.push({
-          ...sp,
-          sectionOrder: secIdx,
-          updatedAt: now,
-        });
-      }
-    });
-    if (updates.length > 0) {
-      await db.spaces.bulkPut(updates);
-    }
   };
 
   const handleReorderSections = async (
@@ -764,7 +476,7 @@ export const Sidebar: React.FC = () => {
     }
     sectionNames.splice(insertIdx, 0, moved);
 
-    await persistSectionOrder(sectionNames);
+    await persistSectionOrderInDb(sectionNames, sectionsMap);
     setDraggedSectionName(null);
     setDragOverTargetSection(null);
     setSectionDropPosition(null);
@@ -772,14 +484,7 @@ export const Sidebar: React.FC = () => {
 
   const handleMoveSectionByOffset = async (sectionName: string, offset: -1 | 1) => {
     setActiveSectionMenu(null);
-    const sectionNames = Array.from(sectionsMap.keys());
-    const idx = sectionNames.indexOf(sectionName);
-    const newIdx = idx + offset;
-    if (idx === -1 || newIdx < 0 || newIdx >= sectionNames.length) return;
-
-    const [moved] = sectionNames.splice(idx, 1);
-    sectionNames.splice(newIdx, 0, moved);
-    await persistSectionOrder(sectionNames);
+    await moveSectionByOffset(sectionsMap, sectionName, offset);
   };
 
   const handleSectionDragStart = (e: React.DragEvent, sectionName: string) => {
@@ -1429,7 +1134,7 @@ export const Sidebar: React.FC = () => {
         descriptionModalSpace={descriptionModalSpace}
         onCloseDescription={() => setDescriptionModalSpace(null)}
         onSaveDescription={async (spaceId, desc) => {
-          await db.spaces.update(spaceId, { description: desc, updatedAt: Date.now() });
+          await updateSpaceDescription(spaceId, desc);
           setDescriptionModalSpace(null);
         }}
         deleteConfirmSpace={deleteConfirmSpace}
