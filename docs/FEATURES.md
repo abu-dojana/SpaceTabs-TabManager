@@ -111,7 +111,7 @@ Each space includes 4 specialized canvas views accessible via the top sub-naviga
 
 ## 5. Memory Saver & Tab Suspension
 
-SpaceTabs includes a built-in Native Chromium tab suspension engine to free up to **80% of browser RAM**.
+SpaceTabs includes a built-in Native Chromium tab suspension engine to **significantly reduce browser RAM usage**.
 
 ### How Suspension Works
 * **Cold Space Restoration (`suspended.html`):** When restoring a saved space with many tabs, non-active tabs load as lightweight internal placeholders (`suspended.html`) that consume virtually zero CPU and RAM while preserving the tab's title, favicon, and original URL until clicked or focused.

@@ -15,7 +15,7 @@
   </a>
   <img src="https://img.shields.io/badge/Version-1.2.2-blue?style=for-the-badge" alt="Version 1.2.2" />
   <img src="https://img.shields.io/badge/Manifest-V3-success?style=for-the-badge" alt="Manifest V3" />
-  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License" />
+  <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="GPL-3.0 License" />
   <img src="https://img.shields.io/badge/Sync-Google%20Drive-34A853?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive Sync" />
 </p>
 
@@ -33,7 +33,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 
 **SpaceTabs is designed differently:**
 - **Local-First & Unlimited:** Store as many spaces, tabs, notes, and tasks as you need. All data lives in your browser's IndexedDB.
-- **Save Up to 95% Memory:** Suspends cold-restored tabs to lightweight placeholders (~1 MB each) until clicked, with native Chrome `discard()` for idle open tabs.
+- **Significantly Lower Memory Usage:** Suspends cold-restored tabs to lightweight placeholders until clicked, with native Chrome `discard()` for idle open tabs.
 - **Private Cloud Backup:** Sync directly with your personal Google Drive account using Google's secure `drive.file` scope across Chrome, Brave, and Chromium browsers. No third-party servers, no middleman databases.
 
 ---
@@ -70,7 +70,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 * **Drag-and-Drop Organization:** Drag tabs from the canvas directly onto any Space or the Unsaved bucket in the sidebar.
 
 ### ⚡ Smart Memory Saver
-* **Zero-RAM Cold Restores:** Restoring a space with 50+ tabs loads lightweight dormant placeholders (`suspended.html`) consuming only ~1 MB of RAM each and zero network bandwidth until focused or clicked.
+* **Lightweight Cold Restores:** Restoring a space with many tabs loads lightweight dormant placeholders (`suspended.html`) that significantly reduce RAM usage and use zero network bandwidth until focused or clicked.
 * **Native Chrome Memory Discarding:** Automatically unloads memory from idle tabs using `chrome.tabs.discard()`, keeping tabs in place with full titles and favicons.
 * **Configurable Auto-Suspend:** Choose inactivity timeouts (15m, 30m, 1h, 2h) or disable auto-suspension.
 * **Pinned, Active & Audible Tab Protection:** Automatically skips active tabs, pinned tabs, tabs playing audio, and internal browser/extension pages when suspending inactive tabs.
@@ -156,4 +156,4 @@ SpaceTabs is free, open-source, and developed independently. If it helps you sta
 
 ## 📄 License
 
-Distributed under the [MIT License](LICENSE). Local-first, open-source, and free forever.
+Distributed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE). Local-first, open-source, and free forever.

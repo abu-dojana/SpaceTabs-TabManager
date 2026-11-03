@@ -1,0 +1,95 @@
+# SpaceTabs: correctness fixes and modularity
+
+## Summary
+
+Combine both audits into seven ordered phases: regression tests, data integrity, tab lifecycle, note saving, service extraction, UI decomposition, and tooling/documentation cleanup.
+
+Preserve the current interface and workflows except where fixing confirmed defects. Complete correctness fixes before broad refactoring. Use `codex/audit-hardening-modularity` with separate commits for each phase; keep migrations and their required consumers together.
+
+## Implementation phases
+
+### 0. Establish regression coverage (Comment: No NEED. I use realtime and real world test. No need to use any mock or demo. My v1.2.1 has already been in the chrome webstore and live and people are using it. I test on another profile in brave and chrome. No need to complicate and make the size bigger)
+
+- Add Vitest, fake-indexeddb, React Testing Library, and jsdom as development dependencies.
+- Provide isolated databases, mocked Chrome APIs, deferred network/database operations, and fake timers.
+- Convert the audit reproductions into failing tests before fixing each defect.
+- Add `test`, `test:watch`, and `check` scripts. `check` runs type checking, tests, and the size guard. (Comment: if it will help the main product structure, then okay. otherwise, leave it.)
+
+### 1. Make persistence and sync safe
+
+- Add Dexie schema version 4 with tombstones, restore-intent records, and migration metadata. Import existing `chrome.storage` tombstones once, preserving their latest deletion timestamps. Read Chrome storage before entering transactions; mark migration complete transactionally.
+- Store future deletions and their tombstones in the same database transaction. Make duplication and cascading deletion transactional, using bulk writes and remapped child IDs.
+- Serialize sync, Force Push, Force Pull, and backup import across dashboard pages and the worker using one named Web Lock.
+- Perform authentication and downloads outside database transactions. After downloading, reread current local records and tombstones, then merge and commit within one short transaction. Preserve edits made after that commit for the next sync.
+- Keep Unsaved sessions and their complete descendant trees local. Preserve them during normal sync and Force Pull; include them in local JSON backups.
+- Export portable tab records without browser IDs. Ignore runtime fields in legacy imports and remote files; retain only validated local bindings. Validate ownership before browser focus, move, or close operations.
+- Restore backups by merging matching records while retaining unrelated workspaces. Give tombstoned records fresh IDs and remap affected descendants. Retain restoration intents until the first successful cloud round trip so previously unseen remote tombstones also trigger recovery.
+- Validate imported/downloaded payloads before changing local data.
+- Create the recurring sync alarm immediately after successful sign-in.
+
+### 2. Correct window and Unsaved-session lifecycle
+
+- Match restored windows using URL multisets. Assign unique exact matches first, then positive, unambiguous partial matches. Give unmatched or ambiguous windows fresh Unsaved sessions.
+- Remove startup matching by equal tab count/order and deletion based solely on duplicate URLs. Preserve dormant sessions and intentional duplicate URLs.
+- Preserve deliberately stored dormant tabs during reconciliation. Moving a tab continues to stash it in the destination and close its source browser tab; clear both runtime fields.
+- Repair missing or archived window bindings before writing tab records.
+- Centralize Unsaved-session discard: coordinate affected windows, close validated owned tabs, cascade descendants transactionally, then clear/reassign bindings and reconcile.
+- Treat a session as empty only when it contains no tabs, notes, tasks, resource sections, or resource items. Recover existing non-tombstoned orphan content into a named recovered Unsaved session.
+- Compare duplicate-tab URLs without lowercasing paths or query values.
+
+### 3. Make note saving revision-aware
+
+- Keep the existing 500 ms debounce and editor controls.
+- Track immutable save snapshots and revisions per note. Serialize writes; completion acknowledges only the revision actually saved.
+- Bind timers and completions to their original note and editor session. Flush outgoing drafts safely across note, space, and view changes. Failed saves remain dirty and retryable.
+- Refresh clean buffers when database content changes. Preserve dirty drafts.
+- Compare drafts with their loaded base and current database record transactionally. Merge independent title/content changes.
+- For overlapping changes, preserve the incoming note and save the local draft as a fresh “Recovered local edits” copy. Continue editing that copy.
+- Explicit deletion cancels pending saves. External deletion never resurrects the deleted ID; recover outstanding edits under a fresh ID, using a recovered Unsaved session if its parent was deleted.
+
+### 4. Extract services and shared behavior
+
+- Move multi-table mutations, space duplication/deletion/export, section actions, and bulk tab actions out of components.
+- Consolidate host-window lookup, downloads, settings subscriptions, sync subscriptions, input focus, click-outside handling, and settings hydration.
+- Split Drive sync into authentication, API access, persistence, merge, orchestration, status, and alarm modules.
+- Keep generic last-writer selection separate from runtime bindings, local-only preservation, restoration, and parent-deletion policies.
+- Preserve existing public imports through the `src/services/driveSync.ts` facade.
+- Derive export versions from the running extension manifest and manifest versions from `package.json`.
+
+### 5. Decompose UI components
+
+- Split Settings into its shell, tab components, reusable controls, and changelog/contact data. Preserve `src/components/modals/SettingsModal.tsx` as a compatibility export.
+- Split Sidebar into its coordinator, query/drag hooks, Unsaved section, archive drawer, header, and footer.
+- Extract the tested note controller and repository before separating note presentation components.
+- Separate resource cards, rows, dialogs, and actions; extract the tab header and browser subscriptions.
+- Extract cohesive title-editor and task-row components where useful. Preserve Markdown syntax and rendered output.
+- Target files below 600 lines, with warnings above 400. Introduce a temporary baseline for existing oversized files; reject growth and remove exemptions as each component is decomposed.
+
+### 6. Update tooling and documentation
+
+- Upgrade WXT to the patched 0.21 line, starting with 0.21.5. Update required companion/transitive dependencies deliberately and regenerate the lockfile.
+- Resolve the currently reported dependency alerts while retaining React 18.
+- Add MIT licensing with `2026 Abu Dojana`, `.gitattributes`, and `.editorconfig`. Normalize tracked text files to LF in a dedicated commit.
+- Move historical root planning documents into `docs/dev` and repair links.
+- Replace unmeasured RAM percentages with qualitative wording; correct palette counts, suspension behavior, and unsupported whitelist claims.
+- Correct privacy documentation to describe uploaded JSON, optional content synchronization, actual OAuth scopes, and the fact that signing out leaves the Drive backup in place.
+
+## Interfaces and compatibility
+
+- Keep existing service entry points and UI component imports stable.
+- Introduce portable tab types that omit `chromeTabId` and `windowId`.
+- Add an optional payload format version; continue reading existing backup and Drive formats.
+- Make migration initialization idempotent across extension contexts. Retain legacy tombstones as a recovery copy, with Dexie becoming authoritative.
+- Treat the database upgrade as forward-only. A rollback build must understand version 4; older builds cannot safely reopen the upgraded database.
+
+## Verification and acceptance
+
+- **Sync:** concurrent edits/additions/deletions during downloads; simultaneous worker/dashboard operations; retries; Unsaved descendants surviving sync and Force Pull; remote browser-ID collisions.
+- **Transactions/import:** injected failures roll back entities and tombstones together; migration runs once; local and previously unseen remote tombstones cannot erase restored backups.
+- **Lifecycle:** reversed window enumeration, ambiguous matches, unrelated equal-sized sessions, duplicate URLs, dormant tab moves, active-session discard, and sessions containing only notes/tasks/resources.
+- **Notes:** typing during pending writes; Ctrl+S/blur; rapid navigation; external updates; conflict recovery; deletion during saves; failed writes; React StrictMode.
+- **Refactoring:** representative Markdown rendering parity and identical space exports from both entry points.
+- Run type checking, relevant regression tests, and production builds after each phase. Finish with the complete suite, size guard, and dependency audit.
+- Smoke-test disposable Chrome and Brave profiles: startup, multi-window operations, every settings tab, native/Web OAuth, scheduled sync, import/export, Force Push/Pull, notes, and resources.
+
+Defaults are those selected: Unsaved data stays local, backup restore merges and recovers deleted records, note conflicts preserve both versions, WXT upgrades are included, and repository/documentation cleanup includes MIT licensing. Website redesign, promotional posts, and new product features remain outside this plan.

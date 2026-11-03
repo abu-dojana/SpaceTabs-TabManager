@@ -2059,7 +2059,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>No Artificial Space Limits:</strong> Create unlimited spaces, sections, tabs, and resources.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Independent Theming:</strong> Toggle light/dark mode for sidebar and workspace canvas separately.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>100% Local Privacy:</strong> All data resides on your machine in IndexedDB. Zero cloud telemetry.</li>
-                    <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Native Chromium Memory Saver:</strong> Background tabs are safely suspended using Chrome's native discard engine to save up to 80% RAM.</li>
+                    <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Native Chromium Memory Saver:</strong> Background tabs are safely suspended using Chrome's native discard engine to significantly reduce RAM usage.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Full Workspace Productivity:</strong> Integrated Tabs, Resources, Notes, and Tasks for each space.</li>
                     <li><strong className={isLight ? 'text-slate-950' : 'text-white'}>Google Drive Cloud Backup:</strong> Optionally sync spaces across multiple machines seamlessly.</li>
                   </ul>
