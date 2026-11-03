@@ -13,7 +13,9 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
-    "compile": "tsc --noEmit"
+    "compile": "tsc --noEmit",
+    "lint:size": "node scripts/check-file-size.js",
+    "check": "npm run compile && npm run lint:size"
   },
   "dependencies": {
     "clsx": "^2.1.1",

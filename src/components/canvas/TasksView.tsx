@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { type Task, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
 import { recordTombstone, recordTombstones } from '@/services/driveSync';
+import { formatDueDateBadge } from '@/utils/time';
 import {
   CheckSquare,
   Square,
@@ -20,45 +21,6 @@ import {
   X,
   Sparkles,
 } from 'lucide-react';
-
-/**
- * Format a due date timestamp into a human-readable badge
- */
-function formatDueDateBadge(dueDateMs?: number): {
-  label: string;
-  isOverdue: boolean;
-  isToday: boolean;
-} | null {
-  if (!dueDateMs) return null;
-
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startOfTomorrow = startOfToday + 86400000;
-  const startOfYesterday = startOfToday - 86400000;
-
-  if (dueDateMs >= startOfToday && dueDateMs < startOfTomorrow) {
-    return { label: 'Today', isOverdue: false, isToday: true };
-  }
-  if (dueDateMs >= startOfTomorrow && dueDateMs < startOfTomorrow + 86400000) {
-    return { label: 'Tomorrow', isOverdue: false, isToday: false };
-  }
-  if (dueDateMs < startOfToday) {
-    return {
-      label: dueDateMs >= startOfYesterday ? 'Yesterday' : new Date(dueDateMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      isOverdue: true,
-      isToday: false,
-    };
-  }
-
-  return {
-    label: new Date(dueDateMs).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-    }),
-    isOverdue: false,
-    isToday: false,
-  };
-}
 
 export const TasksView: React.FC = () => {
   const { activeSpaceId, searchQuery } = useUIStore();

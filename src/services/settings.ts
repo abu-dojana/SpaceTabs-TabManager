@@ -10,6 +10,7 @@ import {
   UNSAVED_SPACE_ID,
 } from '@/db/schema';
 import { discardInactiveTabs, discardAllInactiveTabsInWindow } from './suspension';
+import { downloadFile } from '@/utils/download';
 import {
   stripRuntimeTabFields,
   withSyncLock,
@@ -123,16 +124,8 @@ export async function exportAllSpacesBackup(): Promise<DriveDataExport> {
   };
 
   const jsonStr = JSON.stringify(payload, null, 2);
-  const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
   const dateStr = new Date().toISOString().split('T')[0];
-  a.download = `spacetabs-backup-${dateStr}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadFile(jsonStr, `spacetabs-backup-${dateStr}.json`);
 
   return payload;
 }

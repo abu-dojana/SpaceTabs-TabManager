@@ -19,6 +19,9 @@ import {
   migrateLegacyUnsavedTabs,
 } from '@/services/tabManager';
 import { getUserSettings } from '@/services/settings';
+import { hexToRgba, adjustBrightness } from '@/utils/color';
+import { getHostWindowId } from '@/utils/chromeWindow';
+import { useHydrateUiFromSettings } from '@/hooks/useHydrateUiFromSettings';
 import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink } from 'lucide-react';
 
 interface ErrorBoundaryProps {
@@ -66,28 +69,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-  let c = hex.replace('#', '');
-  if (c.length === 3) c = c.split('').map((x) => x + x).join('');
-  const num = parseInt(c, 16);
-  if (isNaN(num)) return `rgba(37, 99, 235, ${alpha})`;
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function adjustBrightness(hex: string, percent: number): string {
-  let c = hex.replace('#', '');
-  if (c.length === 3) c = c.split('').map((x) => x + x).join('');
-  const num = parseInt(c, 16);
-  if (isNaN(num)) return hex;
-  const r = Math.min(255, Math.max(0, ((num >> 16) & 255) + Math.round(255 * (percent / 100))));
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 255) + Math.round(255 * (percent / 100))));
-  const b = Math.min(255, Math.max(0, (num & 255) + Math.round(255 * (percent / 100))));
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-}
-
 export default function App() {
   const {
     activeView,
@@ -111,25 +92,16 @@ export default function App() {
     setSettingsOpen,
   } = useUIStore();
 
-  React.useEffect(() => {
-    getUserSettings().then((settings) => {
-      if (settings.sidebarTheme) setSidebarTheme(settings.sidebarTheme);
-      if (settings.dashboardTheme) setDashboardTheme(settings.dashboardTheme);
-      if (settings.accentColor) setAccentColor(settings.accentColor);
-      if (settings.darkPalette) setDarkPalette(settings.darkPalette);
-      if (settings.lightPalette) setLightPalette(settings.lightPalette);
-      if (settings.sidebarWidth) setSidebarWidth(settings.sidebarWidth);
-      if (settings.patreonUrl) setPatreonUrl(settings.patreonUrl);
-    });
+  useHydrateUiFromSettings();
 
+  React.useEffect(() => {
     let hostWinId: number | undefined;
 
     async function syncActiveSpaceFromWindow() {
       try {
         await ensureSessionInitialized();
         await migrateLegacyUnsavedTabs();
-        const curTab = await chrome.tabs.getCurrent().catch(() => null);
-        const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
+        const winId = await getHostWindowId();
         if (winId) {
           hostWinId = winId;
           let spaceId = await getWindowActiveSpaceId(winId);

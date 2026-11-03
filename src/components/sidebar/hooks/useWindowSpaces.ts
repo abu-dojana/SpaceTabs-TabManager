@@ -1,5 +1,6 @@
 import React from 'react';
 import { getAllWindowSpaces } from '@/services/tabManager';
+import { getHostWindowId } from '@/utils/chromeWindow';
 
 /**
  * Custom hook to subscribe and track active spaces across all browser windows.
@@ -12,22 +13,11 @@ export function useWindowSpaces() {
   // Initialize and anchor host window ID from the dashboard's own tab context
   React.useEffect(() => {
     let isMounted = true;
-    const initHostWindow = async () => {
-      try {
-        const curTab = await chrome.tabs.getCurrent();
-        if (isMounted && curTab?.windowId) {
-          setCurrentWindowId(curTab.windowId);
-          return;
-        }
-      } catch {}
-      try {
-        const curWin = await chrome.windows.getCurrent();
-        if (isMounted && curWin?.id) {
-          setCurrentWindowId(curWin.id);
-        }
-      } catch {}
-    };
-    initHostWindow();
+    getHostWindowId().then((winId) => {
+      if (isMounted && winId) {
+        setCurrentWindowId(winId);
+      }
+    });
     return () => {
       isMounted = false;
     };

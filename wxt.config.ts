@@ -6,7 +6,6 @@ export default defineConfig({
   manifest: {
     name: 'SpaceTabs — Tab Manager',
     description: 'Local-first, unlimited tab & workspace manager with Google Drive sync.',
-    version: '1.2.2',
     icons: {
       16: 'icon-16.png',
       32: 'icon-32.png',

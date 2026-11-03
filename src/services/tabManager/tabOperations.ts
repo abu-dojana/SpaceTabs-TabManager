@@ -1,6 +1,7 @@
 import { db } from '@/db';
 import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { decodeRealUrl } from '@/utils/urlFilter';
+import { getHostWindowId } from '@/utils/chromeWindow';
 import { recordTombstones } from '@/services/driveSync';
 import {
   setPendingNewWindowSpace,
@@ -92,8 +93,7 @@ export async function locateOrOpenTab(tabRecord: {
 
   // 3. Not currently open anywhere: open it in current window
   try {
-    const curTab = await chrome.tabs.getCurrent().catch(() => null);
-    const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
+    const winId = await getHostWindowId();
     const newTab = await chrome.tabs.create({
       url: realUrl,
       windowId: winId || undefined,
@@ -379,11 +379,7 @@ export async function closeTabs(tabIds: string[]) {
   if (!tabIds || tabIds.length === 0) return;
   const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
 
-  let currentWindowId: number | undefined;
-  try {
-    const curTab = await chrome.tabs.getCurrent().catch(() => null);
-    currentWindowId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
-  } catch {}
+  const currentWindowId = (await getHostWindowId()) ?? undefined;
 
   let allBrowserTabs: chrome.tabs.Tab[] = [];
   try {

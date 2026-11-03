@@ -24,6 +24,9 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { EMOJI_OPTIONS } from '@/components/modals/CreateSpaceModal';
+import { getHostWindowId } from '@/utils/chromeWindow';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { useAutoFocusSelect } from '@/hooks/useAutoFocusSelect';
 
 export const Header: React.FC = () => {
   const {
@@ -83,27 +86,10 @@ export const Header: React.FC = () => {
   };
 
   // Focus and select text when entering edit mode
-  React.useEffect(() => {
-    if (isEditingTitle && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditingTitle]);
+  useAutoFocusSelect(inputRef, isEditingTitle);
 
   // Click outside to dismiss emoji picker
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
-        setIsEmojiPickerOpen(false);
-      }
-    };
-    if (isEmojiPickerOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isEmojiPickerOpen]);
+  useClickOutside([emojiPickerRef], () => setIsEmojiPickerOpen(false), isEmojiPickerOpen);
 
   const handleDirectChangeEmoji = async (emoji: string) => {
     setIconInput(emoji);
@@ -135,14 +121,9 @@ export const Header: React.FC = () => {
           isUnsaved: false,
           updatedAt: now,
         });
-        try {
-          const curTab = await chrome.tabs.getCurrent().catch(() => null);
-          const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
-          if (winId) {
-            await setWindowActiveSpaceId(winId, activeSpace.id);
-          }
-        } catch {
-          // Ignored
+        const winId = await getHostWindowId();
+        if (winId) {
+          await setWindowActiveSpaceId(winId, activeSpace.id);
         }
       } else {
         const count = await db.spaces.count();
@@ -184,14 +165,9 @@ export const Header: React.FC = () => {
         );
 
         // Bind current window to the newly saved space
-        try {
-          const curTab = await chrome.tabs.getCurrent().catch(() => null);
-          const winId = curTab?.windowId || (await chrome.windows.getCurrent().catch(() => null))?.id;
-          if (winId) {
-            await setWindowActiveSpaceId(winId, newSpaceId);
-          }
-        } catch {
-          // Ignored if window closed or session storage not ready
+        const winId = await getHostWindowId();
+        if (winId) {
+          await setWindowActiveSpaceId(winId, newSpaceId);
         }
 
         // Transition immediately into the new space
