@@ -1,6 +1,12 @@
 import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
-import { type DriveSyncInfo, type SyncStatus } from './types';
+import {
+  type DriveSyncInfo,
+  type SyncStatus,
+  STORAGE_KEY_PROFILE,
+  STORAGE_KEY_SETTINGS,
+  STORAGE_KEY_META,
+} from './types';
 import { getGoogleProfile, getCloudSyncSettings, getSyncMeta } from './storage';
 
 type StatusCallback = (info: DriveSyncInfo) => void;
@@ -64,8 +70,26 @@ export async function getDriveSyncInfo(): Promise<DriveSyncInfo> {
 export function subscribeSyncStatus(cb: StatusCallback): () => void {
   statusListeners.add(cb);
   getDriveSyncInfo().then(cb);
+
+  const handleStorageChange = (
+    changes: { [key: string]: chrome.storage.StorageChange },
+    areaName: string
+  ) => {
+    if (
+      areaName === 'local' &&
+      (changes[STORAGE_KEY_PROFILE] ||
+        changes[STORAGE_KEY_SETTINGS] ||
+        changes[STORAGE_KEY_META])
+    ) {
+      getDriveSyncInfo().then(cb);
+    }
+  };
+
+  chrome.storage?.onChanged?.addListener(handleStorageChange);
+
   return () => {
     statusListeners.delete(cb);
+    chrome.storage?.onChanged?.removeListener(handleStorageChange);
   };
 }
 

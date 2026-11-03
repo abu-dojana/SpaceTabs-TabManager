@@ -11,16 +11,25 @@ export function useClickOutside(
   closeOnEscape = false
 ): void {
   const onOutsideRef = React.useRef(onOutside);
+  const refsRef = React.useRef(refs);
+
   React.useEffect(() => {
     onOutsideRef.current = onOutside;
   }, [onOutside]);
+
+  React.useEffect(() => {
+    refsRef.current = refs;
+  });
 
   React.useEffect(() => {
     if (!enabled) return;
 
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as Node;
-      const isInsideAny = refs.some((ref) => ref.current && ref.current.contains(target));
+      const mountedRefs = refsRef.current.filter((ref) => ref.current !== null);
+      if (mountedRefs.length === 0) return;
+
+      const isInsideAny = mountedRefs.some((ref) => ref.current!.contains(target));
       if (!isInsideAny) {
         onOutsideRef.current();
       }
@@ -43,5 +52,5 @@ export function useClickOutside(
         document.removeEventListener('keydown', handleKeyDown);
       }
     };
-  }, [enabled, closeOnEscape, refs]);
+  }, [enabled, closeOnEscape]);
 }
