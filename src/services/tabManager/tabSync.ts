@@ -8,6 +8,7 @@ import {
   ensureWindowUnsavedSpace,
   ensureSessionInitialized,
   getAllWindowSpaces,
+  withWindowLock,
 } from './windowSpaces';
 import { recordTombstone } from '@/services/driveSync';
 import {
@@ -165,7 +166,7 @@ export async function performSyncWindowTabs(windowId: number): Promise<void> {
 
   const runSync = async () => {
     try {
-      await executeSyncWindowTabs(windowId);
+      await withWindowLock(windowId, () => executeSyncWindowTabs(windowId));
     } finally {
       activeSyncPromises.delete(windowId);
       if (pendingSyncWindows.has(windowId)) {
@@ -398,6 +399,11 @@ async function executeSyncWindowTabs(windowId: number) {
     let matchedOrderCursor = 0;
     let nextNewOrder =
       existing.length > 0 ? Math.max(...existing.map((e) => e.order)) + 1 : validTabs.length;
+
+    // Guard before writing: abort if a space switch started or active space changed mid-sync
+    if (await isTransitioning(windowId)) return;
+    const latestActiveSpaceId = await getWindowActiveSpaceId(windowId);
+    if (latestActiveSpaceId && latestActiveSpaceId !== targetSpaceId) return;
 
     // Apply updates or insert new records
     for (let i = 0; i < validTabs.length; i++) {
