@@ -8,10 +8,7 @@ const ERROR_THRESHOLD = 600;
  * Temporary ceiling for existing monolithic files before they are split in Phases 4–5.
  * Entries are removed as each file is modularized below 600 lines.
  */
-const BASELINE_LIMITS = {
-  'src/components/canvas/NotesView.tsx': 1070,
-  'src/components/canvas/ResourcesView.tsx': 990,
-};
+const BASELINE_LIMITS = {};
 
 function walkDir(dir, results = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
