@@ -5,6 +5,8 @@ import {
   Heart,
   HeartHandshake,
   Sparkles,
+  Scale,
+  ExternalLink,
 } from 'lucide-react';
 import { getAppVersion } from '@/utils/appVersion';
 import { CHANGELOG_RELEASES } from '../data/changelog';
@@ -40,7 +42,7 @@ export const AboutTab: React.FC<AboutTabProps> = ({
           SpaceTabs — Tab Manager
         </h3>
         <p className="text-xs text-blue-500 font-mono mt-0.5 font-bold">
-          Version {getAppVersion()} • Manifest V3
+          Version {getAppVersion()} • Manifest V3 • GPL-3.0
         </p>
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 text-xs font-bold mt-3">
           <CheckCircle2 className="w-4 h-4" />
@@ -124,7 +126,56 @@ export const AboutTab: React.FC<AboutTabProps> = ({
             </strong>{' '}
             Optionally sync spaces across multiple machines seamlessly.
           </li>
+          <li>
+            <strong className={isLight ? 'text-slate-950' : 'text-white'}>
+              Open-Source & Copyleft (GPL-3.0):
+            </strong>{' '}
+            Licensed under the GNU General Public License v3.0 — free to inspect, modify, and share while keeping derivatives open-source.
+          </li>
         </ul>
+      </div>
+
+      {/* Licensing Card */}
+      <div
+        className={`p-4 rounded-2xl border flex items-start justify-between gap-4 ${
+          isLight
+            ? 'bg-slate-50 border-slate-200 text-slate-800 shadow-sm'
+            : 'bg-slate-950/60 border-slate-800 text-slate-200'
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+              isLight
+                ? 'bg-blue-50 border-blue-200 text-blue-600'
+                : 'bg-blue-500/10 border-blue-500/25 text-blue-400'
+            }`}
+          >
+            <Scale className="w-4 h-4" />
+          </div>
+          <div className="space-y-1">
+            <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              GNU General Public License v3.0 (GPL-3.0)
+            </div>
+            <p className={`text-[11px] leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              Copyright © 2026 Abu Dojana. SpaceTabs is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License v3.0 (or later). Any redistributed or modified versions must remain open-source under the same license and credit the original author. Provided &ldquo;AS IS&rdquo; without warranty of any kind.
+            </p>
+          </div>
+        </div>
+
+        <a
+          href="https://github.com/abu-dojana/SpaceTabs-TabManager/blob/main/LICENSE"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center gap-1.5 ${
+            isLight
+              ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+          }`}
+        >
+          <span>View License</span>
+          <ExternalLink className="w-3 h-3" />
+        </a>
       </div>
 
       {/* What's New / Release Changelog */}
