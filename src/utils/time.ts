@@ -60,3 +60,20 @@ export function formatDueDateBadge(dueDateMs?: number): {
     isToday: false,
   };
 }
+
+/**
+ * Format a sync timestamp into "HH:MM:SS (DD Mon, YYYY)" or "Never"
+ */
+export function formatSyncTimestamp(timestamp: number | null | undefined): string {
+  if (!timestamp) return 'Never';
+  const d = new Date(timestamp);
+  const timeStr = d.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const year = d.getFullYear();
+  return `${timeStr} (${day} ${month}, ${year})`;
+}
