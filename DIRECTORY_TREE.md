@@ -81,6 +81,7 @@ D:\tab-manager
     │   ├── useClickOutside.ts                   # Triggers dismiss callbacks when clicking outside ref elements
     │   ├── useDriveSyncInfo.ts                  # Subscribes to reactive Google Drive sync status updates
     │   ├── useHydrateUiFromSettings.ts          # Hydrates UI store appearance from stored user settings
+    │   ├── usePersistedSet.ts                   # Persists a Set<string> across restarts via localStorage & chrome.storage
     │   └── useUserSettings.ts                   # Reactively syncs and listens to chrome.storage user settings
     │
     ├── public/                                  # Source mirrored static assets (icons and developer avatar)
@@ -168,7 +169,9 @@ D:\tab-manager
         │       └── useResourceActions.ts        # Hook providing CRUD operations for resource items and sections
         │
         ├── header/                              # Canvas header component
-        │   └── Header.tsx                       # Top bar: active space icon/title, view tabs switcher, search
+        │   ├── GlobalSearchBar.tsx              # Cross-space search bar and floating results dropdown
+        │   ├── Header.tsx                       # Top bar: active space icon/title, view tabs switcher, search
+        │   └── useGlobalSearch.ts               # Hook querying & filtering tabs, notes, tasks, and resources across spaces
         │
         ├── modals/                              # Top-level modal dialogues
         │   ├── CreateSpaceModal.tsx             # Modal to create a new space with emoji picker and color
@@ -364,6 +367,7 @@ These directories are generated during development and builds, and are typically
 | **`src/hooks/useClickOutside.ts`** | Listens for mouse clicks outside referenced DOM elements and triggers a dismiss callback (also supports `Escape` key). |
 | **`src/hooks/useDriveSyncInfo.ts`** | Loads initial Google Drive sync metadata and subscribes to live status updates from `status.ts`. |
 | **`src/hooks/useHydrateUiFromSettings.ts`** | Reads persisted user preferences from `settings.ts` and updates Zustand UI store theme, accent, and width states. |
+| **`src/hooks/usePersistedSet.ts`** | Persists a `Set<string>` (such as collapsed sidebar and resource sections) across browser restarts via synchronous `localStorage` and `chrome.storage.local`. |
 | **`src/hooks/useUserSettings.ts`** | Reactive hook listening to `chrome.storage.onChanged` to keep components updated with user settings in real-time. |
 
 ---
@@ -418,7 +422,9 @@ These directories are generated during development and builds, and are typically
 #### Header (`src/components/header/`)
 | File | Description |
 | :--- | :--- |
-| **`src/components/header/Header.tsx`** | Top dashboard header displaying active space name and emoji, navigation view tabs (`Tabs`, `Resources`, `Notes`, `Tasks`), tab counter, and search bar. |
+| **`src/components/header/GlobalSearchBar.tsx`** | Cross-space search bar with category filter pills (All, Tabs, Notes, Tasks, Resources), live counts, space badges, and highlighted search keywords. |
+| **`src/components/header/Header.tsx`** | Top dashboard header displaying active space name and emoji, navigation view tabs (`Tabs`, `Resources`, `Notes`, `Tasks`, `Chat`), tab counter, and search bar. |
+| **`src/components/header/useGlobalSearch.ts`** | Custom hook querying all non-archived spaces and matching tabs, notes, tasks, and resources with category counts. |
 
 #### Top-Level Modals (`src/components/modals/`)
 | File | Description |

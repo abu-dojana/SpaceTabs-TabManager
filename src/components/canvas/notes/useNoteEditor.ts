@@ -1,6 +1,7 @@
 import React from 'react';
 import { db } from '@/db';
 import { type Note } from '@/db/schema';
+import { useUIStore } from '@/store/uiStore';
 import { recordTombstone } from '@/services/driveSync';
 import { downloadFile } from '@/utils/download';
 
@@ -17,6 +18,7 @@ export function useNoteEditor({
   notes,
   filteredNotes,
 }: UseNoteEditorParams) {
+  const { pendingNoteId, setPendingNoteId } = useUIStore();
   const [selectedNoteId, setSelectedNoteId] = React.useState<string | null>(null);
   const [titleBuffer, setTitleBuffer] = React.useState('');
   const [contentBuffer, setContentBuffer] = React.useState('');
@@ -110,6 +112,24 @@ export function useNoteEditor({
       }
     }, 500);
   };
+
+  // Check if a note should be deep-selected from global search
+  React.useEffect(() => {
+    if (pendingNoteId && notes) {
+      const match = notes.find((n) => n.id === pendingNoteId);
+      if (match) {
+        setSelectedNoteId(match.id);
+        setTitleBuffer(match.title || '');
+        setContentBuffer(match.content || '');
+        loadedNoteIdRef.current = match.id;
+        loadedUpdatedAtRef.current = match.updatedAt || 0;
+        editRevRef.current = 0;
+        savedRevRef.current = 0;
+        setSaveStatus('saved');
+        setPendingNoteId(null);
+      }
+    }
+  }, [pendingNoteId, notes, setPendingNoteId]);
 
   // Reset selected note when switching spaces (flushing current note first)
   React.useEffect(() => {

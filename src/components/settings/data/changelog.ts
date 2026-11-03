@@ -13,8 +13,23 @@ export interface ChangelogRelease {
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
     version: '1.3.0',
-    title: 'Version 1.3.0 — Modular Architecture & Space-Switch Isolation',
+    title: 'Version 1.3.0 — Unified Cross-Space Search, Persistent Sections & Workspace Polish',
     items: [
+      {
+        lead: 'Unified Cross-Space Search with Filters:',
+        description:
+          'Search across Tabs, Notes, Tasks, and Resources in all Spaces and Unsaved sessions from the header. Includes instant filter pills (All, Tabs, Notes, Tasks, Resources), match counts, Space badges, and highlighted search keywords.',
+      },
+      {
+        lead: 'Workspace Chat Preview:',
+        description:
+          'Added a dedicated Chat workspace option beside Tasks featuring upcoming AI space assistants and collaboration preview.',
+      },
+      {
+        lead: 'Persistent Collapsed Sections:',
+        description:
+          'Sidebar space sections and resource sections now remember their collapsed or expanded state across browser restarts and synchronize across open windows.',
+      },
       {
         lead: 'Space-Switch Isolation Hardening:',
         description:

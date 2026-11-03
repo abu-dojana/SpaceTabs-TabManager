@@ -22,7 +22,7 @@ import { getUserSettings } from '@/services/settings';
 import { hexToRgba, adjustBrightness } from '@/utils/color';
 import { getHostWindowId } from '@/utils/chromeWindow';
 import { useHydrateUiFromSettings } from '@/hooks/useHydrateUiFromSettings';
-import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink } from 'lucide-react';
+import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink, MessageSquare } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -204,6 +204,52 @@ export default function App() {
             {activeView === 'notes' && <NotesView />}
 
             {activeView === 'tasks' && <TasksView />}
+
+            {activeView === 'chat' && (
+              <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-8 text-center animate-in fade-in zoom-in-95 duration-150 select-none">
+                <div
+                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-xl border ${
+                    dashboardTheme === 'light'
+                      ? 'bg-blue-50 border-blue-200 text-blue-600'
+                      : 'bg-blue-500/10 border-blue-500/25 text-blue-400'
+                  }`}
+                >
+                  <MessageSquare className="w-8 h-8" />
+                </div>
+                <h2
+                  className={`text-xl font-bold tracking-tight ${
+                    dashboardTheme === 'light' ? 'text-slate-900' : 'text-slate-100'
+                  }`}
+                >
+                  Workspace Chat — Coming Soon!
+                </h2>
+                <p
+                  className={`text-xs max-w-md mt-2 leading-relaxed ${
+                    dashboardTheme === 'light' ? 'text-slate-600' : 'text-slate-400'
+                  }`}
+                >
+                  We&apos;re developing built-in workspace communication and AI space assistants so you can summarize tabs, take notes, and collaborate without leaving SpaceTabs.
+                </p>
+                <div className="mt-6 flex items-center gap-3">
+                  <button
+                    onClick={() => useUIStore.getState().setActiveView('tabs')}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md transition cursor-pointer"
+                  >
+                    Back to Tabs
+                  </button>
+                  <button
+                    onClick={() => useUIStore.getState().setSettingsOpen(true, 'contact')}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                      dashboardTheme === 'light'
+                        ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                        : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    Suggest Features →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Bottom Footer: Support Me! */}

@@ -4,6 +4,7 @@ import { type ResourceSection, type ResourceItem } from '@/db/schema';
 import { recordTombstone, recordTombstones } from '@/services/driveSync';
 import { focusOrOpenTab } from '@/services/tabManager';
 import { decodeRealUrl, extractDomain } from '@/utils/urlFilter';
+import { usePersistedSet } from '@/hooks/usePersistedSet';
 import { detectResourceType, normalizeResourceUrl } from './resourceUtils';
 
 export interface ResourceModalState {
@@ -27,7 +28,9 @@ export function useResourceActions({
   itemsBySection,
 }: UseResourceActionsParams) {
   // UI state
-  const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set());
+  const [collapsedSections, setCollapsedSections] = usePersistedSet(
+    'spacetabs_collapsed_resource_sections'
+  );
   const [isAddingSection, setIsAddingSection] = React.useState(false);
   const [newSectionTitle, setNewSectionTitle] = React.useState('');
   const [editingSectionId, setEditingSectionId] = React.useState<string | null>(null);
@@ -149,6 +152,12 @@ export function useResourceActions({
   // Delete section and its items
   const handleDeleteSection = async (sectionId: string) => {
     setActiveSectionMenuId(null);
+    setCollapsedSections((prev) => {
+      if (!prev.has(sectionId)) return prev;
+      const next = new Set(prev);
+      next.delete(sectionId);
+      return next;
+    });
     const itemsToDelete = await db.resourceItems.where('sectionId').equals(sectionId).toArray();
     recordTombstones([
       { id: sectionId, table: 'resource_sections' as const },

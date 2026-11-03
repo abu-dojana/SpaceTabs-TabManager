@@ -24,6 +24,7 @@ import { getHostWindowId } from '@/utils/chromeWindow';
 import { useDriveSyncInfo } from '@/hooks/useDriveSyncInfo';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAutoFocusSelect } from '@/hooks/useAutoFocusSelect';
+import { usePersistedSet } from '@/hooks/usePersistedSet';
 import { useWindowSpaces } from './hooks/useWindowSpaces';
 import { useSidebarSpaces } from './hooks/useSidebarSpaces';
 import { useSpaceDragReorder } from './hooks/useSpaceDragReorder';
@@ -77,7 +78,9 @@ export const Sidebar: React.FC = () => {
   const renameSectionInputRef = React.useRef<HTMLInputElement>(null!);
 
   const [deleteSectionModal, setDeleteSectionModal] = React.useState<string | null>(null);
-  const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set());
+  const [collapsedSections, setCollapsedSections] = usePersistedSet(
+    'spacetabs_collapsed_sidebar_sections'
+  );
   const [archiveOpen, setArchiveOpen] = React.useState(false);
   const [descriptionModalSpace, setDescriptionModalSpace] = React.useState<Space | null>(null);
   const [deleteConfirmSpace, setDeleteConfirmSpace] = React.useState<Space | null>(null);
@@ -223,6 +226,12 @@ export const Sidebar: React.FC = () => {
 
   const handleArchiveSectionSpaces = async (sectionName: string) => {
     const archivedIds = await archiveSectionSpaces(sectionName);
+    setCollapsedSections((prev) => {
+      if (!prev.has(sectionName)) return prev;
+      const next = new Set(prev);
+      next.delete(sectionName);
+      return next;
+    });
     if (activeSpaceId && archivedIds.includes(activeSpaceId)) {
       await handleSelectSpace(null);
     }
@@ -231,6 +240,12 @@ export const Sidebar: React.FC = () => {
 
   const handleKeepSectionSpaces = async (sectionName: string) => {
     await keepSectionSpacesUnsectioned(sectionName);
+    setCollapsedSections((prev) => {
+      if (!prev.has(sectionName)) return prev;
+      const next = new Set(prev);
+      next.delete(sectionName);
+      return next;
+    });
     setDeleteSectionModal(null);
   };
 

@@ -8,7 +8,6 @@ import {
   setWindowActiveSpaceId,
 } from '@/services/tabManager';
 import {
-  Search,
   ExternalLink,
   Layers,
   FileText,
@@ -27,6 +26,7 @@ import { EMOJI_OPTIONS } from '@/components/modals/CreateSpaceModal';
 import { getHostWindowId } from '@/utils/chromeWindow';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAutoFocusSelect } from '@/hooks/useAutoFocusSelect';
+import { GlobalSearchBar } from './GlobalSearchBar';
 
 export const Header: React.FC = () => {
   const {
@@ -34,8 +34,6 @@ export const Header: React.FC = () => {
     setActiveSpaceId,
     activeView,
     setActiveView,
-    searchQuery,
-    setSearchQuery,
     setCreateSpaceOpen,
     setMoveSectionSpaceId,
     dashboardTheme,
@@ -402,21 +400,8 @@ export const Header: React.FC = () => {
           )}
         </div>
 
-        {/* Search Bar */}
-        <div className="w-36 sm:w-48 md:w-56 lg:w-64 max-w-xs min-w-[130px] flex-shrink-0 relative transition-all duration-150 focus-within:w-52 sm:focus-within:w-64 md:focus-within:w-72">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tabs & spaces..."
-            className={`w-full rounded-full pl-10 pr-4 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 transition ${
-              isLight
-                ? 'bg-slate-100/80 hover:bg-slate-100 border border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-500'
-                : 'bg-slate-900 border border-slate-800 text-slate-200 placeholder-slate-500 focus:border-blue-500'
-            }`}
-          />
-        </div>
+        {/* Global Cross-Space Search Bar & Floating Results */}
+        <GlobalSearchBar isLight={isLight} />
 
         {/* Action Buttons */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
@@ -526,11 +511,18 @@ export const Header: React.FC = () => {
         </button>
 
         <button
-          onClick={() => {}}
-          className="flex items-center gap-1.5 py-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-400 transition"
+          onClick={() => setActiveView('chat')}
+          className={`flex items-center gap-1.5 py-2.5 border-b-2 transition ${
+            activeView === 'chat'
+              ? 'border-blue-500 text-blue-400 font-semibold'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Chat</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            Soon
+          </span>
         </button>
       </nav>
     </header>

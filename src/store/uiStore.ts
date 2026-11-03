@@ -3,7 +3,8 @@ import { create } from 'zustand';
 interface UIState {
   activeSpaceId: string | null;     // null = Unsaved view
   selectedTabIds: Set<string>;
-  activeView: 'tabs' | 'resources' | 'notes' | 'tasks';
+  activeView: 'tabs' | 'resources' | 'notes' | 'tasks' | 'chat';
+  pendingNoteId: string | null;
   searchQuery: string;
   isCreateSpaceOpen: boolean;
   moveSectionSpaceId: string | null;
@@ -17,7 +18,8 @@ interface UIState {
   isSettingsOpen: boolean;
   settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact';
   setActiveSpaceId: (id: string | null) => void;
-  setActiveView: (view: 'tabs' | 'resources' | 'notes' | 'tasks') => void;
+  setActiveView: (view: 'tabs' | 'resources' | 'notes' | 'tasks' | 'chat') => void;
+  setPendingNoteId: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   toggleSelectTab: (id: string) => void;
   selectAllTabs: (ids: string[]) => void;
@@ -41,6 +43,7 @@ export const useUIStore = create<UIState>((set) => ({
   activeSpaceId: null, // default to Unsaved
   selectedTabIds: new Set<string>(),
   activeView: 'tabs',
+  pendingNoteId: null,
   searchQuery: '',
   isCreateSpaceOpen: false,
   moveSectionSpaceId: null,
@@ -58,6 +61,7 @@ export const useUIStore = create<UIState>((set) => ({
   setActiveSpaceId: (id) =>
     set({ activeSpaceId: id, selectedTabIds: new Set(), searchQuery: '' }),
   setActiveView: (view) => set({ activeView: view }),
+  setPendingNoteId: (id) => set({ pendingNoteId: id }),
   setSearchQuery: (query) => set({ searchQuery: query }),
 
   toggleSelectTab: (id) =>
