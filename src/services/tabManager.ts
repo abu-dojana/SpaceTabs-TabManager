@@ -8,3 +8,4 @@ export * from './tabManager/windowSpaces';
 export * from './tabManager/tabSync';
 export * from './tabManager/spaceSwitcher';
 export * from './tabManager/tabOperations';
+export * from './spaces/unsavedSessions';

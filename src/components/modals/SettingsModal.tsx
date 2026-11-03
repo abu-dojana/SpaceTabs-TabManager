@@ -120,15 +120,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [customClientIdInput, setCustomClientIdInput] = React.useState('');
   const [showAdvancedAuth, setShowAdvancedAuth] = React.useState(false);
   const [confirmPullModal, setConfirmPullModal] = React.useState(false);
+  const [dashboardShortcut, setDashboardShortcut] = React.useState<string>('Alt + Shift + W');
+  const [isShortcutAssigned, setIsShortcutAssigned] = React.useState<boolean>(true);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const isLight = dashboardTheme === 'light';
 
+  const refreshShortcutBinding = React.useCallback(() => {
+    try {
+      chrome.commands?.getAll?.((commands) => {
+        const cmd = commands?.find((c) => c.name === 'focus-dashboard');
+        if (cmd) {
+          if (cmd.shortcut && cmd.shortcut.trim()) {
+            setDashboardShortcut(cmd.shortcut);
+            setIsShortcutAssigned(true);
+          } else {
+            setDashboardShortcut('Not assigned in browser');
+            setIsShortcutAssigned(false);
+          }
+        }
+      });
+    } catch {
+      // Ignore if outside extension runtime
+    }
+  }, []);
+
   // Sync initial tab when opened & subscribe to Drive sync status
   React.useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
+      refreshShortcutBinding();
       getUserSettings().then((loaded) => {
         setSettings(loaded);
         if (loaded.sidebarTheme) setSidebarTheme(loaded.sidebarTheme);
@@ -1834,12 +1856,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* TAB: SHORTCUTS */}
             {activeTab === 'shortcuts' && (
               <div className="space-y-5 animate-in fade-in duration-100">
-                <h3 className={`text-sm font-bold mb-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                  Keyboard Shortcuts
-                </h3>
-                <p className={`text-xs mb-5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                  Boost your productivity with quick navigation and formatting hotkeys.
-                </p>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className={`text-sm font-bold mb-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      Keyboard Shortcuts
+                    </h3>
+                    <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                      Boost your productivity with quick navigation and formatting hotkeys.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      try {
+                        chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+                      } catch {}
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer flex-shrink-0 ${
+                      isLight
+                        ? 'bg-white border-slate-300 hover:bg-slate-100 text-slate-800 shadow-sm'
+                        : 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-200'
+                    }`}
+                    title="Open chrome://extensions/shortcuts to customize or assign browser shortcuts"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Configure in Browser</span>
+                  </button>
+                </div>
+
+                {!isShortcutAssigned && (
+                  <div
+                    className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                      isLight
+                        ? 'bg-amber-50 border-amber-300 text-amber-900'
+                        : 'bg-amber-950/30 border-amber-700/50 text-amber-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 text-xs">
+                      <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                      <span>
+                        <strong>Alt + Shift + W</strong> is not currently assigned in your browser (this can happen after an extension update or shortcut conflict). Click <strong>Configure in Browser</strong> to bind it in <code className="text-[11px]">chrome://extensions/shortcuts</code>, or click the SpaceTabs toolbar icon anytime.
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div
                   className={`divide-y border rounded-xl overflow-hidden ${isLight
@@ -1847,17 +1907,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     : 'divide-slate-800 border-slate-800 bg-slate-950/70'
                     }`}
                 >
-                  <div className="flex items-center justify-between p-4">
-                    <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
-                      Jump to SpaceTabs Dashboard
-                    </span>
+                  <div className="flex items-center justify-between p-4 gap-3">
+                    <div>
+                      <span className={`font-semibold block ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
+                        Jump to SpaceTabs Dashboard
+                      </span>
+                      <span className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                        Default: Alt + Shift + W (or click the SpaceTabs extension icon)
+                      </span>
+                    </div>
                     <kbd
-                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${isLight
-                        ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
-                        : 'bg-slate-800 border-slate-700 text-blue-300'
-                        }`}
+                      className={`px-3 py-1.5 rounded font-mono text-xs font-bold border ${
+                        !isShortcutAssigned
+                          ? isLight
+                            ? 'bg-amber-100 border-amber-300 text-amber-800'
+                            : 'bg-amber-950/60 border-amber-700 text-amber-300'
+                          : isLight
+                          ? 'bg-white border-slate-300 text-blue-700 shadow-sm'
+                          : 'bg-slate-800 border-slate-700 text-blue-300'
+                      }`}
                     >
-                      Alt + Shift + W
+                      {dashboardShortcut}
                     </kbd>
                   </div>
 
@@ -1921,7 +1991,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
             {/* TAB: ABOUT */}
-            {/* TAB: ABOUT */}
             {activeTab === 'about' && (
               <div className="space-y-5 animate-in fade-in duration-100">
                 <div
@@ -1943,7 +2012,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     SpaceTabs — Tab Manager
                   </h3>
                   <p className="text-xs text-blue-500 font-mono mt-0.5 font-bold">
-                    Version {chrome.runtime?.getManifest?.()?.version || '1.2.1'} • Manifest V3
+                    Version {chrome.runtime?.getManifest?.()?.version || '1.2.2'} • Manifest V3
                   </p>
                   <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 text-xs font-bold mt-3">
                     <CheckCircle2 className="w-4 h-4" />
@@ -2012,12 +2081,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </h4>
                     </div>
                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                      v1.2.1 Latest
+                      v1.2.2 Latest
                     </span>
                   </div>
 
-                  {/* v1.2.1 Highlights */}
+                  {/* v1.2.2 Highlights */}
                   <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        Version 1.2.2 — Data Integrity, Unsaved Session Persistence & Shortcut Polish
+                      </span>
+                    </div>
+                    <ul className={`list-disc pl-5 space-y-1.5 text-xs ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Unsaved Session Notes, Tasks & Resources Persistence:</strong> Notes, tasks, and resource sections inside Unsaved sessions are now preserved across browser restarts, window closes, and Google Drive syncs.
+                      </li>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Cloud Sync & Backup Hardening:</strong> Added cross-context Web Locks, post-download local state snapshots, runtime tab ID stripping, and tombstone-safe backup imports.
+                      </li>
+                      <li>
+                        <strong className={isLight ? 'text-slate-900' : 'text-white'}>Jump to Dashboard Shortcut (<code className="text-[11px]">Alt + Shift + W</code>) & Toolbar Action:</strong> Reliable window focusing and dashboard activation from any tab, plus live shortcut status and 1-click browser shortcut configuration.
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* v1.2.1 Highlights */}
+                  <div className="pt-3 border-t border-slate-500/15 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                         Version 1.2.1 — Side-by-Side Multi-Window Polish

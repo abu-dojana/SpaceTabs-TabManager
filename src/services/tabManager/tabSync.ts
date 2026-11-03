@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
-import { isSystemOrExtensionUrl, decodeRealUrl } from '@/utils/urlFilter';
+import { isSystemOrExtensionUrl, decodeRealUrl, extractDomain } from '@/utils/urlFilter';
 import {
   isTransitioning,
   getWindowActiveSpaceId,
@@ -10,6 +10,11 @@ import {
   getAllWindowSpaces,
 } from './windowSpaces';
 import { recordTombstone } from '@/services/driveSync';
+import {
+  isSessionEmpty,
+  deleteUnsavedSession,
+  recoverOrphanedContent,
+} from '@/services/spaces/unsavedSessions';
 
 const syncDebounceTimers = new Map<number, ReturnType<typeof setTimeout>>();
 const activeSyncPromises = new Map<number, Promise<void>>();
@@ -61,23 +66,31 @@ export function getEffectiveTabTitle(t: chrome.tabs.Tab, realUrl: string): strin
 }
 
 /**
- * Migrates any legacy tabs stored with spaceId '__unsaved__' into an active unsaved space
+ * Migrates any legacy tabs, notes, tasks, or resource sections stored with
+ * spaceId '__unsaved__' into an active unsaved space, and recovers any orphaned content.
  */
 export async function migrateLegacyUnsavedTabs(): Promise<void> {
   try {
-    const legacyTabs = await db.tabs
-      .where('spaceId')
-      .equals(UNSAVED_SPACE_ID)
-      .toArray();
+    const [legacyTabs, legacyNotes, legacyTasks, legacySections] = await Promise.all([
+      db.tabs.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
+      db.notes.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
+      db.tasks.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
+      db.resourceSections.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
+    ]);
 
-    if (legacyTabs.length > 0) {
+    if (
+      legacyTabs.length > 0 ||
+      legacyNotes.length > 0 ||
+      legacyTasks.length > 0 ||
+      legacySections.length > 0
+    ) {
       let targetSpace = await db.spaces
         .filter((s) => !!s.isUnsaved && !s.isArchived)
         .first();
 
+      const now = Date.now();
       if (!targetSpace) {
         const id = crypto.randomUUID();
-        const now = Date.now();
         targetSpace = {
           id,
           name: '',
@@ -90,29 +103,55 @@ export async function migrateLegacyUnsavedTabs(): Promise<void> {
         await db.spaces.add(targetSpace);
       }
 
-      const existingInTarget = await db.tabs
-        .where('spaceId')
-        .equals(targetSpace.id)
-        .toArray();
-      const existingUrls = new Set(existingInTarget.map((t) => decodeRealUrl(t.url)));
-      const existingChromeTabIds = new Set(
-        existingInTarget.map((t) => t.chromeTabId).filter((id): id is number => typeof id === 'number')
-      );
+      if (legacyTabs.length > 0) {
+        const existingInTarget = await db.tabs
+          .where('spaceId')
+          .equals(targetSpace.id)
+          .toArray();
+        const existingUrls = new Set(existingInTarget.map((t) => decodeRealUrl(t.url)));
+        const existingChromeTabIds = new Set(
+          existingInTarget
+            .map((t) => t.chromeTabId)
+            .filter((id): id is number => typeof id === 'number')
+        );
 
-      for (const lt of legacyTabs) {
-        const realUrl = decodeRealUrl(lt.url);
-        if (
-          (lt.chromeTabId && existingChromeTabIds.has(lt.chromeTabId)) ||
-          existingUrls.has(realUrl)
-        ) {
-          await db.tabs.delete(lt.id);
-        } else {
-          existingUrls.add(realUrl);
-          if (lt.chromeTabId) existingChromeTabIds.add(lt.chromeTabId);
-          await db.tabs.update(lt.id, { spaceId: targetSpace.id });
+        for (const lt of legacyTabs) {
+          const realUrl = decodeRealUrl(lt.url);
+          if (
+            (lt.chromeTabId && existingChromeTabIds.has(lt.chromeTabId)) ||
+            existingUrls.has(realUrl)
+          ) {
+            await db.tabs.delete(lt.id);
+          } else {
+            existingUrls.add(realUrl);
+            if (lt.chromeTabId) existingChromeTabIds.add(lt.chromeTabId);
+            await db.tabs.update(lt.id, { spaceId: targetSpace.id });
+          }
         }
       }
+
+      if (legacyNotes.length > 0) {
+        await Promise.all(
+          legacyNotes.map((n) => db.notes.update(n.id, { spaceId: targetSpace!.id, updatedAt: now }))
+        );
+      }
+
+      if (legacyTasks.length > 0) {
+        await Promise.all(
+          legacyTasks.map((t) => db.tasks.update(t.id, { spaceId: targetSpace!.id, updatedAt: now }))
+        );
+      }
+
+      if (legacySections.length > 0) {
+        await Promise.all(
+          legacySections.map((s) =>
+            db.resourceSections.update(s.id, { spaceId: targetSpace!.id, updatedAt: now })
+          )
+        );
+      }
     }
+
+    await recoverOrphanedContent();
   } catch (err) {
     console.warn('Error migrating legacy unsaved tabs:', err);
   }
@@ -205,16 +244,15 @@ async function executeSyncWindowTabs(windowId: number) {
         }
 
         // If all open tabs in this window belong to a single saved Space, bind this window to that Space
-        // and clean up any empty auto-created Unsaved space:
+        // and clean up any truly empty auto-created Unsaved space:
         if (
           matchedSavedSpaceIds.size === 1 &&
           validTabs.every((bt) => bt.id && savedByChromeTabId.has(bt.id))
         ) {
           const [adoptedSpaceId] = Array.from(matchedSavedSpaceIds);
           if (targetSpaceId && targetSpace?.isUnsaved) {
-            const count = await db.tabs.where('spaceId').equals(targetSpaceId).count();
-            if (count === 0) {
-              await db.spaces.delete(targetSpaceId);
+            if (await isSessionEmpty(targetSpaceId)) {
+              await deleteUnsavedSession(targetSpaceId);
             }
           }
           await setWindowActiveSpaceId(windowId, adoptedSpaceId);
@@ -324,15 +362,21 @@ async function executeSyncWindowTabs(windowId: number) {
       }
     }
 
-    // Pass 3: If counts match (e.g. startup restore where a tab redirected), match by tab order
+    // Pass 3: If counts match (e.g. startup restore where a tab redirected within the same site),
+    // match by tab order AND same hostname
     if (existing.length === validTabs.length) {
       for (let i = 0; i < validTabs.length; i++) {
         if (tabMatches.has(i)) continue;
+        const browserHost = extractDomain(
+          decodeRealUrl(getEffectiveTabUrl(validTabs[i]))
+        ).toLowerCase();
         const match = existing.find(
           (e) =>
             !matchedRecordIds.has(e.id) &&
             e.order === i &&
-            (!e.chromeTabId || !allOpenTabIds.has(e.chromeTabId))
+            (!e.chromeTabId || !allOpenTabIds.has(e.chromeTabId)) &&
+            Boolean(browserHost) &&
+            extractDomain(decodeRealUrl(e.url)).toLowerCase() === browserHost
         );
         if (match) {
           matchedRecordIds.add(match.id);
@@ -452,8 +496,9 @@ async function executeSyncWindowTabs(windowId: number) {
         }
       } else if (!record.chromeTabId) {
         const recordRealUrl = decodeRealUrl(record.url);
-        // Delete unclaimed duplicate of an already matched URL, or stale unclaimed unsaved tab once window finishes loading
-        if (matchedUrls.has(recordRealUrl) || (isUnsavedSpace && allTabsLoaded)) {
+        // Only prune unclaimed duplicate/stale records inside Unsaved sessions;
+        // never delete dormant saved-space tabs that happen to share a URL.
+        if (isUnsavedSpace && (matchedUrls.has(recordRealUrl) || allTabsLoaded)) {
           await db.tabs.delete(record.id);
         }
       }

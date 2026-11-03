@@ -114,16 +114,16 @@ Each space includes 4 specialized canvas views accessible via the top sub-naviga
 SpaceTabs includes a built-in Native Chromium tab suspension engine to free up to **80% of browser RAM**.
 
 ### How Suspension Works
-* Inactive tabs that exceed your configured idle threshold (15m, 30m, 1h, 2h) are replaced with a lightweight internal page (`suspended.html`).
-* The suspended page consumes virtually zero CPU and RAM while preserving the tab's title, favicon, and original URL.
-* **1-Click Restoration:** Simply clicking anywhere on the suspended page instantly reloads the original website.
+* **Cold Space Restoration (`suspended.html`):** When restoring a saved space with many tabs, non-active tabs load as lightweight internal placeholders (`suspended.html`) that consume virtually zero CPU and RAM while preserving the tab's title, favicon, and original URL until clicked or focused.
+* **Idle Tab Memory Discarding (`chrome.tabs.discard`):** Open background tabs that exceed your configured idle threshold (15m, 30m, 1h, 2h) are safely unloaded in place using Chromium's native `chrome.tabs.discard()` engine.
+* **1-Click Restoration:** Simply clicking or focusing a suspended or discarded tab immediately restores the original website.
 
-### Whitelist & Smart Exclusions
+### Smart Exclusions
 SpaceTabs automatically detects and avoids suspending:
 * Pinned browser tabs.
+* The currently active tab in each window.
 * Tabs actively playing audio or video (e.g. YouTube, Spotify, Google Meet).
-* The active dashboard tab.
-* User-specified domains added to your custom whitelist in Settings.
+* The active SpaceTabs dashboard tab and internal browser pages (`chrome://`, `chrome-extension://`, `edge://`, `brave://`, `about:`).
 
 ---
 
@@ -151,7 +151,7 @@ Tailor the look and feel of SpaceTabs to match your monitor and environment:
 * **Dual-Zone Independent Themes:**
   - Sidebar: Set to Light or Dark mode.
   - Workspace Canvas: Set to Light or Dark mode independently.
-* **8 Curated Light & Dark Palettes:**
+* **10 Curated Light & Dark Palettes:**
   - Dark: *Slate*, *Midnight OLED (True Pitch Black)*, *Space Indigo*, *Forest Dark*, *Warm Espresso*.
   - Light: *Pure Snow*, *Warm Paper (Notion Cream)*, *Cool Zinc*, *Soft Sky*, *Fresh Mint*.
 * **Custom Accent Color Picker:** Choose any HEX accent color; SpaceTabs automatically calculates matching hover, glow, and alpha borders.

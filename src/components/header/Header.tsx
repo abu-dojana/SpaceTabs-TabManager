@@ -159,18 +159,29 @@ export const Header: React.FC = () => {
           isArchived: false,
         });
 
-        // Move all current unsaved tabs into this newly created space
-        const unsavedTabs = await db.tabs
-          .where('spaceId')
-          .equals(UNSAVED_SPACE_ID)
-          .toArray();
-
-        for (const t of unsavedTabs) {
-          await db.tabs.update(t.id, {
-            spaceId: newSpaceId,
-            updatedAt: now,
-          });
-        }
+        // Move all current unsaved tabs, notes, tasks, and resource sections into this newly created space
+        await db.transaction(
+          'rw',
+          [db.tabs, db.notes, db.tasks, db.resourceSections],
+          async () => {
+            await db.tabs
+              .where('spaceId')
+              .equals(UNSAVED_SPACE_ID)
+              .modify({ spaceId: newSpaceId, updatedAt: now });
+            await db.notes
+              .where('spaceId')
+              .equals(UNSAVED_SPACE_ID)
+              .modify({ spaceId: newSpaceId, updatedAt: now });
+            await db.tasks
+              .where('spaceId')
+              .equals(UNSAVED_SPACE_ID)
+              .modify({ spaceId: newSpaceId, updatedAt: now });
+            await db.resourceSections
+              .where('spaceId')
+              .equals(UNSAVED_SPACE_ID)
+              .modify({ spaceId: newSpaceId, updatedAt: now });
+          }
+        );
 
         // Bind current window to the newly saved space
         try {

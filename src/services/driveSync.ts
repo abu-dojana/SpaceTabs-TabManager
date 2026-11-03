@@ -72,6 +72,25 @@ const statusListeners = new Set<StatusCallback>();
 let currentStatus: SyncStatus = 'idle';
 let currentError: string | null = null;
 
+/**
+ * Strips browser-local runtime fields (chromeTabId, windowId) from a Tab record
+ * so cloud exports and backups remain portable across devices and browser sessions.
+ */
+export function stripRuntimeTabFields({ chromeTabId, windowId, ...rest }: Tab): Tab {
+  return rest as Tab;
+}
+
+/**
+ * Cross-context sync mutex shared between the background Service Worker and Dashboard tabs
+ * via the standard Web Locks API. Prevents concurrent alarm and manual sync interleaving.
+ */
+export async function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== 'undefined' && 'locks' in navigator && navigator.locks?.request) {
+    return navigator.locks.request('spacetabs-sync', fn);
+  }
+  return fn();
+}
+
 // ==========================================
 // TOMBSTONE SYSTEM (Soft-delete tracker)
 // ==========================================
@@ -222,14 +241,29 @@ export async function getDriveSyncInfo(): Promise<DriveSyncInfo> {
 
   let itemStats: DriveSyncInfo['itemStats'] = undefined;
   try {
-    const [spaces, tabs, notes, tasks, resources] = await Promise.all([
-      db.spaces.count(),
-      db.tabs.where('spaceId').notEqual(UNSAVED_SPACE_ID).count(),
-      db.notes.count(),
-      db.tasks.count(),
-      db.resourceItems.count(),
+    const allSpaces = await db.spaces.toArray();
+    const localOnlyIds = new Set<string>([
+      UNSAVED_SPACE_ID,
+      ...allSpaces.filter((s) => !!s.isUnsaved).map((s) => s.id),
     ]);
-    itemStats = { spaces, tabs, notes, tasks, resources };
+    const savedSpacesCount = allSpaces.filter((s) => !s.isUnsaved).length;
+    const [allTabs, allNotes, allTasks, allSections, allResources] = await Promise.all([
+      db.tabs.toArray(),
+      db.notes.toArray(),
+      db.tasks.toArray(),
+      db.resourceSections.toArray(),
+      db.resourceItems.toArray(),
+    ]);
+    const syncableSectionIds = new Set(
+      allSections.filter((s) => !localOnlyIds.has(s.spaceId)).map((s) => s.id)
+    );
+    itemStats = {
+      spaces: savedSpacesCount,
+      tabs: allTabs.filter((t) => !localOnlyIds.has(t.spaceId)).length,
+      notes: allNotes.filter((n) => !localOnlyIds.has(n.spaceId)).length,
+      tasks: allTasks.filter((t) => !localOnlyIds.has(t.spaceId)).length,
+      resources: allResources.filter((r) => syncableSectionIds.has(r.sectionId)).length,
+    };
   } catch {
     // DB might be temporarily closed
   }
@@ -484,8 +518,9 @@ export async function signInWithGoogle(
     }
 
     await setGoogleProfile(profile);
-    await updateCloudSyncSettings({ enabled: true });
+    const updatedSettings = await updateCloudSyncSettings({ enabled: true });
     await chrome.storage.local.set({ [STORAGE_KEY_TOKEN]: token });
+    await setupDriveSyncAlarm(updatedSettings.syncIntervalMinutes);
     setSyncStatus('synced');
 
     // Trigger initial sync to create SpaceTabs_Data folder immediately
@@ -509,6 +544,9 @@ export async function signOutGoogle(): Promise<void> {
   await updateCloudSyncSettings({ enabled: false });
   await updateSyncMeta({ lastError: null });
   await chrome.storage.local.remove(['spacetabs_mock_drive_data']);
+  if (chrome?.alarms) {
+    await chrome.alarms.clear(DRIVE_SYNC_ALARM).catch(() => {});
+  }
   currentStatus = 'idle';
   currentError = null;
   notifyStatusChange();
@@ -701,25 +739,38 @@ export async function buildLocalExport(): Promise<DriveDataExport> {
       getTombstones(),
     ]);
 
-  const unsavedSpaceIds = new Set(spaces.filter((s) => s.isUnsaved).map((s) => s.id));
+  const localOnlySpaceIds = new Set<string>([
+    UNSAVED_SPACE_ID,
+    ...spaces.filter((s) => !!s.isUnsaved).map((s) => s.id),
+  ]);
+  const isSyncableSpace = (spaceId: string) => !localOnlySpaceIds.has(spaceId);
+
   const syncableSpaces = spaces.filter((s) => !s.isUnsaved);
-  const syncableTabs = tabs.filter((t) => !unsavedSpaceIds.has(t.spaceId));
+  const syncableTabs = tabs
+    .filter((t) => isSyncableSpace(t.spaceId))
+    .map(stripRuntimeTabFields);
+  const syncableSections = resourceSections.filter((s) => isSyncableSpace(s.spaceId));
+  const syncableSectionIds = new Set(syncableSections.map((s) => s.id));
+  const syncableItems = resourceItems.filter((i) => syncableSectionIds.has(i.sectionId));
+  const syncableNotes = notes.filter((n) => isSyncableSpace(n.spaceId));
+  const syncableTasks = tasks.filter((t) => isSyncableSpace(t.spaceId));
 
   return {
     exportedAt: Date.now(),
     spaces: syncableSpaces,
     tabs: syncableTabs,
-    resourceSections,
-    resourceItems,
-    notes,
-    tasks,
+    resourceSections: syncableSections,
+    resourceItems: syncableItems,
+    notes: syncableNotes,
+    tasks: syncableTasks,
     deletedIds,
   };
 }
 
 /**
  * Bi-directional conflict resolution and multi-device merge engine.
- * Respects tombstones (soft-deletes) and updatedAt timestamps.
+ * Respects tombstones (soft-deletes), updatedAt timestamps, and strictly preserves
+ * all local-only Unsaved session spaces, tabs, notes, tasks, and resources.
  */
 export async function mergeRemoteAndLocal(
   remote: DriveDataExport,
@@ -744,13 +795,13 @@ export async function mergeRemoteAndLocal(
   );
   const deletedSet = new Set(mergedTombstones.map((t) => t.id));
 
-  // 2. Merge Spaces
+  // 2. Merge Saved Spaces (exclude any isUnsaved spaces)
   const spaceMap = new Map<string, Space>();
   for (const s of local.spaces || []) {
-    if (!deletedSet.has(s.id)) spaceMap.set(s.id, s);
+    if (!s.isUnsaved && !deletedSet.has(s.id)) spaceMap.set(s.id, s);
   }
   for (const s of remote.spaces || []) {
-    if (deletedSet.has(s.id)) continue;
+    if (s.isUnsaved || deletedSet.has(s.id)) continue;
     const existing = spaceMap.get(s.id);
     if (!existing || s.updatedAt > existing.updatedAt) {
       spaceMap.set(s.id, s);
@@ -759,18 +810,19 @@ export async function mergeRemoteAndLocal(
   const mergedSpaces = Array.from(spaceMap.values());
   const validSpaceIds = new Set(mergedSpaces.map((s) => s.id));
 
-  // 3. Merge Saved Tabs
+  // 3. Merge Saved Tabs (strip runtime chromeTabId/windowId so cloud payload stays portable)
   const tabMap = new Map<string, Tab>();
   for (const t of local.tabs || []) {
     if (t.spaceId !== UNSAVED_SPACE_ID && !deletedSet.has(t.id) && validSpaceIds.has(t.spaceId)) {
-      tabMap.set(t.id, t);
+      tabMap.set(t.id, stripRuntimeTabFields(t));
     }
   }
   for (const t of remote.tabs || []) {
     if (t.spaceId !== UNSAVED_SPACE_ID && !deletedSet.has(t.id) && validSpaceIds.has(t.spaceId)) {
-      const existing = tabMap.get(t.id);
-      if (!existing || t.updatedAt > existing.updatedAt) {
-        tabMap.set(t.id, t);
+      const sanitized = stripRuntimeTabFields(t);
+      const existing = tabMap.get(sanitized.id);
+      if (!existing || sanitized.updatedAt > existing.updatedAt) {
+        tabMap.set(sanitized.id, sanitized);
       }
     }
   }
@@ -845,7 +897,7 @@ export async function mergeRemoteAndLocal(
   }
   const mergedTasks = Array.from(taskMap.values());
 
-  // 8. Commit Merged Data to Local Dexie
+  // 8. Commit Merged Data to Local Dexie (preserving local-only Unsaved content & live tab bindings)
   await db.transaction(
     'rw',
     [
@@ -857,54 +909,102 @@ export async function mergeRemoteAndLocal(
       db.tasks,
     ],
     async () => {
-      // Spaces
+      const existingLocalSpaces = await db.spaces.toArray();
+      const localOnlySpaceIds = new Set<string>([
+        UNSAVED_SPACE_ID,
+        ...existingLocalSpaces.filter((s) => !!s.isUnsaved).map((s) => s.id),
+      ]);
+      const isLocalOnlySpace = (spaceId: string) => localOnlySpaceIds.has(spaceId);
+
+      // Spaces: upsert merged saved spaces, delete only explicitly tombstoned saved spaces
       if (mergedSpaces.length > 0) await db.spaces.bulkPut(mergedSpaces);
       const currentSpaces = await db.spaces.toArray();
       const spacesToDelete = currentSpaces
-        .filter((s) => !s.isUnsaved && (!spaceMap.has(s.id) || deletedSet.has(s.id)))
+        .filter((s) => !s.isUnsaved && deletedSet.has(s.id))
         .map((s) => s.id);
       if (spacesToDelete.length > 0) await db.spaces.bulkDelete(spacesToDelete);
 
-      // Saved Tabs
-      if (mergedTabs.length > 0) await db.tabs.bulkPut(mergedTabs);
-      const currentSavedTabs = await db.tabs
-        .where('spaceId')
-        .notEqual(UNSAVED_SPACE_ID)
-        .toArray();
-      const unsavedSpaceIds = new Set(currentSpaces.filter((s) => s.isUnsaved).map((s) => s.id));
-      const tabsToDelete = currentSavedTabs
-        .filter((t) => !unsavedSpaceIds.has(t.spaceId) && (!tabMap.has(t.id) || deletedSet.has(t.id)))
+      const liveSpaceIds = new Set(
+        (await db.spaces.toCollection().primaryKeys()).map(String)
+      );
+
+      // Saved Tabs: re-attach local live chromeTabId/windowId bindings before bulkPut
+      const currentTabs = await db.tabs.toArray();
+      const localTabBindings = new Map<string, { chromeTabId?: number; windowId?: number }>();
+      for (const ct of currentTabs) {
+        if (ct.chromeTabId !== undefined || ct.windowId !== undefined) {
+          localTabBindings.set(ct.id, {
+            chromeTabId: ct.chromeTabId,
+            windowId: ct.windowId,
+          });
+        }
+      }
+      const tabsToWrite = mergedTabs.map((mt) => {
+        const binding = localTabBindings.get(mt.id);
+        return binding ? { ...mt, ...binding } : stripRuntimeTabFields(mt);
+      });
+      if (tabsToWrite.length > 0) await db.tabs.bulkPut(tabsToWrite);
+
+      const afterTabs = await db.tabs.toArray();
+      const tabsToDelete = afterTabs
+        .filter(
+          (t) =>
+            !isLocalOnlySpace(t.spaceId) &&
+            (deletedSet.has(t.id) || !liveSpaceIds.has(t.spaceId))
+        )
         .map((t) => t.id);
       if (tabsToDelete.length > 0) await db.tabs.bulkDelete(tabsToDelete);
 
-      // Resources
+      // Resources: never delete local-only Unsaved resource sections or items
       if (mergedSections.length > 0) await db.resourceSections.bulkPut(mergedSections);
       const currentSections = await db.resourceSections.toArray();
       const sectionsToDelete = currentSections
-        .filter((s) => !secMap.has(s.id) || deletedSet.has(s.id))
+        .filter(
+          (s) =>
+            !isLocalOnlySpace(s.spaceId) &&
+            (deletedSet.has(s.id) || !liveSpaceIds.has(s.spaceId))
+        )
         .map((s) => s.id);
       if (sectionsToDelete.length > 0) await db.resourceSections.bulkDelete(sectionsToDelete);
+
+      const remainingSections = await db.resourceSections.toArray();
+      const liveSectionIds = new Set(remainingSections.map((s) => s.id));
+      const localOnlySectionIds = new Set(
+        remainingSections.filter((s) => isLocalOnlySpace(s.spaceId)).map((s) => s.id)
+      );
 
       if (mergedItems.length > 0) await db.resourceItems.bulkPut(mergedItems);
       const currentItems = await db.resourceItems.toArray();
       const itemsToDelete = currentItems
-        .filter((i) => !itemMap.has(i.id) || deletedSet.has(i.id))
+        .filter(
+          (i) =>
+            !localOnlySectionIds.has(i.sectionId) &&
+            (deletedSet.has(i.id) || !liveSectionIds.has(i.sectionId))
+        )
         .map((i) => i.id);
       if (itemsToDelete.length > 0) await db.resourceItems.bulkDelete(itemsToDelete);
 
-      // Notes
+      // Notes: never delete local-only Unsaved notes
       if (mergedNotes.length > 0) await db.notes.bulkPut(mergedNotes);
       const currentNotes = await db.notes.toArray();
       const notesToDelete = currentNotes
-        .filter((n) => !noteMap.has(n.id) || deletedSet.has(n.id))
+        .filter(
+          (n) =>
+            !isLocalOnlySpace(n.spaceId) &&
+            (deletedSet.has(n.id) || !liveSpaceIds.has(n.spaceId))
+        )
         .map((n) => n.id);
       if (notesToDelete.length > 0) await db.notes.bulkDelete(notesToDelete);
 
-      // Tasks
+      // Tasks: never delete local-only Unsaved tasks
       if (mergedTasks.length > 0) await db.tasks.bulkPut(mergedTasks);
       const currentTasks = await db.tasks.toArray();
       const tasksToDelete = currentTasks
-        .filter((t) => !taskMap.has(t.id) || deletedSet.has(t.id))
+        .filter(
+          (t) =>
+            !isLocalOnlySpace(t.spaceId) &&
+            (deletedSet.has(t.id) || !liveSpaceIds.has(t.spaceId))
+        )
         .map((t) => t.id);
       if (tasksToDelete.length > 0) await db.tasks.bulkDelete(tasksToDelete);
     }
@@ -938,194 +1038,302 @@ export async function syncNow(): Promise<{
   message: string;
   stats?: { spaces: number; tabs: number; notes: number; tasks: number; resources: number };
 }> {
-  const profile = await getGoogleProfile();
-  if (!profile) {
-    return { success: false, message: 'Google account is not connected.' };
-  }
+  return withSyncLock(async () => {
+    const profile = await getGoogleProfile();
+    if (!profile) {
+      return { success: false, message: 'Google account is not connected.' };
+    }
 
-  setSyncStatus('syncing');
+    setSyncStatus('syncing');
 
-  try {
-    const localData = await buildLocalExport();
+    try {
+      // REAL GOOGLE DRIVE REST API FLOW (with automatic 401 token refresh)
+      const mergedPayload = await runWithAuthRetry(async (token) => {
+        const { folderId, folderUrl } = await ensureDriveFolder(token);
+        const existingFile = await findDataFile(token, folderId);
 
-    // REAL GOOGLE DRIVE REST API FLOW (with automatic 401 token refresh)
-    const mergedPayload = await runWithAuthRetry(async (token) => {
-      const { folderId, folderUrl } = await ensureDriveFolder(token);
-      const existingFile = await findDataFile(token, folderId);
+        // Download remote first (if present), then read local state so edits made during
+        // the network download are included in the merge snapshot.
+        const remoteData = existingFile
+          ? await downloadRemoteData(token, existingFile.fileId)
+          : null;
+        const localData = await buildLocalExport();
+        const payload = remoteData
+          ? await mergeRemoteAndLocal(remoteData, localData)
+          : localData;
 
-      let payload = localData;
+        // Push merged state to Drive
+        const uploadRes = await uploadDataToDrive(
+          token,
+          folderId,
+          existingFile?.fileId || null,
+          payload
+        );
 
-      if (existingFile) {
-        // Must successfully download and merge remote data before pushing.
-        // If remote download fails, abort to prevent destructive overwrite of remote-only changes.
-        const remoteData = await downloadRemoteData(token, existingFile.fileId);
-        payload = await mergeRemoteAndLocal(remoteData, localData);
-      }
+        const now = Date.now();
+        await updateSyncMeta({
+          lastSyncTime: now,
+          folderId,
+          fileId: uploadRes.fileId,
+          folderUrl,
+          lastError: null,
+        });
 
-      // Push merged state to Drive
-      const uploadRes = await uploadDataToDrive(
-        token,
-        folderId,
-        existingFile?.fileId || null,
-        payload
-      );
+        return payload;
+      }, false);
 
-      const now = Date.now();
-      await updateSyncMeta({
-        lastSyncTime: now,
-        folderId,
-        fileId: uploadRes.fileId,
-        folderUrl,
-        lastError: null,
-      });
-
-      return payload;
-    }, false);
-
-    setSyncStatus('synced');
-    return {
-      success: true,
-      message: 'Synced successfully with Google Drive!',
-      stats: {
-        spaces: mergedPayload.spaces.length,
-        tabs: mergedPayload.tabs.length,
-        notes: mergedPayload.notes.length,
-        tasks: mergedPayload.tasks.length,
-        resources: mergedPayload.resourceItems.length,
-      },
-    };
-  } catch (err: any) {
-    const errorMsg = err?.message || 'Sync failed';
-    setSyncStatus('error', errorMsg);
-    await updateSyncMeta({ lastError: errorMsg });
-    return { success: false, message: errorMsg };
-  }
+      setSyncStatus('synced');
+      return {
+        success: true,
+        message: 'Synced successfully with Google Drive!',
+        stats: {
+          spaces: mergedPayload.spaces.length,
+          tabs: mergedPayload.tabs.length,
+          notes: mergedPayload.notes.length,
+          tasks: mergedPayload.tasks.length,
+          resources: mergedPayload.resourceItems.length,
+        },
+      };
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Sync failed';
+      setSyncStatus('error', errorMsg);
+      await updateSyncMeta({ lastError: errorMsg });
+      return { success: false, message: errorMsg };
+    }
+  });
 }
 
 /**
  * Force Push: Overwrites Google Drive data with current local workspace state
  */
 export async function forcePushToDrive(): Promise<{ success: boolean; message: string }> {
-  const profile = await getGoogleProfile();
-  if (!profile) return { success: false, message: 'Google account is not connected.' };
+  return withSyncLock(async () => {
+    const profile = await getGoogleProfile();
+    if (!profile) return { success: false, message: 'Google account is not connected.' };
 
-  setSyncStatus('syncing');
+    setSyncStatus('syncing');
 
-  try {
-    const localData = await buildLocalExport();
+    try {
+      const localData = await buildLocalExport();
 
-    await runWithAuthRetry(async (token) => {
-      const { folderId, folderUrl } = await ensureDriveFolder(token);
-      const existingFile = await findDataFile(token, folderId);
+      await runWithAuthRetry(async (token) => {
+        const { folderId, folderUrl } = await ensureDriveFolder(token);
+        const existingFile = await findDataFile(token, folderId);
 
-      const uploadRes = await uploadDataToDrive(
-        token,
-        folderId,
-        existingFile?.fileId || null,
-        localData
-      );
+        const uploadRes = await uploadDataToDrive(
+          token,
+          folderId,
+          existingFile?.fileId || null,
+          localData
+        );
 
-      await updateSyncMeta({
-        lastSyncTime: Date.now(),
-        folderId,
-        fileId: uploadRes.fileId,
-        folderUrl,
-        lastError: null,
-      });
-    }, false);
+        await updateSyncMeta({
+          lastSyncTime: Date.now(),
+          folderId,
+          fileId: uploadRes.fileId,
+          folderUrl,
+          lastError: null,
+        });
+      }, false);
 
-    setSyncStatus('synced');
-    return { success: true, message: 'Workspace data uploaded to Google Drive!' };
-  } catch (err: any) {
-    const msg = err?.message || 'Failed to upload to Drive';
-    setSyncStatus('error', msg);
-    return { success: false, message: msg };
-  }
+      setSyncStatus('synced');
+      return { success: true, message: 'Workspace data uploaded to Google Drive!' };
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to upload to Drive';
+      setSyncStatus('error', msg);
+      return { success: false, message: msg };
+    }
+  });
 }
 
 /**
- * Force Pull: Overwrites local Dexie workspace with Google Drive backup
+ * Force Pull: Overwrites local saved workspaces with Google Drive backup while preserving
+ * all local-only Unsaved sessions and their tabs, notes, tasks, and resources.
  */
 export async function forcePullFromDrive(): Promise<{ success: boolean; message: string }> {
-  const profile = await getGoogleProfile();
-  if (!profile) return { success: false, message: 'Google account is not connected.' };
+  return withSyncLock(async () => {
+    const profile = await getGoogleProfile();
+    if (!profile) return { success: false, message: 'Google account is not connected.' };
 
-  setSyncStatus('syncing');
+    setSyncStatus('syncing');
 
-  try {
-    const restoredCount = await runWithAuthRetry(async (token) => {
-      const meta = await getSyncMeta();
-      let fileId = meta.fileId;
+    try {
+      const restoredCount = await runWithAuthRetry(async (token) => {
+        const meta = await getSyncMeta();
+        let fileId = meta.fileId;
 
-      if (!fileId) {
-        const { folderId } = await ensureDriveFolder(token);
-        const existing = await findDataFile(token, folderId);
-        fileId = existing?.fileId;
-      }
-
-      if (!fileId) {
-        throw new Error('No backup file found in your Google Drive folder.');
-      }
-
-      const remoteData: DriveDataExport = await downloadRemoteData(token, fileId);
-
-      if (!remoteData || !Array.isArray(remoteData.spaces)) {
-        throw new Error('Remote backup file is empty or invalid.');
-      }
-
-      // Replace local saved tables (preserve unsaved tabs)
-      await db.transaction(
-        'rw',
-        [
-          db.spaces,
-          db.tabs,
-          db.resourceSections,
-          db.resourceItems,
-          db.notes,
-          db.tasks,
-        ],
-        async () => {
-          await db.spaces.clear();
-          await db.tabs.where('spaceId').notEqual(UNSAVED_SPACE_ID).delete();
-          await db.resourceSections.clear();
-          await db.resourceItems.clear();
-          await db.notes.clear();
-          await db.tasks.clear();
-
-          if (remoteData?.spaces?.length) await db.spaces.bulkPut(remoteData.spaces);
-          if (remoteData?.tabs?.length) {
-            const savedTabs = remoteData.tabs.filter((t) => t.spaceId !== UNSAVED_SPACE_ID);
-            if (savedTabs.length > 0) await db.tabs.bulkPut(savedTabs);
-          }
-          if (remoteData?.resourceSections?.length) {
-            await db.resourceSections.bulkPut(remoteData.resourceSections);
-          }
-          if (remoteData?.resourceItems?.length) {
-            await db.resourceItems.bulkPut(remoteData.resourceItems);
-          }
-          if (remoteData?.notes?.length) await db.notes.bulkPut(remoteData.notes);
-          if (remoteData?.tasks?.length) await db.tasks.bulkPut(remoteData.tasks);
+        if (!fileId) {
+          const { folderId } = await ensureDriveFolder(token);
+          const existing = await findDataFile(token, folderId);
+          fileId = existing?.fileId;
         }
-      );
 
-      // Restore remote tombstones (deletion history) to prevent deleted items from reappearing
-      const remoteTombstones = Array.isArray(remoteData.deletedIds) ? remoteData.deletedIds : [];
-      await chrome.storage.local.set({ [STORAGE_KEY_TOMBSTONES]: remoteTombstones });
+        if (!fileId) {
+          throw new Error('No backup file found in your Google Drive folder.');
+        }
 
-      await updateSyncMeta({ lastSyncTime: Date.now(), lastError: null });
-      return remoteData.spaces.length;
-    }, false);
+        const remoteData: DriveDataExport = await downloadRemoteData(token, fileId);
 
-    setSyncStatus('synced');
-    return {
-      success: true,
-      message: `Restored ${restoredCount} spaces from Google Drive!`,
-    };
-  } catch (err: any) {
-    const msg = err?.message || 'Failed to pull from Drive';
-    setSyncStatus('error', msg);
-    return { success: false, message: msg };
-  }
+        if (!remoteData || !Array.isArray(remoteData.spaces)) {
+          throw new Error('Remote backup file is empty or invalid.');
+        }
+
+        const remoteSavedSpaces = remoteData.spaces.filter((s) => !s.isUnsaved);
+        const remoteSavedSpaceIds = new Set(remoteSavedSpaces.map((s) => s.id));
+
+        // Replace local saved tables while strictly preserving local-only Unsaved sessions & content
+        await db.transaction(
+          'rw',
+          [
+            db.spaces,
+            db.tabs,
+            db.resourceSections,
+            db.resourceItems,
+            db.notes,
+            db.tasks,
+          ],
+          async () => {
+            const currentSpaces = await db.spaces.toArray();
+            const localOnlySpaceIds = new Set<string>([
+              UNSAVED_SPACE_ID,
+              ...currentSpaces.filter((s) => !!s.isUnsaved).map((s) => s.id),
+            ]);
+            const isLocalOnlySpace = (spaceId: string) => localOnlySpaceIds.has(spaceId);
+
+            // Preserve existing live tab bindings for matching saved tabs
+            const currentTabs = await db.tabs.toArray();
+            const localTabBindings = new Map<string, { chromeTabId?: number; windowId?: number }>();
+            for (const ct of currentTabs) {
+              if (ct.chromeTabId !== undefined || ct.windowId !== undefined) {
+                localTabBindings.set(ct.id, {
+                  chromeTabId: ct.chromeTabId,
+                  windowId: ct.windowId,
+                });
+              }
+            }
+
+            // Delete only non-Unsaved records
+            const savedSpaceIdsToDelete = currentSpaces
+              .filter((s) => !s.isUnsaved)
+              .map((s) => s.id);
+            if (savedSpaceIdsToDelete.length > 0) {
+              await db.spaces.bulkDelete(savedSpaceIdsToDelete);
+            }
+
+            const savedTabIdsToDelete = currentTabs
+              .filter((t) => !isLocalOnlySpace(t.spaceId))
+              .map((t) => t.id);
+            if (savedTabIdsToDelete.length > 0) {
+              await db.tabs.bulkDelete(savedTabIdsToDelete);
+            }
+
+            const currentSections = await db.resourceSections.toArray();
+            const localOnlySectionIds = new Set(
+              currentSections.filter((s) => isLocalOnlySpace(s.spaceId)).map((s) => s.id)
+            );
+            const savedSectionIdsToDelete = currentSections
+              .filter((s) => !isLocalOnlySpace(s.spaceId))
+              .map((s) => s.id);
+            if (savedSectionIdsToDelete.length > 0) {
+              await db.resourceSections.bulkDelete(savedSectionIdsToDelete);
+            }
+
+            const currentItems = await db.resourceItems.toArray();
+            const savedItemIdsToDelete = currentItems
+              .filter((i) => !localOnlySectionIds.has(i.sectionId))
+              .map((i) => i.id);
+            if (savedItemIdsToDelete.length > 0) {
+              await db.resourceItems.bulkDelete(savedItemIdsToDelete);
+            }
+
+            const currentNotes = await db.notes.toArray();
+            const savedNoteIdsToDelete = currentNotes
+              .filter((n) => !isLocalOnlySpace(n.spaceId))
+              .map((n) => n.id);
+            if (savedNoteIdsToDelete.length > 0) {
+              await db.notes.bulkDelete(savedNoteIdsToDelete);
+            }
+
+            const currentTasks = await db.tasks.toArray();
+            const savedTaskIdsToDelete = currentTasks
+              .filter((t) => !isLocalOnlySpace(t.spaceId))
+              .map((t) => t.id);
+            if (savedTaskIdsToDelete.length > 0) {
+              await db.tasks.bulkDelete(savedTaskIdsToDelete);
+            }
+
+            // Insert remote saved entities (stripping runtime tab fields and re-attaching local bindings)
+            if (remoteSavedSpaces.length > 0) {
+              await db.spaces.bulkPut(remoteSavedSpaces);
+            }
+            if (remoteData?.tabs?.length) {
+              const savedTabs = remoteData.tabs
+                .filter(
+                  (t) =>
+                    t.spaceId !== UNSAVED_SPACE_ID &&
+                    !localOnlySpaceIds.has(t.spaceId) &&
+                    remoteSavedSpaceIds.has(t.spaceId)
+                )
+                .map((t) => {
+                  const clean = stripRuntimeTabFields(t);
+                  const binding = localTabBindings.get(clean.id);
+                  return binding ? { ...clean, ...binding } : clean;
+                });
+              if (savedTabs.length > 0) await db.tabs.bulkPut(savedTabs);
+            }
+
+            const validRemoteSections = (remoteData?.resourceSections || []).filter(
+              (s) => !localOnlySpaceIds.has(s.spaceId) && remoteSavedSpaceIds.has(s.spaceId)
+            );
+            const validRemoteSectionIds = new Set(validRemoteSections.map((s) => s.id));
+            if (validRemoteSections.length > 0) {
+              await db.resourceSections.bulkPut(validRemoteSections);
+            }
+
+            if (remoteData?.resourceItems?.length) {
+              const validRemoteItems = remoteData.resourceItems.filter((i) =>
+                validRemoteSectionIds.has(i.sectionId)
+              );
+              if (validRemoteItems.length > 0) {
+                await db.resourceItems.bulkPut(validRemoteItems);
+              }
+            }
+
+            if (remoteData?.notes?.length) {
+              const validRemoteNotes = remoteData.notes.filter(
+                (n) => !localOnlySpaceIds.has(n.spaceId) && remoteSavedSpaceIds.has(n.spaceId)
+              );
+              if (validRemoteNotes.length > 0) await db.notes.bulkPut(validRemoteNotes);
+            }
+
+            if (remoteData?.tasks?.length) {
+              const validRemoteTasks = remoteData.tasks.filter(
+                (t) => !localOnlySpaceIds.has(t.spaceId) && remoteSavedSpaceIds.has(t.spaceId)
+              );
+              if (validRemoteTasks.length > 0) await db.tasks.bulkPut(validRemoteTasks);
+            }
+          }
+        );
+
+        // Restore remote tombstones (deletion history) to prevent deleted items from reappearing
+        const remoteTombstones = Array.isArray(remoteData.deletedIds) ? remoteData.deletedIds : [];
+        await chrome.storage.local.set({ [STORAGE_KEY_TOMBSTONES]: remoteTombstones });
+
+        await updateSyncMeta({ lastSyncTime: Date.now(), lastError: null });
+        return remoteSavedSpaces.length;
+      }, false);
+
+      setSyncStatus('synced');
+      return {
+        success: true,
+        message: `Restored ${restoredCount} spaces from Google Drive!`,
+      };
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to pull from Drive';
+      setSyncStatus('error', msg);
+      return { success: false, message: msg };
+    }
+  });
 }
 
 // ==========================================

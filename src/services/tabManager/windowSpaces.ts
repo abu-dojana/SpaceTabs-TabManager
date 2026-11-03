@@ -1,6 +1,12 @@
 import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
 import { decodeRealUrl, isSystemOrExtensionUrl } from '@/utils/urlFilter';
+import {
+  isSessionEmpty,
+  deleteUnsavedSession,
+  recoverOrphanedContent,
+  getUnsavedContentCount,
+} from '@/services/spaces/unsavedSessions';
 
 const SESSION_INIT_KEY = 'spacetabs_session_initialized';
 const SESSION_INIT_STATUS_KEY = 'spacetabs_session_init_status';
@@ -8,6 +14,13 @@ const PENDING_NEW_WINDOW_SPACE_KEY = 'pending_new_window_space';
 const PERSISTED_WINDOW_SPACES_KEY = 'spacetabs_persisted_window_spaces';
 let sessionInitPromise: Promise<void> | null = null;
 const ensureUnsavedLocks = new Map<number, Promise<string>>();
+
+async function withUnsavedLock<T>(windowId: number, fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== 'undefined' && 'locks' in navigator && navigator.locks?.request) {
+    return navigator.locks.request(`spacetabs-unsaved-win-${windowId}`, fn);
+  }
+  return fn();
+}
 
 /**
  * Reserves a space ID for a window about to be created via openSpaceInNewWindow,
@@ -45,8 +58,9 @@ export async function consumePendingNewWindowSpace(): Promise<string | null> {
 /**
  * Runs once per browser session (detected via chrome.storage.session) to:
  * 1. Clear stale chromeTabId and windowId values left over from prior browser sessions.
- * 2. Deduplicate any duplicate tab records inside unsaved spaces.
- * 3. Prune empty redundant unsaved spaces.
+ * 2. Restore saved Space bindings only when open tabs genuinely overlap (> 0 URL matches).
+ * 3. Recover any orphaned or '__unsaved__' notes, tasks, and resources into an Unsaved session.
+ * 4. Deduplicate duplicate tab records inside unsaved spaces and prune only truly empty unsaved spaces.
  */
 export async function ensureSessionInitialized(): Promise<void> {
   if (sessionInitPromise) {
@@ -120,8 +134,8 @@ export async function ensureSessionInitialized(): Promise<void> {
 
         let matchedSavedSpaceId: string | null = null;
 
-        // First, check persisted saved spaces from before the browser closed
-        let bestScore = -1;
+        // First, check persisted saved spaces from before the browser closed (require at least 1 URL overlap)
+        let bestScore = 0;
         for (const candidateId of persistedSavedSpaceIds) {
           if (claimedSavedSpaceIds.has(candidateId)) continue;
           const sTabs = await db.tabs.where('spaceId').equals(candidateId).toArray();
@@ -131,10 +145,7 @@ export async function ensureSessionInitialized(): Promise<void> {
               score++;
             }
           }
-          if (
-            score > bestScore ||
-            (persistedSavedSpaceIds.length === 1 && windows.length === 1)
-          ) {
+          if (score > bestScore) {
             bestScore = score;
             matchedSavedSpaceId = candidateId;
           }
@@ -191,6 +202,9 @@ export async function ensureSessionInitialized(): Promise<void> {
         await chrome.storage.local.set({ [PERSISTED_WINDOW_SPACES_KEY]: newPersistedMap });
       }
 
+      // Recover any '__unsaved__' or orphaned notes, tasks, and resources into an Unsaved session
+      await recoverOrphanedContent();
+
       // 3. Count how many copies of each URL are currently open in non-saved-space (Unsaved) windows
       const openUrlCounts = new Map<string, number>();
       for (const t of allOpenTabs) {
@@ -218,7 +232,9 @@ export async function ensureSessionInitialized(): Promise<void> {
           .sortBy('order');
 
         if (uTabs.length === 0) {
-          emptyUnsavedSpaceIds.push(uSpace.id);
+          if (await isSessionEmpty(uSpace.id)) {
+            emptyUnsavedSpaceIds.push(uSpace.id);
+          }
           continue;
         }
 
@@ -246,13 +262,13 @@ export async function ensureSessionInitialized(): Promise<void> {
 
         if (duplicateTabIds.length > 0) {
           await db.tabs.bulkDelete(duplicateTabIds);
-          if (duplicateTabIds.length === uTabs.length) {
+          if (duplicateTabIds.length === uTabs.length && (await isSessionEmpty(uSpace.id))) {
             emptyUnsavedSpaceIds.push(uSpace.id);
           }
         }
       }
 
-      // Prune empty unsaved spaces
+      // Prune only truly empty unsaved spaces (never delete an unsaved space that holds notes, tasks, or resources)
       if (emptyUnsavedSpaceIds.length > 0) {
         const allWindowsRestoredToSaved =
           windows.length > 0 && restoredSavedSpaceWindowIds.size === windows.length;
@@ -261,8 +277,10 @@ export async function ensureSessionInitialized(): Promise<void> {
           : emptyUnsavedSpaceIds.length === unsavedSpaces.length
           ? emptyUnsavedSpaceIds.slice(1)
           : emptyUnsavedSpaceIds;
-        if (toDelete.length > 0) {
-          await db.spaces.bulkDelete(toDelete);
+        for (const id of toDelete) {
+          if (await isSessionEmpty(id)) {
+            await deleteUnsavedSession(id);
+          }
         }
       }
 
@@ -370,7 +388,7 @@ export async function ensureWindowUnsavedSpace(
     return inFlight;
   }
 
-  const promise = (async () => {
+  const promise = withUnsavedLock(windowId, async () => {
     await ensureSessionInitialized();
 
     const existingSpaceId = await getWindowActiveSpaceId(windowId);
@@ -398,7 +416,8 @@ export async function ensureWindowUnsavedSpace(
     if (availableUnsavedList.length === 1) {
       chosenSpaceId = availableUnsavedList[0].id;
     } else if (availableUnsavedList.length > 1) {
-      // Find the unsaved space whose tabs best match the currently open tabs in this window
+      // Find the unsaved space whose tabs best match the currently open tabs in this window,
+      // prioritizing sessions that also hold notes, tasks, or resources.
       const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
       let windowTabs: chrome.tabs.Tab[] = [];
       try {
@@ -415,17 +434,28 @@ export async function ensureWindowUnsavedSpace(
 
       let bestSpace = availableUnsavedList[0];
       let bestScore = -1;
+      let bestContentCount = -1;
 
       for (const candidate of availableUnsavedList) {
-        const candidateTabs = await db.tabs.where('spaceId').equals(candidate.id).toArray();
+        const [candidateTabs, contentCount] = await Promise.all([
+          db.tabs.where('spaceId').equals(candidate.id).toArray(),
+          getUnsavedContentCount(candidate.id),
+        ]);
         let score = 0;
         for (const ct of candidateTabs) {
           if (windowUrls.has(decodeRealUrl(ct.url))) {
             score++;
           }
         }
-        if (score > bestScore || (score === bestScore && candidate.updatedAt > bestSpace.updatedAt)) {
+        if (
+          score > bestScore ||
+          (score === bestScore && contentCount > bestContentCount) ||
+          (score === bestScore &&
+            contentCount === bestContentCount &&
+            candidate.updatedAt > bestSpace.updatedAt)
+        ) {
           bestScore = score;
+          bestContentCount = contentCount;
           bestSpace = candidate;
         }
       }
@@ -465,7 +495,7 @@ export async function ensureWindowUnsavedSpace(
 
     await setWindowActiveSpaceId(windowId, newId);
     return newId;
-  })();
+  });
 
   ensureUnsavedLocks.set(windowId, promise);
   try {

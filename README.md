@@ -13,7 +13,7 @@
   <a href="https://chromewebstore.google.com/detail/aiajlcdplbpcfohgekcgafcpghgjojhh?utm_source=item-share-cb">
     <img src="https://img.shields.io/badge/Chrome%20Web%20Store-SpaceTabs-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
   </a>
-  <img src="https://img.shields.io/badge/Version-1.2.1-blue?style=for-the-badge" alt="Version 1.2.1" />
+  <img src="https://img.shields.io/badge/Version-1.2.2-blue?style=for-the-badge" alt="Version 1.2.2" />
   <img src="https://img.shields.io/badge/Manifest-V3-success?style=for-the-badge" alt="Manifest V3" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License" />
   <img src="https://img.shields.io/badge/Sync-Google%20Drive-34A853?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive Sync" />
@@ -73,7 +73,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 * **Zero-RAM Cold Restores:** Restoring a space with 50+ tabs loads lightweight dormant placeholders (`suspended.html`) consuming only ~1 MB of RAM each and zero network bandwidth until focused or clicked.
 * **Native Chrome Memory Discarding:** Automatically unloads memory from idle tabs using `chrome.tabs.discard()`, keeping tabs in place with full titles and favicons.
 * **Configurable Auto-Suspend:** Choose inactivity timeouts (15m, 30m, 1h, 2h) or disable auto-suspension.
-* **Domain Whitelisting:** Never suspend critical sites (e.g. YouTube, Google Meet, Slack, GitHub).
+* **Pinned, Active & Audible Tab Protection:** Automatically skips active tabs, pinned tabs, tabs playing audio, and internal browser/extension pages when suspending inactive tabs.
 
 ### ☁️ Google Drive Cloud Backup & Sync
 * **Direct Cloud Sync:** Bi-directionally sync your spaces, tabs, notes, tasks, and resource bookmarks directly to a dedicated `SpaceTabs_Data` folder in your personal Google Drive.
@@ -119,8 +119,8 @@ Install the official extension from the [Chrome Web Store](https://chromewebstor
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/abu-dojana/SpaceTabs-TabManager.git
-cd SpaceTabs-TabManager
+git clone https://github.com/abu-dojana/tab-manager.git
+cd tab-manager
 
 # 2. Install dependencies
 npm install

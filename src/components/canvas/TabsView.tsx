@@ -460,7 +460,7 @@ export const TabsView: React.FC = () => {
 
     const exportPayload = {
       app: 'SpaceTabs',
-      version: '1.2.1',
+      version: chrome.runtime?.getManifest?.()?.version || '1.2.2',
       exportedAt: new Date().toISOString(),
       space: {
         name: spaceName,
@@ -575,7 +575,13 @@ export const TabsView: React.FC = () => {
     const duplicateTabIds: string[] = [];
 
     for (const t of tabs) {
-      const normalized = decodeRealUrl(t.url).toLowerCase().trim();
+      const real = decodeRealUrl(t.url).trim();
+      let normalized = real;
+      try {
+        normalized = new URL(real).href;
+      } catch {
+        normalized = real;
+      }
       if (seenUrls.has(normalized)) {
         duplicateTabIds.push(t.id);
       } else {

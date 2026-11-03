@@ -11,6 +11,8 @@ import {
   consumePendingNewWindowSpace,
   getAllWindowSpaces,
   migrateLegacyUnsavedTabs,
+  isSessionEmpty,
+  deleteUnsavedSession,
 } from '@/services/tabManager';
 import {
   setupSuspensionAlarms,
@@ -103,6 +105,9 @@ export default defineBackground(() => {
           if (keep.index !== 0) {
             await chrome.tabs.move(keep.id, { index: 0 });
           }
+          if (activateIfCreated) {
+            await chrome.tabs.update(keep.id, { active: true });
+          }
         }
         for (const dup of duplicates) {
           if (dup.id) await chrome.tabs.remove(dup.id);
@@ -116,6 +121,9 @@ export default defineBackground(() => {
           }
           if (dash.index !== 0) {
             await chrome.tabs.move(dash.id, { index: 0 });
+          }
+          if (activateIfCreated) {
+            await chrome.tabs.update(dash.id, { active: true });
           }
         }
       }
@@ -139,6 +147,49 @@ export default defineBackground(() => {
           ensurePinnedIndexTab(windowId, activateIfCreated, retryCount + 1);
         }, 200);
       }
+    }
+  }
+
+  /**
+   * Focuses the pinned SpaceTabs Dashboard tab in the target normal browser window,
+   * creating and activating it if missing.
+   */
+  async function focusOrCreateDashboard(preferredWindowId?: number) {
+    try {
+      let winId = preferredWindowId;
+      if (winId) {
+        try {
+          const win = await chrome.windows.get(winId);
+          if (win.type !== 'normal') {
+            winId = undefined;
+          }
+        } catch {
+          winId = undefined;
+        }
+      }
+      if (!winId) {
+        try {
+          const lastWin = await chrome.windows.getLastFocused({ windowTypes: ['normal'] });
+          winId = lastWin.id;
+        } catch {
+          const wins = await chrome.windows.getAll({ windowTypes: ['normal'] });
+          winId = wins[0]?.id;
+        }
+      }
+      if (!winId) return;
+
+      const tabs = await chrome.tabs.query({ windowId: winId });
+      const dashTab = tabs.find((t) => isDashboardTab(t));
+
+      if (dashTab?.id) {
+        await chrome.tabs.update(dashTab.id, { active: true });
+        await chrome.windows.update(winId, { focused: true });
+      } else {
+        await ensurePinnedIndexTab(winId, true);
+        await chrome.windows.update(winId, { focused: true });
+      }
+    } catch (err) {
+      console.warn('[Background] Failed to focus dashboard:', err);
     }
   }
 
@@ -239,11 +290,8 @@ export default defineBackground(() => {
       const spaceId = await getWindowActiveSpaceId(windowId);
       if (spaceId) {
         const space = await db.spaces.get(spaceId);
-        if (space?.isUnsaved) {
-          const tabCount = await db.tabs.where('spaceId').equals(spaceId).count();
-          if (tabCount === 0) {
-            await db.spaces.delete(spaceId);
-          }
+        if (space?.isUnsaved && (await isSessionEmpty(spaceId))) {
+          await deleteUnsavedSession(spaceId);
         }
       }
       dashboardTabIds.delete(windowId);
@@ -349,11 +397,8 @@ export default defineBackground(() => {
             const winTabs = await chrome.tabs.query({ windowId: attachInfo.newWindowId });
             const nonDashTabs = winTabs.filter((t) => !t.pinned && !isDashboardTab(t));
             if (nonDashTabs.length === 1 && nonDashTabs[0].id === tabId) {
-              if (curWinSpaceId && curWinSpace?.isUnsaved) {
-                const count = await db.tabs.where('spaceId').equals(curWinSpaceId).count();
-                if (count === 0) {
-                  await db.spaces.delete(curWinSpaceId);
-                }
+              if (curWinSpaceId && curWinSpace?.isUnsaved && (await isSessionEmpty(curWinSpaceId))) {
+                await deleteUnsavedSession(curWinSpaceId);
               }
               await setWindowActiveSpaceId(attachInfo.newWindowId, sp.id);
             }
@@ -407,21 +452,25 @@ export default defineBackground(() => {
     }
   });
 
-  // 6. Keyboard Shortcut to focus Dashboard (Alt+Shift+W)
-  chrome.commands.onCommand.addListener(async (command) => {
+  // 6. Keyboard Shortcut (Alt+Shift+W), Toolbar Icon Click & Runtime Message to focus Dashboard
+  chrome.commands.onCommand.addListener(async (command, tab) => {
     if (command === 'focus-dashboard') {
-      const currentWin = await chrome.windows.getCurrent();
-      if (!currentWin.id) return;
-
-      const tabs = await chrome.tabs.query({ windowId: currentWin.id });
-      const dashTab = tabs.find((t) => t.url?.startsWith(DASHBOARD_URL));
-
-      if (dashTab?.id) {
-        await chrome.tabs.update(dashTab.id, { active: true });
-      } else {
-        await ensurePinnedIndexTab(currentWin.id);
-      }
+      await focusOrCreateDashboard(tab?.windowId);
     }
+  });
+
+  chrome.action?.onClicked?.addListener(async (tab) => {
+    await focusOrCreateDashboard(tab?.windowId);
+  });
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type === 'FOCUS_DASHBOARD') {
+      focusOrCreateDashboard(sender.tab?.windowId).finally(() => {
+        sendResponse({ ok: true });
+      });
+      return true;
+    }
+    return false;
   });
 
   // Immediate check on Service Worker startup / load unpacked

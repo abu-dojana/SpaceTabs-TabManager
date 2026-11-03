@@ -9,6 +9,7 @@ import {
   moveTabsToSpace,
   openSpaceInNewWindow,
   getAllWindowSpaces,
+  deleteUnsavedSession,
 } from '@/services/tabManager';
 import {
   Folder,
@@ -332,8 +333,7 @@ export const Sidebar: React.FC = () => {
 
   const handleDeleteUnsavedSession = async (spaceId: string) => {
     try {
-      await db.tabs.where('spaceId').equals(spaceId).delete();
-      await db.spaces.delete(spaceId);
+      await deleteUnsavedSession(spaceId);
       if (activeSpaceId === spaceId) {
         setActiveSpaceId(null);
       }
@@ -472,86 +472,100 @@ export const Sidebar: React.FC = () => {
     setActiveMenuSpaceId(null);
     const newSpaceId = crypto.randomUUID();
     const now = Date.now();
-    const count = await db.spaces.count();
 
-    await db.spaces.add({
-      id: newSpaceId,
-      name: `${space.name} (Copy)`,
-      icon: space.icon,
-      color: space.color,
-      description: space.description,
-      section: space.section,
-      order: count,
-      createdAt: now,
-      updatedAt: now,
-      isArchived: false,
-    });
-
-    const spaceTabs = await db.tabs.where('spaceId').equals(space.id).toArray();
-    for (const t of spaceTabs) {
-      await db.tabs.add({
-        id: crypto.randomUUID(),
-        spaceId: newSpaceId,
-        url: t.url,
-        title: t.title,
-        favIconUrl: t.favIconUrl,
-        order: t.order,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    const spaceNotes = await db.notes.where('spaceId').equals(space.id).toArray();
-    for (const n of spaceNotes) {
-      await db.notes.add({
-        id: crypto.randomUUID(),
-        spaceId: newSpaceId,
-        title: n.title,
-        content: n.content,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    const spaceTasks = await db.tasks.where('spaceId').equals(space.id).toArray();
-    for (const task of spaceTasks) {
-      await db.tasks.add({
-        id: crypto.randomUUID(),
-        spaceId: newSpaceId,
-        text: task.text,
-        completed: task.completed,
-        order: task.order,
-        dueDate: task.dueDate,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    const resSections = await db.resourceSections.where('spaceId').equals(space.id).toArray();
-    for (const sec of resSections) {
-      const newSecId = crypto.randomUUID();
-      await db.resourceSections.add({
-        id: newSecId,
-        spaceId: newSpaceId,
-        title: sec.title,
-        order: sec.order,
-        updatedAt: now,
-      });
-      const items = await db.resourceItems.where('sectionId').equals(sec.id).toArray();
-      for (const item of items) {
-        await db.resourceItems.add({
-          id: crypto.randomUUID(),
-          sectionId: newSecId,
-          title: item.title,
-          url: item.url,
-          favIconUrl: item.favIconUrl,
-          type: item.type,
-          order: item.order ?? 0,
+    await db.transaction(
+      'rw',
+      [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
+      async () => {
+        const count = await db.spaces.count();
+        await db.spaces.add({
+          id: newSpaceId,
+          name: `${space.name} (Copy)`,
+          icon: space.icon,
+          color: space.color,
+          description: space.description,
+          section: space.section,
+          order: count,
           createdAt: now,
           updatedAt: now,
+          isArchived: false,
         });
+
+        const spaceTabs = await db.tabs.where('spaceId').equals(space.id).toArray();
+        if (spaceTabs.length > 0) {
+          await db.tabs.bulkAdd(
+            spaceTabs.map((t) => ({
+              id: crypto.randomUUID(),
+              spaceId: newSpaceId,
+              url: t.url,
+              title: t.title,
+              favIconUrl: t.favIconUrl,
+              order: t.order,
+              createdAt: now,
+              updatedAt: now,
+            }))
+          );
+        }
+
+        const spaceNotes = await db.notes.where('spaceId').equals(space.id).toArray();
+        if (spaceNotes.length > 0) {
+          await db.notes.bulkAdd(
+            spaceNotes.map((n) => ({
+              id: crypto.randomUUID(),
+              spaceId: newSpaceId,
+              title: n.title,
+              content: n.content,
+              createdAt: now,
+              updatedAt: now,
+            }))
+          );
+        }
+
+        const spaceTasks = await db.tasks.where('spaceId').equals(space.id).toArray();
+        if (spaceTasks.length > 0) {
+          await db.tasks.bulkAdd(
+            spaceTasks.map((task) => ({
+              id: crypto.randomUUID(),
+              spaceId: newSpaceId,
+              text: task.text,
+              completed: task.completed,
+              order: task.order,
+              dueDate: task.dueDate,
+              createdAt: now,
+              updatedAt: now,
+            }))
+          );
+        }
+
+        const resSections = await db.resourceSections.where('spaceId').equals(space.id).toArray();
+        for (const sec of resSections) {
+          const newSecId = crypto.randomUUID();
+          await db.resourceSections.add({
+            id: newSecId,
+            spaceId: newSpaceId,
+            title: sec.title,
+            order: sec.order,
+            updatedAt: now,
+          });
+          const items = await db.resourceItems.where('sectionId').equals(sec.id).toArray();
+          if (items.length > 0) {
+            await db.resourceItems.bulkAdd(
+              items.map((item) => ({
+                id: crypto.randomUUID(),
+                sectionId: newSecId,
+                title: item.title,
+                url: item.url,
+                favIconUrl: item.favIconUrl,
+                type: item.type,
+                order: item.order ?? 0,
+                createdAt: now,
+                updatedAt: now,
+              }))
+            );
+          }
+        }
       }
-    }
+    );
   };
 
   const handleExportSidebarSpace = async (space: Space) => {
@@ -577,7 +591,7 @@ export const Sidebar: React.FC = () => {
 
     const exportPayload = {
       app: 'SpaceTabs',
-      version: '1.2.1',
+      version: chrome.runtime?.getManifest?.()?.version || '1.2.2',
       exportedAt: new Date().toISOString(),
       space: {
         name: space.name,
@@ -657,15 +671,21 @@ export const Sidebar: React.FC = () => {
       console.warn('Failed to record space tombstones:', e);
     }
 
-    await db.tabs.where('spaceId').equals(spaceId).delete();
-    await db.notes.where('spaceId').equals(spaceId).delete();
-    await db.tasks.where('spaceId').equals(spaceId).delete();
-    const secs = await db.resourceSections.where('spaceId').equals(spaceId).toArray();
-    for (const s of secs) {
-      await db.resourceItems.where('sectionId').equals(s.id).delete();
-    }
-    await db.resourceSections.where('spaceId').equals(spaceId).delete();
-    await db.spaces.delete(spaceId);
+    await db.transaction(
+      'rw',
+      [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
+      async () => {
+        await db.tabs.where('spaceId').equals(spaceId).delete();
+        await db.notes.where('spaceId').equals(spaceId).delete();
+        await db.tasks.where('spaceId').equals(spaceId).delete();
+        const secs = await db.resourceSections.where('spaceId').equals(spaceId).toArray();
+        for (const s of secs) {
+          await db.resourceItems.where('sectionId').equals(s.id).delete();
+        }
+        await db.resourceSections.where('spaceId').equals(spaceId).delete();
+        await db.spaces.delete(spaceId);
+      }
+    );
 
     setDeleteConfirmSpace(null);
     setActiveMenuSpaceId(null);

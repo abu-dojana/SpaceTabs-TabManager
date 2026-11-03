@@ -64,3 +64,14 @@ window.addEventListener('focus', () => {
   }
 });
 
+// 4. Support Alt+Shift+W on suspended tabs even if Chrome's command binding is unassigned
+window.addEventListener('keydown', (e) => {
+  if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyW') {
+    e.preventDefault();
+    try {
+      chrome.runtime.sendMessage({ type: 'FOCUS_DASHBOARD' });
+    } catch {
+      // Ignore if outside extension runtime
+    }
+  }
+});
