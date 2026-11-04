@@ -201,7 +201,7 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className={`border-b px-4 sm:px-6 pt-4 pb-0 select-none backdrop-blur-md transition-colors relative z-40 ${
+      className={`dashboard-header border-b px-4 sm:px-6 pt-4 pb-0 select-none backdrop-blur-md transition-colors relative z-40 ${
         isLight
           ? 'border-slate-200/90 bg-white/95'
           : 'border-slate-800 bg-slate-950/80'

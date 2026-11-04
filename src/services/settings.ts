@@ -20,8 +20,8 @@ import {
   syncNow,
 } from './driveSync';
 
-export type DarkPalette = 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso';
-export type LightPalette = 'snow' | 'paper' | 'zinc' | 'sky' | 'mint';
+export type DarkPalette = 'slate' | 'midnight' | 'obsidian' | 'indigo' | 'forest' | 'espresso';
+export type LightPalette = 'snow' | 'paper' | 'zinc' | 'sky' | 'mint' | 'sakura';
 
 export interface UserSettings {
   autoSuspendEnabled: boolean;

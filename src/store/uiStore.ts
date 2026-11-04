@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { DarkPalette, LightPalette } from '@/services/settings';
 
 interface UIState {
   activeSpaceId: string | null;     // null = Unsaved view
@@ -11,8 +12,8 @@ interface UIState {
   sidebarTheme: 'dark' | 'light';
   dashboardTheme: 'dark' | 'light';
   accentColor: string;
-  darkPalette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso';
-  lightPalette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint';
+  darkPalette: DarkPalette;
+  lightPalette: LightPalette;
   sidebarWidth: number;
   patreonUrl: string;
   isSettingsOpen: boolean;
@@ -29,8 +30,8 @@ interface UIState {
   setSidebarTheme: (theme: 'dark' | 'light') => void;
   setDashboardTheme: (theme: 'dark' | 'light') => void;
   setAccentColor: (color: string) => void;
-  setDarkPalette: (palette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso') => void;
-  setLightPalette: (palette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint') => void;
+  setDarkPalette: (palette: DarkPalette) => void;
+  setLightPalette: (palette: LightPalette) => void;
   setSidebarWidth: (width: number) => void;
   setPatreonUrl: (url: string) => void;
   setSettingsOpen: (

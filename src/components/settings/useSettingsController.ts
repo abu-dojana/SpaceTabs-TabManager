@@ -11,6 +11,8 @@ import {
   purgeStaleUnsavedTabs,
   suspendAllInactiveNow,
   type UserSettings,
+  type DarkPalette,
+  type LightPalette,
   DEFAULT_SETTINGS,
 } from '@/services/settings';
 import {
@@ -173,18 +175,14 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     showToast('Accent color updated');
   };
 
-  const handleDarkPaletteChange = async (
-    palette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso'
-  ) => {
+  const handleDarkPaletteChange = async (palette: DarkPalette) => {
     setDarkPalette(palette);
     const updated = await updateUserSettings({ darkPalette: palette });
     setSettings(updated);
     showToast(`Dark palette set to ${palette}`);
   };
 
-  const handleLightPaletteChange = async (
-    palette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint'
-  ) => {
+  const handleLightPaletteChange = async (palette: LightPalette) => {
     setLightPalette(palette);
     const updated = await updateUserSettings({ lightPalette: palette });
     setSettings(updated);

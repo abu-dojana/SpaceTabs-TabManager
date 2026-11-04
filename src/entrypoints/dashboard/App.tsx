@@ -177,6 +177,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div
+        id="app-root"
+        data-theme={dashboardTheme}
         data-dark-palette={darkPalette}
         data-light-palette={lightPalette}
         style={dynamicStyles}
@@ -254,7 +256,7 @@ export default function App() {
 
           {/* Bottom Footer: Support Me! */}
           <footer
-            className={`py-2 px-6 border-t flex items-center justify-between text-xs select-none flex-shrink-0 transition-colors ${
+            className={`dashboard-footer py-2 px-6 border-t flex items-center justify-between text-xs select-none flex-shrink-0 transition-colors ${
               dashboardTheme === 'light'
                 ? 'bg-white/80 border-slate-200 text-slate-500'
                 : 'bg-slate-950/60 border-slate-800/80 text-slate-400'

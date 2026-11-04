@@ -10,26 +10,23 @@ import {
   Pipette,
 } from 'lucide-react';
 import { ThemeOptionCard } from '../ui/ThemeOptionCard';
+import type { DarkPalette, LightPalette } from '@/services/settings';
 
 interface AppearanceTabProps {
   isLight: boolean;
   sidebarTheme: 'dark' | 'light';
   dashboardTheme: 'dark' | 'light';
   accentColor: string;
-  darkPalette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso';
-  lightPalette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint';
+  darkPalette: DarkPalette;
+  lightPalette: LightPalette;
   sidebarWidth: number;
   onApplyPreset: (sb: 'dark' | 'light', dbTheme: 'dark' | 'light') => void;
   onSidebarThemeChange: (theme: 'dark' | 'light') => void;
   onSidebarWidthChange: (width: number) => void;
   onDashboardThemeChange: (theme: 'dark' | 'light') => void;
   onAccentColorChange: (color: string) => void;
-  onDarkPaletteChange: (
-    palette: 'slate' | 'midnight' | 'indigo' | 'forest' | 'espresso'
-  ) => void;
-  onLightPaletteChange: (
-    palette: 'snow' | 'paper' | 'zinc' | 'sky' | 'mint'
-  ) => void;
+  onDarkPaletteChange: (palette: DarkPalette) => void;
+  onLightPaletteChange: (palette: LightPalette) => void;
 }
 
 const ACCENT_PRESETS = [
@@ -45,18 +42,20 @@ const ACCENT_PRESETS = [
 
 const DARK_PALETTES = [
   { id: 'slate', name: 'Deep Slate', bg: '#0b1329', card: '#0f172a', desc: 'Classic navy' },
-  { id: 'midnight', name: 'Midnight', bg: '#09090b', card: '#121215', desc: 'OLED black' },
-  { id: 'indigo', name: 'Space Indigo', bg: '#0b0e20', card: '#121633', desc: 'Cosmic galaxy' },
-  { id: 'forest', name: 'Forest Dark', bg: '#07150f', card: '#0d2218', desc: 'Pine charcoal' },
-  { id: 'espresso', name: 'Warm Espresso', bg: '#151210', card: '#201c19', desc: 'Rich cocoa' },
+  { id: 'midnight', name: 'Midnight OLED', bg: '#000000', card: '#08080a', desc: 'True #000000 OLED' },
+  { id: 'obsidian', name: 'Obsidian Charcoal', bg: '#16181d', card: '#20242c', desc: 'Matte charcoal' },
+  { id: 'indigo', name: 'Space Indigo', bg: '#0e142e', card: '#151d42', desc: 'Cosmic galaxy' },
+  { id: 'forest', name: 'Forest Dark', bg: '#0b1a13', card: '#112a1f', desc: 'Pine charcoal' },
+  { id: 'espresso', name: 'Warm Espresso', bg: '#1c1511', card: '#281e19', desc: 'Rich cocoa' },
 ] as const;
 
 const LIGHT_PALETTES = [
   { id: 'snow', name: 'Pure Snow', bg: '#f8fafc', card: '#ffffff', desc: 'Crisp white' },
-  { id: 'paper', name: 'Warm Paper', bg: '#f7f5ef', card: '#fdfcf9', desc: 'Cozy cream' },
+  { id: 'paper', name: 'Warm Paper', bg: '#f7f5ef', card: '#ffffff', desc: 'Cozy cream' },
   { id: 'zinc', name: 'Cool Zinc', bg: '#f4f4f5', card: '#ffffff', desc: 'Modern silver' },
   { id: 'sky', name: 'Soft Sky', bg: '#f0f7ff', card: '#ffffff', desc: 'Airy blue' },
   { id: 'mint', name: 'Fresh Mint', bg: '#f0fdf4', card: '#ffffff', desc: 'Calming sage' },
+  { id: 'sakura', name: 'Sakura Blossom', bg: '#fff0f3', card: '#ffffff', desc: 'Cherry blossom' },
 ] as const;
 
 export const AppearanceTab: React.FC<AppearanceTabProps> = ({
@@ -366,7 +365,7 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = ({
             Select your preferred dark surface tone. Applies when dark mode is enabled.
           </p>
 
-          <div className="grid grid-cols-5 gap-2.5">
+          <div className="grid grid-cols-3 gap-2.5">
             {DARK_PALETTES.map((pal) => {
               const isSelected = (darkPalette || 'slate') === pal.id;
               return (
@@ -427,7 +426,7 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = ({
             Select your preferred light surface tone. Applies when light mode is enabled.
           </p>
 
-          <div className="grid grid-cols-5 gap-2.5">
+          <div className="grid grid-cols-3 gap-2.5">
             {LIGHT_PALETTES.map((pal) => {
               const isSelected = (lightPalette || 'snow') === pal.id;
               return (

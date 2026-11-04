@@ -16,6 +16,11 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
     title: 'Version 1.3.0 — Unified Cross-Space Search, Persistent Sections & Workspace Polish',
     items: [
       {
+        lead: 'Obsidian Charcoal, Sakura Blossom & True OLED Themes:',
+        description:
+          'Added Obsidian Charcoal dark palette and Sakura Blossom light palette. Refined Midnight OLED to true #000000 pitch-black across sidebar, header, canvas, and cards, and fixed full-workspace theme synchronization across Sidebar and Canvas.',
+      },
+      {
         lead: 'Unified Cross-Space Search with Filters:',
         description:
           'Search across Tabs, Notes, Tasks, and Resources in all Spaces and Unsaved sessions from the header. Includes instant filter pills (All, Tabs, Notes, Tasks, Resources), match counts, Space badges, and highlighted search keywords.',

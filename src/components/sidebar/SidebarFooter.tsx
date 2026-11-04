@@ -11,7 +11,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
   onOpenSettings,
 }) => {
   return (
-    <div className="p-2 border-t border-slate-800/80 bg-slate-950/60 flex-shrink-0 space-y-1">
+    <div className="sidebar-footer p-2 border-t border-slate-800/80 bg-slate-950/60 flex-shrink-0 space-y-1">
       {/* Support Creator Button */}
       <button
         onClick={onOpenSupport}
