@@ -106,7 +106,7 @@ export const ContactTab: React.FC<ContactTabProps> = ({ isLight, onCopyBkash }) 
                   <span>SupportKori (Bangladesh)</span>
                 </div>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 border border-rose-500/20">
-                  bKash / Nagad / Rocket
+                  bKash / Nagad / Rocket / Card
                 </span>
               </div>
               <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
@@ -188,7 +188,7 @@ export const ContactTab: React.FC<ContactTabProps> = ({ isLight, onCopyBkash }) 
                   <span>Patreon</span>
                 </div>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/20">
-                  International / Payoneer
+                  Buy me a Coffee
                 </span>
               </div>
               <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>

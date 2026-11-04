@@ -263,13 +263,13 @@ export default function App() {
                 : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
             }`}
           >
-            <div className="flex items-center gap-1.5 text-[11px] opacity-75">
-              <span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] opacity-75">
                 SpaceTabs — Tab Manager • Free, Unlimited & Local-First Workspace •
               </span>
               <button
                 onClick={() => setSettingsOpen(true, 'about', 'whats-new')}
-                className="hover:underline hover:opacity-100 transition-opacity cursor-pointer"
+                className="text-[11px] font-semibold text-blue-500 hover:text-blue-400 hover:underline transition-colors cursor-pointer"
                 title="View What's New in SpaceTabs"
               >
                 v{getAppVersion()}
