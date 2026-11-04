@@ -265,7 +265,7 @@ export default function App() {
           >
             <div className="flex items-center gap-2">
               <span className="text-[11px] opacity-75">
-                SpaceTabs v{getAppVersion()} — Tab Manager • Free, Unlimited & Local-First Workspace
+                SpaceTabs — Tab Manager • Free, Unlimited & Local-First Workspace • v{getAppVersion()}
               </span>
             </div>
 

@@ -51,11 +51,11 @@ const DARK_PALETTES = [
 
 const LIGHT_PALETTES = [
   { id: 'snow', name: 'Pure Snow', bg: '#f8fafc', card: '#ffffff', desc: 'Crisp white' },
-  { id: 'paper', name: 'Warm Paper', bg: '#f2eee3', card: '#faf8f4', desc: 'Cozy cream' },
-  { id: 'zinc', name: 'Cool Zinc', bg: '#ececee', card: '#f8f8f9', desc: 'Modern silver' },
-  { id: 'sky', name: 'Soft Sky', bg: '#e6f2fe', card: '#f4f9ff', desc: 'Airy blue' },
-  { id: 'mint', name: 'Fresh Mint', bg: '#e8fced', card: '#f4fcf6', desc: 'Calming sage' },
-  { id: 'sakura', name: 'Sakura Blossom', bg: '#ffe5ea', card: '#fff5f8', desc: 'Cherry blossom' },
+  { id: 'paper', name: 'Warm Paper', bg: '#f7f5ef', card: '#ffffff', desc: 'Cozy cream' },
+  { id: 'zinc', name: 'Cool Zinc', bg: '#f4f4f5', card: '#ffffff', desc: 'Modern silver' },
+  { id: 'sky', name: 'Soft Sky', bg: '#f0f7ff', card: '#ffffff', desc: 'Airy blue' },
+  { id: 'mint', name: 'Fresh Mint', bg: '#f0fdf4', card: '#ffffff', desc: 'Calming sage' },
+  { id: 'sakura', name: 'Sakura Blossom', bg: '#fff0f3', card: '#ffffff', desc: 'Cherry blossom' },
 ] as const;
 
 export const AppearanceTab: React.FC<AppearanceTabProps> = ({
