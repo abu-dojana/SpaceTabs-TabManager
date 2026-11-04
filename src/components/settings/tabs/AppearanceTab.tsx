@@ -34,6 +34,7 @@ const ACCENT_PRESETS = [
   { name: 'Royal Indigo', hex: '#6366f1' },
   { name: 'Violet Purple', hex: '#8b5cf6' },
   { name: 'Emerald Green', hex: '#10b981' },
+  { name: 'Sakura Blossom', hex: '#ec4899' },
   { name: 'Crimson Rose', hex: '#f43f5e' },
   { name: 'Amber Gold', hex: '#f59e0b' },
   { name: 'Ocean Cyan', hex: '#06b6d4' },

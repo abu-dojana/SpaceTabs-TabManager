@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Settings, CheckCircle2 } from 'lucide-react';
+import { Heart, Settings } from 'lucide-react';
 
 interface SidebarFooterProps {
   onOpenSupport: () => void;
@@ -32,20 +32,11 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
       {/* Settings Button */}
       <button
         onClick={onOpenSettings}
-        className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition group border border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 hover:border-slate-800/80 cursor-pointer"
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition group border border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900/80 hover:border-slate-800/80 cursor-pointer"
         title="Open Settings & Preferences"
       >
-        <div className="flex items-center gap-2.5">
-          <Settings className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition" />
-          <span className="font-semibold text-slate-300 group-hover:text-white">Settings</span>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <span className="text-emerald-500 flex items-center gap-1 text-[11px] font-medium">
-            <CheckCircle2 className="w-3 h-3" />
-            Ready
-          </span>
-        </div>
+        <Settings className="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition" />
+        <span className="font-semibold text-slate-300 group-hover:text-white">Settings</span>
       </button>
     </div>
   );
