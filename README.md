@@ -92,9 +92,28 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 * **Global Search:** Fast fuzzy search across all spaces, open tabs, notes, and resource items.
 
 ### 🎨 Themes & Customization
-* **3 Theme Modes:** Split (Dark sidebar + Light canvas), All Dark, or All Light.
-* **Accent Colors:** Crimson Rose, Indigo Blue, Emerald, Violet, Amber, Cyan.
+* **Independent Sidebar & Canvas Modes:** Choose between **Split Mode** (Dark sidebar + Light canvas), **All Dark**, or **All Light**.
+* **14 Curated Surface Palettes:**
+  * **7 Dark Mode Palettes:**
+    * **Midnight OLED:** True `#000000` pitch black across sidebar, canvas, header, and cards for maximum OLED battery savings.
+    * **Obsidian Charcoal:** Minimalist matte neutral charcoal (`#16181d` sidebar / `#20242c` cards).
+    * **Space Indigo:** Cosmic galaxy violet-indigo night sky (`#13102d` / `#1c183f` with `#362e6e` borders).
+    * **Purple Space:** Deep interstellar violet space with vivid ultraviolet borders (`#1f0430` / `#310047` / `#660094`).
+    * **Deep Slate:** Classic maritime navy blue (`#0b1329` / `#0f172a` with `#1e293b` borders).
+    * **Forest Dark:** Rich pine charcoal and calming deep emerald tones (`#0b1a13` / `#112a1f`).
+    * **Warm Espresso:** Rich cocoa coffee tones (`#1c1511` / `#281e19`).
+  * **7 Light Mode Palettes:**
+    * **Pure Snow:** Minimalist crisp white and subtle slate borders.
+    * **Sakura Blossom:** Soft cherry blossom pastel pink canvas (`#fff0f3`) with crisp white cards.
+    * **Purple Serenity:** Calming soft lavender mist canvas (`#f7f3fa`) with crisp white cards.
+    * **Fresh Mint:** Calming sage green canvas (`#f0fdf4`) with crisp white cards.
+    * **Soft Sky:** Airy celestial blue canvas (`#f0f7ff`) with crisp white cards.
+    * **Warm Paper:** Cozy cream and warm book texture (`#f7f5ef`).
+    * **Cool Zinc:** Modern architectural silver (`#f4f4f5`).
+* **Full-Frame Theme Consistency:** Synchronized palette coloring across Sidebar, Header, Canvas, and Footer. In all light themes, cards maintain pure white (`#ffffff`) with themed borders and shadows for maximum contrast and readability.
+* **9 Accent Color Presets + Custom Picker:** Sakura Blossom, Ocean Blue, Royal Indigo, Violet Purple, Emerald Green, Crimson Rose, Amber Gold, Ocean Cyan, and Sunset Orange, plus custom hex color picker.
 * **Adjustable Sidebar Width:** Default (260px), Medium (320px), and Wide (380px) for long space titles.
+* **Direct Changelog Access:** Clickable dynamic version badge in the footer linking directly to release notes and what's new.
 * **Auto-Pinned Index Dashboard:** Always accessible at Tab 0 or via shortcut `Alt + Shift + W`.
 
 ---
@@ -145,11 +164,11 @@ npm run build
 
 ## 💖 Support the Developer
 
-SpaceTabs is free, open-source, and developed independently. If it helps you stay organized and saves your RAM, consider supporting development:
+SpaceTabs is free, open-source, and developed independently with zero paywalls. If it helps you stay organized and saves your RAM, consider supporting development:
 
-- ☕ **Patreon:** [patreon.com/abudojana](https://patreon.com/abudojana)
-- 🇧🇩 **SupportKori (bKash):** [supportkori.com/abudojana](https://www.supportkori.com/abudojana)
-- ☕ **SociaBuzz:** [sociabuzz.com/abudojana/tribe](https://sociabuzz.com/abudojana/tribe)
+- 🇧🇩 **SupportKori (Bangladesh):** [supportkori.com/abudojana](https://www.supportkori.com/abudojana) — Donate via bKash, Nagad, Rocket, or local debit/credit cards.
+- ☕ **Patreon / Buy me a Coffee:** [patreon.com/abudojana](https://patreon.com/abudojana) — Support monthly or one-time via international credit/debit cards.
+- ☕ **SociaBuzz:** [sociabuzz.com/abudojana/tribe](https://sociabuzz.com/abudojana/tribe) — Quick global tips and tribe support.
 - ⭐ **GitHub:** Star this repo and follow [@abu-dojana](https://github.com/abu-dojana)
 
 ---
