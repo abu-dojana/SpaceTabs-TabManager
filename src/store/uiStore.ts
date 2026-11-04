@@ -18,6 +18,7 @@ interface UIState {
   patreonUrl: string;
   isSettingsOpen: boolean;
   settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact';
+  settingsScrollTarget: string | null;
   setActiveSpaceId: (id: string | null) => void;
   setActiveView: (view: 'tabs' | 'resources' | 'notes' | 'tasks' | 'chat') => void;
   setPendingNoteId: (id: string | null) => void;
@@ -36,7 +37,8 @@ interface UIState {
   setPatreonUrl: (url: string) => void;
   setSettingsOpen: (
     open: boolean,
-    tab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact'
+    tab?: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact',
+    scrollTarget?: string | null
   ) => void;
 }
 
@@ -57,6 +59,7 @@ export const useUIStore = create<UIState>((set) => ({
   patreonUrl: 'https://www.patreon.com/abudojana',
   isSettingsOpen: false,
   settingsTab: 'general',
+  settingsScrollTarget: null,
   setPatreonUrl: (url) => set({ patreonUrl: url }),
 
   setActiveSpaceId: (id) =>
@@ -83,9 +86,10 @@ export const useUIStore = create<UIState>((set) => ({
   setDarkPalette: (palette) => set({ darkPalette: palette }),
   setLightPalette: (palette) => set({ lightPalette: palette }),
   setSidebarWidth: (width) => set({ sidebarWidth: width }),
-  setSettingsOpen: (open, tab) =>
+  setSettingsOpen: (open, tab, scrollTarget = null) =>
     set((state) => ({
       isSettingsOpen: open,
       settingsTab: tab ?? (open ? state.settingsTab : 'general'),
+      settingsScrollTarget: open ? (scrollTarget ?? null) : null,
     })),
 }));

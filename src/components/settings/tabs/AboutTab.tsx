@@ -15,13 +15,25 @@ interface AboutTabProps {
   isLight: boolean;
   accentColor: string;
   onNavigateContact: () => void;
+  scrollTarget?: string | null;
 }
 
 export const AboutTab: React.FC<AboutTabProps> = ({
   isLight,
   accentColor,
   onNavigateContact,
+  scrollTarget,
 }) => {
+  React.useEffect(() => {
+    if (scrollTarget === 'whats-new') {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('whats-new-section');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollTarget]);
+
   return (
     <div className="space-y-5 animate-in fade-in duration-100">
       <div
@@ -180,6 +192,7 @@ export const AboutTab: React.FC<AboutTabProps> = ({
 
       {/* What's New / Release Changelog */}
       <div
+        id="whats-new-section"
         className={`p-5 rounded-2xl border space-y-4 ${
           isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950/70 border-slate-800'
         }`}

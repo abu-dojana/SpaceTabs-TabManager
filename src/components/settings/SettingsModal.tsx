@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { type SettingsModalProps, type SettingsTabId } from './settingsTabs';
 import { useSettingsController } from './useSettingsController';
+import { useUIStore } from '@/store/uiStore';
 import { SettingsToast } from './ui/SettingsToast';
 import { GeneralTab } from './tabs/GeneralTab';
 import { AppearanceTab } from './tabs/AppearanceTab';
@@ -44,6 +45,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   initialTab = 'general',
 }) => {
   const c = useSettingsController(isOpen, initialTab);
+  const { settingsScrollTarget } = useUIStore();
 
   if (!isOpen) return null;
 
@@ -237,6 +239,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 isLight={c.isLight}
                 accentColor={c.accentColor}
                 onNavigateContact={() => c.setActiveTab('contact')}
+                scrollTarget={settingsScrollTarget}
               />
             )}
 

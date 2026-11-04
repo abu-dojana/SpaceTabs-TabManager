@@ -263,23 +263,30 @@ export default function App() {
                 : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <span className="text-[11px] opacity-75">
-                SpaceTabs — Tab Manager • Free, Unlimited & Local-First Workspace • v{getAppVersion()}
+                SpaceTabs — Tab Manager • Free, Unlimited & Local-First Workspace •
               </span>
+              <button
+                onClick={() => setSettingsOpen(true, 'about', 'whats-new')}
+                className="text-[11px] font-semibold text-blue-500 hover:text-blue-400 hover:underline transition-colors cursor-pointer"
+                title="View What's New in SpaceTabs"
+              >
+                v{getAppVersion()}
+              </button>
             </div>
 
             <button
               onClick={() => setSettingsOpen(true, 'contact')}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition shadow-md group cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition border group cursor-pointer ${
                 dashboardTheme === 'light'
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30 hover:shadow-emerald-500/40'
+                  ? 'border-emerald-600/35 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600'
+                  : 'border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/70'
               }`}
               title="Support Abu Dojana (SupportKori, bKash, Patreon, SociaBuzz)"
             >
-              <Heart className="w-3.5 h-3.5 fill-white text-white group-hover:scale-110 transition-transform" />
-              <span>Support Me!</span>
+              <Heart className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500/15 group-hover:fill-emerald-500 transition-all group-hover:scale-110" />
+              <span>Support Creator</span>
             </button>
           </footer>
         </main>
