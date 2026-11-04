@@ -961,46 +961,46 @@ input[type="checkbox"]:indeterminate,
   background-color: #382a23 !important;
 }
 
-/* Purple Space (Cosmic Violet / Deep Interstellar) */
+/* Purple Space (Cosmic Violet / Deep Purple Space) */
 #app-root[data-dark-palette="purplespace"] {
-  background-color: #310047 !important;
+  background-color: #160223 !important;
 }
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] aside,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .bg-slate-950,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .sidebar-footer,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .bg-slate-950\/60,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .bg-slate-950\/80 {
-  background-color: #660094 !important;
-  border-color: #9614d0 !important;
+  background-color: #1f0430 !important;
+  border-color: #660094 !important;
 }
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .bg-slate-900,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .bg-slate-900\/95,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .bg-slate-900\/40,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .bg-slate-800 {
-  background-color: #55007c !important;
-  border-color: #9614d0 !important;
+  background-color: #310047 !important;
+  border-color: #660094 !important;
 }
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .hover\:bg-slate-900:hover,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .hover\:bg-slate-800:hover,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .hover\:bg-slate-900\/60:hover {
-  background-color: #bb44f0 !important;
+  background-color: #470b67 !important;
 }
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .border-slate-800,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .border-slate-800\/80,
 [data-dark-palette="purplespace"] [data-sidebar-theme="dark"] .border-slate-700 {
-  border-color: #9614d0 !important;
+  border-color: #660094 !important;
 }
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"],
 [data-dark-palette="purplespace"] main[data-dashboard-theme="dark"],
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"].bg-slate-900\/40 {
-  background-color: #310047 !important;
+  background-color: #160223 !important;
 }
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] header,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .dashboard-header,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] footer,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .dashboard-footer {
-  background-color: #660094 !important;
-  border-color: #9614d0 !important;
+  background-color: #1f0430 !important;
+  border-color: #660094 !important;
 }
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .tab-manager-card,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .rounded-xl.border,
@@ -1016,16 +1016,8 @@ input[type="checkbox"]:indeterminate,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .bg-slate-950\/50,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .bg-slate-950\/60,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .bg-slate-950\/80 {
-  background-color: #d16aff !important;
-  border-color: #9614d0 !important;
-}
-[data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .tab-manager-card,
-[data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .tab-manager-card * {
-  color: #1a0029 !important;
-}
-[data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .tab-manager-card input,
-[data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .tab-manager-card textarea {
-  color: #1a0029 !important;
+  background-color: #310047 !important;
+  border-color: #660094 !important;
 }
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .border-slate-800,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .border-slate-800\/50,
@@ -1033,7 +1025,7 @@ input[type="checkbox"]:indeterminate,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .border-slate-800\/80,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .border-slate-700,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #9614d0 !important;
+  border-color: #660094 !important;
 }
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .hover\:bg-slate-900:hover,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .hover\:bg-slate-900\/60:hover,
@@ -1042,7 +1034,7 @@ input[type="checkbox"]:indeterminate,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .hover\:bg-slate-700:hover,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .bg-slate-800,
 [data-dark-palette="purplespace"] [data-dashboard-theme="dark"] .bg-slate-800\/50 {
-  background-color: #bb44f0 !important;
+  background-color: #470b67 !important;
 }
 
 /* =========================================================================
@@ -1401,48 +1393,38 @@ input[type="checkbox"]:indeterminate,
 
 /* Purple Serenity (Calming Lilac / Soft Lavender) */
 #app-root[data-light-palette="serenity"] {
-  background-color: #ab8cc1 !important;
+  background-color: #f7f3fa !important;
 }
 [data-light-palette="serenity"] [data-sidebar-theme="light"] aside,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .bg-slate-950,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .sidebar-footer,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .bg-slate-950\/60,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .bg-slate-950\/80 {
-  background-color: #7f5d99 !important;
-  border-color: #633083 !important;
-}
-[data-light-palette="serenity"] [data-sidebar-theme="light"] aside *,
-[data-light-palette="serenity"] [data-sidebar-theme="light"] .sidebar-footer * {
-  color: #ffffff !important;
+  background-color: #f0e8f7 !important;
+  border-color: #c8addb !important;
 }
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .border-slate-800,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .border-slate-800\/80,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .border-slate-700,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .border-slate-200 {
-  border-color: #633083 !important;
+  border-color: #c8addb !important;
 }
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .bg-slate-900\/95,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .bg-slate-900 {
-  background-color: #9e7eb5 !important;
-  border-color: #633083 !important;
+  background-color: #ffffff !important;
+  border-color: #c8addb !important;
 }
 [data-light-palette="serenity"] [data-dashboard-theme="light"],
 [data-light-palette="serenity"] main[data-dashboard-theme="light"],
 [data-light-palette="serenity"] [data-dashboard-theme="light"].bg-slate-900\/40 {
-  background-color: #ab8cc1 !important;
+  background-color: #f7f3fa !important;
 }
 [data-light-palette="serenity"] [data-dashboard-theme="light"] header,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .dashboard-header,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] footer,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .dashboard-footer {
-  background-color: #7f5d99 !important;
-  border-color: #633083 !important;
-}
-[data-light-palette="serenity"] [data-dashboard-theme="light"] header *,
-[data-light-palette="serenity"] [data-dashboard-theme="light"] .dashboard-header *,
-[data-light-palette="serenity"] [data-dashboard-theme="light"] footer *,
-[data-light-palette="serenity"] [data-dashboard-theme="light"] .dashboard-footer * {
-  color: #ffffff !important;
+  background-color: #f0e8f7 !important;
+  border-color: #c8addb !important;
 }
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .tab-manager-card,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .rounded-xl.border,
@@ -1458,12 +1440,8 @@ input[type="checkbox"]:indeterminate,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .bg-slate-950\/50,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .bg-slate-950\/60,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .bg-slate-950\/80 {
-  background-color: #c8addb !important;
-  border-color: #633083 !important;
-}
-[data-light-palette="serenity"] [data-dashboard-theme="light"] .tab-manager-card *,
-[data-light-palette="serenity"] [data-dashboard-theme="light"] .tab-manager-card {
-  color: #240a38 !important;
+  background-color: #ffffff !important;
+  border-color: #c8addb !important;
 }
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .border-slate-800,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .border-slate-800\/40,
@@ -1472,7 +1450,7 @@ input[type="checkbox"]:indeterminate,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .border-slate-800\/80,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .border-slate-700,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .divide-slate-800\/50 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #633083 !important;
+  border-color: #c8addb !important;
 }
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .hover\:bg-slate-900:hover,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .hover\:bg-slate-900\/60:hover,
@@ -1486,5 +1464,5 @@ input[type="checkbox"]:indeterminate,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .hover\:bg-slate-800:hover,
 [data-light-palette="serenity"] [data-sidebar-theme="light"] .hover\:bg-slate-900\/60:hover,
 [data-light-palette="serenity"] [data-dashboard-theme="light"] .bg-slate-100 {
-  background-color: #9e7eb5 !important;
+  background-color: #ebdff5 !important;
 }
