@@ -21,6 +21,7 @@ import {
 import { getUserSettings } from '@/services/settings';
 import { hexToRgba, adjustBrightness } from '@/utils/color';
 import { getHostWindowId } from '@/utils/chromeWindow';
+import { getAppVersion } from '@/utils/appVersion';
 import { useHydrateUiFromSettings } from '@/hooks/useHydrateUiFromSettings';
 import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink, MessageSquare } from 'lucide-react';
 
@@ -264,7 +265,7 @@ export default function App() {
           >
             <div className="flex items-center gap-2">
               <span className="text-[11px] opacity-75">
-                SpaceTabs — Tab Manager • Free, Unlimited & Local-First Workspace
+                SpaceTabs v{getAppVersion()} — Tab Manager • Free, Unlimited & Local-First Workspace
               </span>
             </div>
 

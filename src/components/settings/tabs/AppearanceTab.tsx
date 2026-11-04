@@ -44,18 +44,18 @@ const DARK_PALETTES = [
   { id: 'slate', name: 'Deep Slate', bg: '#0b1329', card: '#0f172a', desc: 'Classic navy' },
   { id: 'midnight', name: 'Midnight OLED', bg: '#000000', card: '#08080a', desc: 'True #000000 OLED' },
   { id: 'obsidian', name: 'Obsidian Charcoal', bg: '#16181d', card: '#20242c', desc: 'Matte charcoal' },
-  { id: 'indigo', name: 'Space Indigo', bg: '#0e142e', card: '#151d42', desc: 'Cosmic galaxy' },
+  { id: 'indigo', name: 'Space Indigo', bg: '#13102d', card: '#1c183f', desc: 'Cosmic galaxy' },
   { id: 'forest', name: 'Forest Dark', bg: '#0b1a13', card: '#112a1f', desc: 'Pine charcoal' },
   { id: 'espresso', name: 'Warm Espresso', bg: '#1c1511', card: '#281e19', desc: 'Rich cocoa' },
 ] as const;
 
 const LIGHT_PALETTES = [
   { id: 'snow', name: 'Pure Snow', bg: '#f8fafc', card: '#ffffff', desc: 'Crisp white' },
-  { id: 'paper', name: 'Warm Paper', bg: '#f7f5ef', card: '#ffffff', desc: 'Cozy cream' },
-  { id: 'zinc', name: 'Cool Zinc', bg: '#f4f4f5', card: '#ffffff', desc: 'Modern silver' },
-  { id: 'sky', name: 'Soft Sky', bg: '#f0f7ff', card: '#ffffff', desc: 'Airy blue' },
-  { id: 'mint', name: 'Fresh Mint', bg: '#f0fdf4', card: '#ffffff', desc: 'Calming sage' },
-  { id: 'sakura', name: 'Sakura Blossom', bg: '#fff0f3', card: '#ffffff', desc: 'Cherry blossom' },
+  { id: 'paper', name: 'Warm Paper', bg: '#f2eee3', card: '#faf8f4', desc: 'Cozy cream' },
+  { id: 'zinc', name: 'Cool Zinc', bg: '#ececee', card: '#f8f8f9', desc: 'Modern silver' },
+  { id: 'sky', name: 'Soft Sky', bg: '#e6f2fe', card: '#f4f9ff', desc: 'Airy blue' },
+  { id: 'mint', name: 'Fresh Mint', bg: '#e8fced', card: '#f4fcf6', desc: 'Calming sage' },
+  { id: 'sakura', name: 'Sakura Blossom', bg: '#ffe5ea', card: '#fff5f8', desc: 'Cherry blossom' },
 ] as const;
 
 export const AppearanceTab: React.FC<AppearanceTabProps> = ({
