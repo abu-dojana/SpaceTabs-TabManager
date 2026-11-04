@@ -48,6 +48,7 @@ const DARK_PALETTES = [
   { id: 'indigo', name: 'Space Indigo', bg: '#13102d', card: '#1c183f', desc: 'Cosmic galaxy' },
   { id: 'forest', name: 'Forest Dark', bg: '#0b1a13', card: '#112a1f', desc: 'Pine charcoal' },
   { id: 'espresso', name: 'Warm Espresso', bg: '#1c1511', card: '#281e19', desc: 'Rich cocoa' },
+  { id: 'purplespace', name: 'Purple Space', bg: '#660094', card: '#d16aff', desc: 'Cosmic violet' },
 ] as const;
 
 const LIGHT_PALETTES = [
@@ -57,6 +58,7 @@ const LIGHT_PALETTES = [
   { id: 'sky', name: 'Soft Sky', bg: '#f0f7ff', card: '#ffffff', desc: 'Airy blue' },
   { id: 'mint', name: 'Fresh Mint', bg: '#f0fdf4', card: '#ffffff', desc: 'Calming sage' },
   { id: 'sakura', name: 'Sakura Blossom', bg: '#fff0f3', card: '#ffffff', desc: 'Cherry blossom' },
+  { id: 'serenity', name: 'Purple Serenity', bg: '#7f5d99', card: '#c8addb', desc: 'Calming lilac' },
 ] as const;
 
 export const AppearanceTab: React.FC<AppearanceTabProps> = ({
