@@ -12,6 +12,22 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.3.1',
+    title: 'Version 1.3.1 — Multi-Window Unsaved Sessions Protection & Stability',
+    items: [
+      {
+        lead: 'Unsaved Sessions Multi-Window Protection:',
+        description:
+          'Fixed an issue where opening a new browser window (Ctrl+N or New window) while inside a saved space could accidentally overwrite and delete background unsaved sessions.',
+      },
+      {
+        lead: 'Smart Tab Matching & Overlap Verification:',
+        description:
+          'Enhanced window space assignment to require strong tab overlap (>= 60%) before reclaiming existing sessions, ensuring blank new tab pages always open as fresh sessions without touching dormant tabs.',
+      },
+    ],
+  },
+  {
     version: '1.3.0',
     title: 'Version 1.3.0 — Unified Cross-Space Search, Persistent Sections & Workspace Polish',
     items: [
