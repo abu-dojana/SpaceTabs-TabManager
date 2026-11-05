@@ -413,29 +413,39 @@ export async function ensureWindowUnsavedSpace(
       .filter((s) => !!s.isUnsaved && !s.isArchived && !activeUnsavedIdsInWindows.has(s.id))
       .toArray();
 
+    const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
+    let windowTabs: chrome.tabs.Tab[] = [];
+    try {
+      windowTabs = await chrome.tabs.query({ windowId });
+    } catch {}
+
+    const isBlankOrNewTab = (u?: string): boolean => {
+      if (!u) return true;
+      const lower = u.trim().toLowerCase();
+      return (
+        lower.startsWith('chrome://newtab') ||
+        lower.startsWith('chrome://new-tab-page') ||
+        lower.startsWith('edge://newtab') ||
+        lower.startsWith('brave://newtab') ||
+        lower.startsWith('about:blank') ||
+        lower === ''
+      );
+    };
+
+    const windowUrls = new Set(
+      windowTabs
+        .filter((t) => !t.pinned)
+        .map((t) => t.url || t.pendingUrl || '')
+        .filter((u) => u && !u.startsWith(dashboardUrl) && !isSystemOrExtensionUrl(u) && !isBlankOrNewTab(u))
+        .map((u) => decodeRealUrl(u))
+    );
+
     let chosenSpaceId: string | null = null;
 
-    if (availableUnsavedList.length === 1) {
-      chosenSpaceId = availableUnsavedList[0].id;
-    } else if (availableUnsavedList.length > 1) {
-      // Find the unsaved space whose tabs best match the currently open tabs in this window,
-      // prioritizing sessions that also hold notes, tasks, or resources.
-      const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
-      let windowTabs: chrome.tabs.Tab[] = [];
-      try {
-        windowTabs = await chrome.tabs.query({ windowId });
-      } catch {}
-
-      const windowUrls = new Set(
-        windowTabs
-          .filter((t) => !t.pinned)
-          .map((t) => t.url || t.pendingUrl || '')
-          .filter((u) => u && !u.startsWith(dashboardUrl) && !isSystemOrExtensionUrl(u))
-          .map((u) => decodeRealUrl(u))
-      );
-
-      let bestSpace = availableUnsavedList[0];
-      let bestScore = -1;
+    // Only match an existing unsaved space if this window has real tabs and there is strong overlap
+    if (availableUnsavedList.length > 0 && windowUrls.size > 0) {
+      let bestSpace: (typeof availableUnsavedList)[0] | null = null;
+      let bestScore = 0;
       let bestContentCount = -1;
 
       for (const candidate of availableUnsavedList) {
@@ -443,26 +453,48 @@ export async function ensureWindowUnsavedSpace(
           db.tabs.where('spaceId').equals(candidate.id).toArray(),
           getUnsavedContentCount(candidate.id),
         ]);
+
+        const validCandidateTabs = candidateTabs.filter((ct) => !isBlankOrNewTab(ct.url));
+        if (validCandidateTabs.length === 0) continue;
+
         let score = 0;
-        for (const ct of candidateTabs) {
-          if (windowUrls.has(decodeRealUrl(ct.url))) {
+        for (const ct of validCandidateTabs) {
+          const ctReal = decodeRealUrl(ct.url);
+          if (windowUrls.has(ctReal)) {
             score++;
           }
         }
-        if (
-          score > bestScore ||
-          (score === bestScore && contentCount > bestContentCount) ||
-          (score === bestScore &&
-            contentCount === bestContentCount &&
-            candidate.updatedAt > bestSpace.updatedAt)
-        ) {
-          bestScore = score;
-          bestContentCount = contentCount;
-          bestSpace = candidate;
+
+        // Must match at least 60% of the candidate's real tabs to be considered the same session
+        const requiredMatch = Math.ceil(validCandidateTabs.length * 0.6);
+        if (score >= requiredMatch && score > 0) {
+          if (
+            score > bestScore ||
+            (score === bestScore && contentCount > bestContentCount) ||
+            (score === bestScore &&
+              contentCount === bestContentCount &&
+              candidate.updatedAt > (bestSpace?.updatedAt ?? 0))
+          ) {
+            bestScore = score;
+            bestContentCount = contentCount;
+            bestSpace = candidate;
+          }
         }
       }
 
-      chosenSpaceId = bestSpace.id;
+      if (bestScore > 0 && bestSpace) {
+        chosenSpaceId = bestSpace.id;
+      }
+    }
+
+    // If no session matched real tabs, check if an available candidate is completely empty (0 tabs & 0 content)
+    if (!chosenSpaceId && availableUnsavedList.length > 0) {
+      for (const candidate of availableUnsavedList) {
+        if (await isSessionEmpty(candidate.id)) {
+          chosenSpaceId = candidate.id;
+          break;
+        }
+      }
     }
 
     // Re-check before writing in case openSpaceInNewWindow or switchWindowToSpace bound a space concurrently
