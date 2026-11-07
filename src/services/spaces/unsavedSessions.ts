@@ -1,22 +1,26 @@
 import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
+import { isBlankOrNewTabUrl } from '@/utils/urlFilter';
 
 /**
  * Checks whether an Unsaved session is completely empty across ALL entity tables
  * (tabs, notes, tasks, and resource sections).
- * An Unsaved session with notes, tasks, or resources must NEVER be auto-deleted
- * even when its open browser tabs count reaches 0.
+ * Sessions with notes, tasks, or resources must NEVER be auto-deleted.
+ * A session whose tabs are all blank/newtab placeholders and contains no notes/tasks/resources
+ * is considered empty so it can be safely reused or cleaned up without spawning duplicates.
  */
 export async function isSessionEmpty(spaceId: string): Promise<boolean> {
   if (!spaceId) return true;
   try {
-    const [tabCount, noteCount, taskCount, sectionCount] = await Promise.all([
-      db.tabs.where('spaceId').equals(spaceId).count(),
+    const [tabs, noteCount, taskCount, sectionCount] = await Promise.all([
+      db.tabs.where('spaceId').equals(spaceId).toArray(),
       db.notes.where('spaceId').equals(spaceId).count(),
       db.tasks.where('spaceId').equals(spaceId).count(),
       db.resourceSections.where('spaceId').equals(spaceId).count(),
     ]);
-    return tabCount === 0 && noteCount === 0 && taskCount === 0 && sectionCount === 0;
+    if (noteCount > 0 || taskCount > 0 || sectionCount > 0) return false;
+    const realTabs = tabs.filter((t) => !isBlankOrNewTabUrl(t.url));
+    return realTabs.length === 0;
   } catch (err) {
     console.warn('Error checking if unsaved session is empty:', err);
     return false;

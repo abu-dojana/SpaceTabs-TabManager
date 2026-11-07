@@ -1,6 +1,12 @@
 import { db } from '@/db';
 import { type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
-import { isSystemOrExtensionUrl, decodeRealUrl, extractDomain } from '@/utils/urlFilter';
+import {
+  isSystemOrExtensionUrl,
+  decodeRealUrl,
+  extractDomain,
+  isMeaningfulTitle,
+  isValidWebFavicon,
+} from '@/utils/urlFilter';
 import {
   isTransitioning,
   getWindowActiveSpaceId,
@@ -44,7 +50,15 @@ export function getEffectiveTabUrl(t: chrome.tabs.Tab): string {
 }
 
 export function getEffectiveTabTitle(t: chrome.tabs.Tab, realUrl: string): string {
-  if (t.title && t.title !== realUrl) return t.title;
+  const rawUrl = t.url || t.pendingUrl || '';
+  if (rawUrl.includes('/suspended.html')) {
+    try {
+      const parsed = new URL(rawUrl);
+      const paramTitle = parsed.searchParams.get('title');
+      if (paramTitle && paramTitle !== realUrl) return paramTitle;
+    } catch {}
+  }
+  if (t.title && t.title !== realUrl && t.title !== 'Suspended Tab') return t.title;
   if (realUrl.startsWith('chrome://newtab') || realUrl.startsWith('about:blank')) {
     return 'New Tab';
   }
@@ -149,6 +163,17 @@ export async function migrateLegacyUnsavedTabs(): Promise<void> {
             db.resourceSections.update(s.id, { spaceId: targetSpace!.id, updatedAt: now })
           )
         );
+      }
+    }
+
+    // Sanitize any stored tab records whose URL still contains /suspended.html
+    const allStoredTabs = await db.tabs.toArray();
+    for (const st of allStoredTabs) {
+      if (st.url && st.url.includes('/suspended.html')) {
+        const clean = decodeRealUrl(st.url);
+        if (clean && clean !== st.url) {
+          await db.tabs.update(st.id, { url: clean });
+        }
       }
     }
 
@@ -267,11 +292,18 @@ async function executeSyncWindowTabs(windowId: number) {
               const savedRec = savedByChromeTabId.get(bt.id)!;
               const effUrl = getEffectiveTabUrl(bt);
               const rUrl = decodeRealUrl(effUrl);
+              const nextTitle = getEffectiveTabTitle(bt, rUrl);
+              const keepSavedTitle =
+                decodeRealUrl(savedRec.url) === rUrl &&
+                !isMeaningfulTitle(bt.title, rUrl) &&
+                isMeaningfulTitle(savedRec.title, rUrl);
               await db.tabs.update(savedRec.id, {
                 windowId,
                 url: rUrl || savedRec.url,
-                title: getEffectiveTabTitle(bt, rUrl) || savedRec.title,
-                favIconUrl: bt.favIconUrl || savedRec.favIconUrl,
+                title: keepSavedTitle ? savedRec.title : nextTitle || savedRec.title,
+                favIconUrl: isValidWebFavicon(bt.favIconUrl)
+                  ? bt.favIconUrl!
+                  : savedRec.favIconUrl,
                 updatedAt: now,
               });
             }
@@ -419,10 +451,15 @@ async function executeSyncWindowTabs(windowId: number) {
           browserTab.discarded && (!browserTab.url || browserTab.url === 'chrome://newtab/')
             ? match.url
             : realUrl;
+        const sameUrl = decodeRealUrl(match.url) === decodeRealUrl(tabUrl);
         const tabTitle =
-          browserTab.discarded && (!browserTab.title || browserTab.title === 'New Tab')
+          (browserTab.discarded && (!browserTab.title || browserTab.title === 'New Tab')) ||
+          (sameUrl &&
+            !isMeaningfulTitle(browserTab.title, tabUrl) &&
+            isMeaningfulTitle(match.title, tabUrl))
             ? match.title
             : title;
+        const tabFavicon = isValidWebFavicon(favIconUrl) ? favIconUrl : match.favIconUrl;
 
         matchedUrls.add(decodeRealUrl(tabUrl));
 
@@ -444,7 +481,7 @@ async function executeSyncWindowTabs(windowId: number) {
           windowId: isLiveInOtherWindow ? match.windowId : windowId,
           title: tabTitle,
           url: tabUrl,
-          favIconUrl: favIconUrl || match.favIconUrl,
+          favIconUrl: tabFavicon,
           order: targetOrder,
           updatedAt: now,
         });
@@ -460,7 +497,7 @@ async function executeSyncWindowTabs(windowId: number) {
           windowId,
           url: realUrl,
           title,
-          favIconUrl,
+          favIconUrl: isValidWebFavicon(favIconUrl) ? favIconUrl : '',
           order: targetOrder,
           createdAt: now,
           updatedAt: now,

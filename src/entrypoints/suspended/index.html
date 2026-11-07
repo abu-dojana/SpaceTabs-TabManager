@@ -36,10 +36,19 @@
         color: #f8fafc;
         font-size: 16px;
         font-weight: 600;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+      .url {
+        color: #94a3b8;
+        font-size: 12px;
+        margin-bottom: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        user-select: text;
       }
       .hint {
         font-size: 13px;
@@ -60,6 +69,7 @@
   <body>
     <div class="card">
       <div id="tab-title" class="title">Loading...</div>
+      <div id="tab-url" class="url"></div>
       <div class="hint">Tab suspended to save memory</div>
       <div class="shortcut">Click anywhere to load</div>
     </div>

@@ -20,6 +20,23 @@ export function isSystemOrExtensionUrl(url?: string): boolean {
 }
 
 /**
+ * Checks whether a URL represents an empty or blank initial tab page.
+ */
+export function isBlankOrNewTabUrl(url?: string): boolean {
+  if (!url) return true;
+  const real = decodeRealUrl(url);
+  const lower = real.trim().toLowerCase();
+  return (
+    lower.startsWith('chrome://newtab') ||
+    lower.startsWith('chrome://new-tab-page') ||
+    lower.startsWith('edge://newtab') ||
+    lower.startsWith('brave://newtab') ||
+    lower.startsWith('about:blank') ||
+    lower === ''
+  );
+}
+
+/**
  * Checks whether a URL is a standard web URL that can be suspended and restored via window.location.replace().
  * Only http:// and https:// URLs can be safely loaded into suspended.html placeholders and restored.
  * Non-HTTP schemes (file://, chrome://, about:, edge://, brave://, chrome-extension://, view-source:)
@@ -34,6 +51,13 @@ export function isSuspendableUrl(url?: string): boolean {
 export function decodeRealUrl(url?: string): string {
   if (!url) return '';
   if (url.includes('/suspended.html')) {
+    const hashIdx = url.indexOf('#');
+    if (hashIdx !== -1 && hashIdx + 1 < url.length) {
+      const hashTarget = url.slice(hashIdx + 1);
+      if (hashTarget.startsWith('http://') || hashTarget.startsWith('https://')) {
+        return hashTarget;
+      }
+    }
     try {
       const parsed = new URL(url);
       const target = parsed.searchParams.get('url');
@@ -43,6 +67,60 @@ export function decodeRealUrl(url?: string): string {
     }
   }
   return url;
+}
+
+/**
+ * Checks whether a tab title is a real human-readable page title rather than
+ * a temporary loading placeholder or raw URL assigned by Chromium before <title> loads.
+ */
+export function isMeaningfulTitle(title?: string, realUrl?: string): boolean {
+  if (!title) return false;
+  const trimmed = title.trim();
+  if (!trimmed) return false;
+
+  const lower = trimmed.toLowerCase();
+  if (
+    lower === 'new tab' ||
+    lower === 'loading...' ||
+    lower === 'suspended tab' ||
+    lower === 'untitled' ||
+    lower === 'about:blank' ||
+    lower.includes('/suspended.html')
+  ) {
+    return false;
+  }
+
+  if (realUrl) {
+    const normalize = (s: string) =>
+      s
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/+$/, '');
+    if (normalize(trimmed) === normalize(decodeRealUrl(realUrl))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Checks whether a favicon URL is a genuine site icon rather than an empty string
+ * or an internal extension icon.
+ */
+export function isValidWebFavicon(favIconUrl?: string): boolean {
+  if (!favIconUrl) return false;
+  const trimmed = favIconUrl.trim();
+  if (!trimmed) return false;
+  if (
+    trimmed.startsWith('chrome-extension://') ||
+    trimmed.startsWith('moz-extension://')
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function extractDomain(url?: string): string {

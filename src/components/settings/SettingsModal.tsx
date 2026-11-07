@@ -158,6 +158,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 settings={c.settings}
                 isLight={c.isLight}
                 onToggle={c.handleToggle}
+                onRestoreAllSuspended={c.handleRestoreAllSuspended}
               />
             )}
 

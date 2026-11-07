@@ -10,6 +10,7 @@ import {
   UNSAVED_SPACE_ID,
 } from '@/db/schema';
 import { discardInactiveTabs, discardAllInactiveTabsInWindow } from './suspension';
+import { decodeRealUrl } from '@/utils/urlFilter';
 import { downloadFile } from '@/utils/download';
 import {
   stripRuntimeTabFields,
@@ -62,7 +63,15 @@ export async function getUserSettings(): Promise<UserSettings> {
   try {
     const data = await chrome.storage.local.get(SETTINGS_STORAGE_KEY);
     if (data && data[SETTINGS_STORAGE_KEY]) {
-      return { ...DEFAULT_SETTINGS, ...data[SETTINGS_STORAGE_KEY] };
+      const raw = { ...data[SETTINGS_STORAGE_KEY] };
+      if ('nativeCleanUrlSuspension' in raw) {
+        if (raw.nativeCleanUrlSuspension) {
+          raw.discardOnSpaceSwitch = true;
+        }
+        delete raw.nativeCleanUrlSuspension;
+        await chrome.storage.local.set({ [SETTINGS_STORAGE_KEY]: { ...DEFAULT_SETTINGS, ...raw } });
+      }
+      return { ...DEFAULT_SETTINGS, ...raw };
     }
   } catch (err) {
     console.warn('Failed to load user settings from storage:', err);
@@ -371,6 +380,38 @@ export async function suspendAllInactiveNow(): Promise<number> {
     return totalPurged;
   } catch (err) {
     console.error('Failed to suspend inactive tabs now:', err);
+    return 0;
+  }
+}
+
+/**
+ * Restores all currently open /suspended.html placeholder tabs across all windows
+ * back to their original clean URLs (e.g., before disabling or removing the extension).
+ */
+export async function restoreAllSuspendedTabsToCleanUrls(): Promise<number> {
+  try {
+    const allTabs = await chrome.tabs.query({});
+    let restoredCount = 0;
+
+    for (const tab of allTabs) {
+      if (!tab.id) continue;
+      const rawUrl = tab.url || tab.pendingUrl || '';
+      if (!rawUrl.includes('/suspended.html')) continue;
+
+      const cleanUrl = decodeRealUrl(rawUrl);
+      if (!cleanUrl || cleanUrl === rawUrl) continue;
+
+      try {
+        await chrome.tabs.update(tab.id, { url: cleanUrl });
+        restoredCount++;
+      } catch {
+        // Tab may have been closed
+      }
+    }
+
+    return restoredCount;
+  } catch (err) {
+    console.error('Failed to restore suspended tabs to clean URLs:', err);
     return 0;
   }
 }

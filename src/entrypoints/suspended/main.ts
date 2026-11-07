@@ -1,21 +1,44 @@
 const params = new URLSearchParams(window.location.search);
-const realUrl = params.get('url');
+const hashIdx = window.location.href.indexOf('#');
+const hashUrl = hashIdx !== -1 ? window.location.href.slice(hashIdx + 1) : '';
+const realUrl = hashUrl || params.get('url');
 const title = params.get('title');
+const favIconParam = params.get('fav') || params.get('favIconUrl');
 
 if (title) {
   document.title = title;
   const titleEl = document.getElementById('tab-title');
   if (titleEl) titleEl.textContent = title;
+} else if (realUrl) {
+  document.title = realUrl;
+  const titleEl = document.getElementById('tab-title');
+  if (titleEl) titleEl.textContent = realUrl;
 }
 
-// Attach native favicon via Chrome's _favicon endpoint
+if (realUrl) {
+  const urlEl = document.getElementById('tab-url');
+  if (urlEl) urlEl.textContent = realUrl;
+}
+
+// Attach native favicon via Chrome's _favicon endpoint with stored favIconUrl fallback
 if (realUrl) {
   try {
-    const faviconUrl = chrome.runtime.getURL(`/_favicon/?pageUrl=${encodeURIComponent(realUrl)}&size=32`);
+    const chromeFaviconUrl = chrome.runtime.getURL(
+      `/_favicon/?pageUrl=${encodeURIComponent(realUrl)}&size=32`
+    );
     const link = document.createElement('link');
     link.rel = 'icon';
-    link.href = faviconUrl;
+    link.href =
+      favIconParam && favIconParam.startsWith('http') ? favIconParam : chromeFaviconUrl;
     document.head.appendChild(link);
+
+    if (favIconParam && favIconParam.startsWith('http')) {
+      const img = new Image();
+      img.onerror = () => {
+        link.href = chromeFaviconUrl;
+      };
+      img.src = favIconParam;
+    }
   } catch {
     // Ignore if running outside extension context
   }
@@ -46,23 +69,31 @@ function restore() {
   }
 }
 
+function checkVisibleAndRestore() {
+  if (document.visibilityState !== 'visible') return;
+  const elapsed = Date.now() - initTime;
+  if (elapsed > 800) {
+    restore();
+  } else {
+    setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        restore();
+      }
+    }, 850 - elapsed);
+  }
+}
+
 // 1. Explicit user click anywhere on the page restores immediately
 window.addEventListener('click', restore);
 
-// 2. Tab visibility change: restore ONLY when the user actively selects this tab
-// and only after an initial 800ms grace period so background creation never triggers it
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && Date.now() - initTime > 800) {
-    restore();
-  }
-});
+// 2. If already visible on load (e.g. opened from history or active tab), restore after grace period
+checkVisibleAndRestore();
 
-// 3. Tab focus event: only restore if actually visible and after grace period
-window.addEventListener('focus', () => {
-  if (document.visibilityState === 'visible' && Date.now() - initTime > 800) {
-    restore();
-  }
-});
+// 3. Tab visibility change: restore when the user actively selects this tab
+document.addEventListener('visibilitychange', checkVisibleAndRestore);
+
+// 4. Tab focus event: restore when focused and visible
+window.addEventListener('focus', checkVisibleAndRestore);
 
 // 4. Support Alt+Shift+W on suspended tabs even if Chrome's command binding is unassigned
 window.addEventListener('keydown', (e) => {

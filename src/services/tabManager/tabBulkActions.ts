@@ -174,6 +174,13 @@ export async function reloadAllTabsInCurrentWindow(): Promise<void> {
       if (t.url.startsWith(dashboardUrl)) continue;
 
       try {
+        if (t.url.includes('/suspended.html')) {
+          const cleanUrl = decodeRealUrl(t.url);
+          if (cleanUrl && cleanUrl !== t.url) {
+            await chrome.tabs.update(t.id, { url: cleanUrl });
+            continue;
+          }
+        }
         await chrome.tabs.reload(t.id);
       } catch {}
     }

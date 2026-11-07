@@ -10,6 +10,7 @@ import {
   importSpacesBackup,
   purgeStaleUnsavedTabs,
   suspendAllInactiveNow,
+  restoreAllSuspendedTabsToCleanUrls,
   type UserSettings,
   type DarkPalette,
   type LightPalette,
@@ -214,6 +215,19 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     }
   };
 
+  const handleRestoreAllSuspended = async () => {
+    try {
+      const count = await restoreAllSuspendedTabsToCleanUrls();
+      if (count > 0) {
+        showToast(`Restored ${count} suspended tab(s) to their original clean URLs!`);
+      } else {
+        showToast('All open tabs already have clean URLs.');
+      }
+    } catch {
+      showToast('Failed to restore suspended tabs.', 'error');
+    }
+  };
+
   const handleExport = async () => {
     try {
       await exportAllSpacesBackup();
@@ -367,6 +381,7 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     handleApplyPreset,
     handleCopyBkash,
     handleInstantSuspend,
+    handleRestoreAllSuspended,
     handleExport,
     handleImportFile,
     handlePurge,

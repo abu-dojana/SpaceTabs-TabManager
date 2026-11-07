@@ -53,7 +53,11 @@ export async function locateOrOpenTab(tabRecord: {
     try {
       const liveTab = await chrome.tabs.get(tabRecord.chromeTabId);
       if (liveTab && liveTab.id) {
-        await chrome.tabs.update(liveTab.id, { active: true });
+        const isSuspendedPlaceholder = Boolean(liveTab.url?.includes('/suspended.html'));
+        await chrome.tabs.update(
+          liveTab.id,
+          isSuspendedPlaceholder ? { active: true, url: realUrl } : { active: true }
+        );
         if (liveTab.windowId) {
           await chrome.windows.update(liveTab.windowId, { focused: true });
         }
@@ -76,7 +80,11 @@ export async function locateOrOpenTab(tabRecord: {
     });
 
     if (match && match.id) {
-      await chrome.tabs.update(match.id, { active: true });
+      const isSuspendedPlaceholder = Boolean(match.url?.includes('/suspended.html'));
+      await chrome.tabs.update(
+        match.id,
+        isSuspendedPlaceholder ? { active: true, url: realUrl } : { active: true }
+      );
       if (match.windowId) {
         await chrome.windows.update(match.windowId, { focused: true });
       }

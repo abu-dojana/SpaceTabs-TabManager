@@ -1,6 +1,12 @@
 import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
-import { isSystemOrExtensionUrl, decodeRealUrl, isSuspendableUrl } from '@/utils/urlFilter';
+import {
+  isSystemOrExtensionUrl,
+  decodeRealUrl,
+  isSuspendableUrl,
+  isMeaningfulTitle,
+  isValidWebFavicon,
+} from '@/utils/urlFilter';
 import { getUserSettings } from '@/services/settings';
 import { buildSuspendedUrl } from './suspensionUrls';
 import {
@@ -92,10 +98,20 @@ export async function switchWindowToSpace(
 
         if (record) {
           claimedIds.add(record.id);
+          const preservedTitle =
+            decodeRealUrl(record.url) === realUrl &&
+            !isMeaningfulTitle(bt.title, realUrl) &&
+            isMeaningfulTitle(record.title, realUrl)
+              ? record.title
+              : title;
+          const preservedFavicon = isValidWebFavicon(bt.favIconUrl)
+            ? bt.favIconUrl!
+            : record.favIconUrl;
+
           await db.tabs.update(record.id, {
-            title,
+            title: preservedTitle,
             url: realUrl,
-            favIconUrl: bt.favIconUrl || record.favIconUrl,
+            favIconUrl: preservedFavicon,
             order: i,
             updatedAt: now,
             chromeTabId: undefined,
@@ -109,7 +125,7 @@ export async function switchWindowToSpace(
             spaceId: normalizedCurrent,
             url: realUrl,
             title,
-            favIconUrl: bt.favIconUrl || '',
+            favIconUrl: isValidWebFavicon(bt.favIconUrl) ? bt.favIconUrl! : '',
             order: i,
             createdAt: now,
             updatedAt: now,
@@ -160,10 +176,11 @@ export async function switchWindowToSpace(
       const settings = await getUserSettings();
       for (let i = 0; i < targetTabs.length; i++) {
         const tabRecord = targetTabs[i];
-        const shouldSuspend = settings.discardOnSpaceSwitch && isSuspendableUrl(tabRecord.url);
+        const cleanUrl = decodeRealUrl(tabRecord.url);
+        const shouldSuspend = settings.discardOnSpaceSwitch && isSuspendableUrl(cleanUrl);
         const openUrl = shouldSuspend
-          ? buildSuspendedUrl(tabRecord.url, tabRecord.title)
-          : tabRecord.url;
+          ? buildSuspendedUrl(cleanUrl, tabRecord.title, tabRecord.favIconUrl)
+          : cleanUrl;
 
         const created = await chrome.tabs.create({
           windowId,
@@ -175,6 +192,7 @@ export async function switchWindowToSpace(
           await db.tabs.update(tabRecord.id, {
             chromeTabId: created.id,
             windowId,
+            url: cleanUrl,
             updatedAt: Date.now(),
           });
         }
@@ -248,21 +266,25 @@ export async function openSpaceInNewWindow(spaceId: string) {
       const settings = await getUserSettings();
       for (let i = 0; i < spaceTabs.length; i++) {
         const tabItem = spaceTabs[i];
-        const shouldSuspend = settings.discardOnSpaceSwitch && isSuspendableUrl(tabItem.url);
+        const cleanUrl = decodeRealUrl(tabItem.url);
+        const isFirstTab = i === 0;
+        const shouldSuspend =
+          !isFirstTab && settings.discardOnSpaceSwitch && isSuspendableUrl(cleanUrl);
         const openUrl = shouldSuspend
-          ? buildSuspendedUrl(tabItem.url, tabItem.title)
-          : tabItem.url;
+          ? buildSuspendedUrl(cleanUrl, tabItem.title, tabItem.favIconUrl)
+          : cleanUrl;
 
         const createdTab = await chrome.tabs.create({
           windowId: winId,
           url: openUrl,
-          active: i === 0, // only focus the first restored tab
+          active: isFirstTab, // only focus the first restored tab
         });
 
         if (createdTab.id) {
           await db.tabs.update(tabItem.id, {
             chromeTabId: createdTab.id,
             windowId: winId,
+            url: cleanUrl,
             updatedAt: Date.now(),
           });
         }

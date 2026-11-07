@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
-import { decodeRealUrl, isSystemOrExtensionUrl } from '@/utils/urlFilter';
+import { decodeRealUrl, isSystemOrExtensionUrl, isBlankOrNewTabUrl } from '@/utils/urlFilter';
 import {
   isSessionEmpty,
   deleteUnsavedSession,
@@ -233,7 +233,7 @@ export async function ensureSessionInitialized(): Promise<void> {
           .equals(uSpace.id)
           .sortBy('order');
 
-        if (uTabs.length === 0) {
+        if (uTabs.length === 0 || (await isSessionEmpty(uSpace.id))) {
           if (await isSessionEmpty(uSpace.id)) {
             emptyUnsavedSpaceIds.push(uSpace.id);
           }
@@ -419,24 +419,11 @@ export async function ensureWindowUnsavedSpace(
       windowTabs = await chrome.tabs.query({ windowId });
     } catch {}
 
-    const isBlankOrNewTab = (u?: string): boolean => {
-      if (!u) return true;
-      const lower = u.trim().toLowerCase();
-      return (
-        lower.startsWith('chrome://newtab') ||
-        lower.startsWith('chrome://new-tab-page') ||
-        lower.startsWith('edge://newtab') ||
-        lower.startsWith('brave://newtab') ||
-        lower.startsWith('about:blank') ||
-        lower === ''
-      );
-    };
-
     const windowUrls = new Set(
       windowTabs
         .filter((t) => !t.pinned)
         .map((t) => t.url || t.pendingUrl || '')
-        .filter((u) => u && !u.startsWith(dashboardUrl) && !isSystemOrExtensionUrl(u) && !isBlankOrNewTab(u))
+        .filter((u) => u && !u.startsWith(dashboardUrl) && !isSystemOrExtensionUrl(u) && !isBlankOrNewTabUrl(u))
         .map((u) => decodeRealUrl(u))
     );
 
@@ -454,7 +441,7 @@ export async function ensureWindowUnsavedSpace(
           getUnsavedContentCount(candidate.id),
         ]);
 
-        const validCandidateTabs = candidateTabs.filter((ct) => !isBlankOrNewTab(ct.url));
+        const validCandidateTabs = candidateTabs.filter((ct) => !isBlankOrNewTabUrl(ct.url));
         if (validCandidateTabs.length === 0) continue;
 
         let score = 0;
