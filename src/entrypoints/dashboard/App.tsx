@@ -18,12 +18,11 @@ import {
   isTransitioning,
   migrateLegacyUnsavedTabs,
 } from '@/services/tabManager';
-import { getUserSettings } from '@/services/settings';
 import { hexToRgba, adjustBrightness } from '@/utils/color';
 import { getHostWindowId } from '@/utils/chromeWindow';
 import { getAppVersion } from '@/utils/appVersion';
 import { useHydrateUiFromSettings } from '@/hooks/useHydrateUiFromSettings';
-import { Bookmark, FileText, CheckSquare, AlertTriangle, Heart, ExternalLink, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Heart, MessageSquare } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -80,14 +79,6 @@ export default function App() {
     darkPalette,
     lightPalette,
     sidebarWidth,
-    patreonUrl,
-    setSidebarTheme,
-    setDashboardTheme,
-    setAccentColor,
-    setDarkPalette,
-    setLightPalette,
-    setSidebarWidth,
-    setPatreonUrl,
     isSettingsOpen,
     settingsTab,
     setSettingsOpen,
@@ -155,15 +146,7 @@ export default function App() {
       window.removeEventListener('focus', handleFocus);
       chrome.storage?.onChanged?.removeListener(handleSessionStorageChange);
     };
-  }, [
-    setActiveSpaceId,
-    setSidebarTheme,
-    setDashboardTheme,
-    setAccentColor,
-    setDarkPalette,
-    setLightPalette,
-    setSidebarWidth,
-  ]);
+  }, [setActiveSpaceId]);
 
   const dynamicStyles = React.useMemo(() => {
     const validAccent = accentColor || '#2563eb';

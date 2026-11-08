@@ -18,6 +18,8 @@ export function useLiveBrowserTabs() {
       }
     });
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     const refreshLiveTabs = async () => {
       try {
         const all = await chrome.tabs.query({});
@@ -37,7 +39,11 @@ export function useLiveBrowserTabs() {
     refreshLiveTabs();
 
     const onEvent = () => {
-      refreshLiveTabs();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        refreshLiveTabs();
+      }, 60);
     };
 
     chrome.tabs.onCreated.addListener(onEvent);
@@ -49,6 +55,7 @@ export function useLiveBrowserTabs() {
 
     return () => {
       isMounted = false;
+      if (debounceTimer) clearTimeout(debounceTimer);
       chrome.tabs.onCreated.removeListener(onEvent);
       chrome.tabs.onRemoved.removeListener(onEvent);
       chrome.tabs.onUpdated.removeListener(onEvent);

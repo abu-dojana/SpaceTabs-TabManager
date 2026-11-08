@@ -12,6 +12,32 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.4.0',
+    title: 'Version 1.4.0 — Multi-Window Space Switch Fix, Safe Deduplication & Security Hardening',
+    items: [
+      {
+        lead: 'Side-by-Side Window Space Switch Fix:',
+        description:
+          'Fixed a bug where opening a tab in a new window and then switching spaces could create duplicate tab records when chromeTabId bindings differed across windows.',
+      },
+      {
+        lead: 'Safe Duplicate Tab Closing:',
+        description:
+          'Fixed Close Duplicate Tabs so it always preserves the live browser tab and deletes database records before closing redundant browser tabs, preventing background sync from removing the original tab.',
+      },
+      {
+        lead: 'Non-Chrome Google Drive Token Caching & Tombstone Queue:',
+        description:
+          'Added OAuth access token expiry caching for Brave, Edge, Vivaldi, and custom Client IDs, serialized tombstone writes, and excluded unsaved sessions from cloud tombstones.',
+      },
+      {
+        lead: 'Note Editor Auto-Save Race Fix & URL Sanitization:',
+        description:
+          'Prevented late-resolving note flushes on space switch from dropping subsequent auto-saves, and hardened Markdown links and suspended tab restoration against unsafe URI schemes.',
+      },
+    ],
+  },
+  {
     version: '1.3.1',
     title: 'Version 1.3.1 — Multi-Window Unsaved Sessions Protection & Stability',
     items: [

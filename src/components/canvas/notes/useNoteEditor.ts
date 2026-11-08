@@ -1,6 +1,6 @@
 import React from 'react';
 import { db } from '@/db';
-import { type Note } from '@/db/schema';
+import { type Note, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
 import { recordTombstone } from '@/services/driveSync';
 import { downloadFile } from '@/utils/download';
@@ -70,10 +70,12 @@ export function useNoteEditor({
         content: contentRef.current,
         updatedAt: now,
       });
-      savedRevRef.current = Math.max(savedRevRef.current, revToSave);
-      loadedUpdatedAtRef.current = Math.max(loadedUpdatedAtRef.current, now);
-      if (!isDirty()) {
-        setSaveStatus('saved');
+      if (selectedNoteIdRef.current === targetId) {
+        savedRevRef.current = Math.max(savedRevRef.current, revToSave);
+        loadedUpdatedAtRef.current = Math.max(loadedUpdatedAtRef.current, now);
+        if (!isDirty()) {
+          setSaveStatus('saved');
+        }
       }
     } catch (err) {
       console.error('Failed to flush note save:', err);
@@ -93,7 +95,13 @@ export function useNoteEditor({
     }
 
     saveDebounceTimer.current = setTimeout(async () => {
-      if (!targetId || savedRevRef.current >= scheduledRev) return;
+      if (
+        !targetId ||
+        selectedNoteIdRef.current !== targetId ||
+        savedRevRef.current >= scheduledRev
+      ) {
+        return;
+      }
 
       const now = Date.now();
       try {
@@ -102,10 +110,12 @@ export function useNoteEditor({
           content: newContent,
           updatedAt: now,
         });
-        savedRevRef.current = Math.max(savedRevRef.current, scheduledRev);
-        loadedUpdatedAtRef.current = Math.max(loadedUpdatedAtRef.current, now);
-        if (!isDirty()) {
-          setSaveStatus('saved');
+        if (selectedNoteIdRef.current === targetId) {
+          savedRevRef.current = Math.max(savedRevRef.current, scheduledRev);
+          loadedUpdatedAtRef.current = Math.max(loadedUpdatedAtRef.current, now);
+          if (!isDirty()) {
+            setSaveStatus('saved');
+          }
         }
       } catch (err) {
         console.error('Failed to auto-save note:', err);
@@ -123,8 +133,7 @@ export function useNoteEditor({
         setContentBuffer(match.content || '');
         loadedNoteIdRef.current = match.id;
         loadedUpdatedAtRef.current = match.updatedAt || 0;
-        editRevRef.current = 0;
-        savedRevRef.current = 0;
+        savedRevRef.current = editRevRef.current;
         setSaveStatus('saved');
         setPendingNoteId(null);
       }
@@ -139,8 +148,7 @@ export function useNoteEditor({
     setSelectedNoteId(null);
     loadedNoteIdRef.current = null;
     loadedUpdatedAtRef.current = 0;
-    editRevRef.current = 0;
-    savedRevRef.current = 0;
+    savedRevRef.current = editRevRef.current;
     setTitleBuffer('');
     setContentBuffer('');
     setSaveStatus('saved');
@@ -159,8 +167,7 @@ export function useNoteEditor({
           setContentBuffer(current.content || '');
           loadedNoteIdRef.current = selectedNoteId;
           loadedUpdatedAtRef.current = current.updatedAt || 0;
-          editRevRef.current = 0;
-          savedRevRef.current = 0;
+          savedRevRef.current = editRevRef.current;
           setSaveStatus('saved');
         } else if (!isDirty() && (current.updatedAt || 0) > loadedUpdatedAtRef.current) {
           // Refresh clean buffer when background sync delivers newer remote content
@@ -186,8 +193,7 @@ export function useNoteEditor({
       setContentBuffer(first.content || '');
       loadedNoteIdRef.current = first.id;
       loadedUpdatedAtRef.current = first.updatedAt || 0;
-      editRevRef.current = 0;
-      savedRevRef.current = 0;
+      savedRevRef.current = editRevRef.current;
       setSaveStatus('saved');
     } else {
       setTitleBuffer('');
@@ -258,8 +264,7 @@ export function useNoteEditor({
     await db.notes.add(newNote);
     loadedNoteIdRef.current = id;
     loadedUpdatedAtRef.current = now;
-    editRevRef.current = 0;
-    savedRevRef.current = 0;
+    savedRevRef.current = editRevRef.current;
     setSelectedNoteId(id);
     setTitleBuffer(newNote.title);
     setContentBuffer(newNote.content);
@@ -274,7 +279,20 @@ export function useNoteEditor({
 
   // Delete note
   const handleDeleteNote = async (id: string) => {
-    recordTombstone(id, 'notes').catch(() => {});
+    if (selectedNoteId === id) {
+      if (saveDebounceTimer.current) {
+        clearTimeout(saveDebounceTimer.current);
+        saveDebounceTimer.current = null;
+      }
+      savedRevRef.current = editRevRef.current;
+      setSaveStatus('saved');
+    }
+    if (targetSpaceId !== UNSAVED_SPACE_ID) {
+      const space = await db.spaces.get(targetSpaceId).catch(() => undefined);
+      if (!space?.isUnsaved) {
+        recordTombstone(id, 'notes').catch(() => {});
+      }
+    }
     await db.notes.delete(id);
     setConfirmDeleteId(null);
     if (selectedNoteId === id) {

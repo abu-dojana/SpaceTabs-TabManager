@@ -6,6 +6,7 @@ import {
   switchWindowToSpace,
   openSpaceInNewWindow,
   getAllWindowSpaces,
+  ensureWindowUnsavedSpace,
   deleteUnsavedSession,
   duplicateSpace,
   deleteSpacePermanently,
@@ -171,7 +172,13 @@ export const Sidebar: React.FC = () => {
     try {
       await deleteUnsavedSession(spaceId);
       if (activeSpaceId === spaceId) {
-        setActiveSpaceId(null);
+        const targetWinId = currentWindowId || (await getHostWindowId());
+        if (targetWinId) {
+          const nextSpaceId = await ensureWindowUnsavedSpace(targetWinId);
+          setActiveSpaceId(nextSpaceId);
+        } else {
+          setActiveSpaceId(null);
+        }
       }
     } catch (err) {
       console.error('Failed to delete unsaved session:', err);

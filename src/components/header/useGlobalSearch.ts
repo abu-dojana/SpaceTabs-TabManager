@@ -106,17 +106,34 @@ function extractSnippet(text: string, words: string[], maxLength = 90): string {
 
 export function useGlobalSearch(searchQuery: string, activeSpaceId: string | null) {
   const [activeCategory, setActiveCategory] = React.useState<SearchCategory>('all');
+  const hasQuery = searchQuery.trim().length > 0;
 
   const allSpaces = useLiveQuery(async () => {
+    if (!hasQuery) return [] as Space[];
     const spaces = await db.spaces.orderBy('order').toArray();
     return spaces.filter((s) => !s.isArchived);
-  }, []);
+  }, [hasQuery]);
 
-  const allTabs = useLiveQuery(async () => db.tabs.orderBy('order').toArray(), []);
-  const allNotes = useLiveQuery(async () => db.notes.toArray(), []);
-  const allTasks = useLiveQuery(async () => db.tasks.orderBy('order').toArray(), []);
-  const allResourceSections = useLiveQuery(async () => db.resourceSections.toArray(), []);
-  const allResourceItems = useLiveQuery(async () => db.resourceItems.orderBy('order').toArray(), []);
+  const allTabs = useLiveQuery(
+    async () => (hasQuery ? db.tabs.orderBy('order').toArray() : []),
+    [hasQuery]
+  );
+  const allNotes = useLiveQuery(
+    async () => (hasQuery ? db.notes.toArray() : []),
+    [hasQuery]
+  );
+  const allTasks = useLiveQuery(
+    async () => (hasQuery ? db.tasks.orderBy('order').toArray() : []),
+    [hasQuery]
+  );
+  const allResourceSections = useLiveQuery(
+    async () => (hasQuery ? db.resourceSections.toArray() : []),
+    [hasQuery]
+  );
+  const allResourceItems = useLiveQuery(
+    async () => (hasQuery ? db.resourceItems.orderBy('order').toArray() : []),
+    [hasQuery]
+  );
 
   const searchWords = React.useMemo(() => {
     return searchQuery

@@ -1,6 +1,7 @@
 import { db } from '@/db';
 import { type Tab } from '@/db/schema';
 import { decodeRealUrl, extractDomain, isSystemOrExtensionUrl } from '@/utils/urlFilter';
+import { getHostWindowId } from '@/utils/chromeWindow';
 import { setTransitionLock } from './windowSpaces';
 import { closeTabs } from './tabOperations';
 
@@ -115,9 +116,19 @@ export async function sortTabsByDomain(tabs: Tab[]): Promise<void> {
 
 export async function closeDuplicateTabs(tabs: Tab[]): Promise<number> {
   if (!tabs || tabs.length <= 1) return 0;
-  const seenUrls = new Set<string>();
-  const duplicateTabIds: string[] = [];
 
+  const hostWinId = await getHostWindowId();
+  const openTabWindowMap = new Map<number, number>();
+  try {
+    const allOpen = await chrome.tabs.query({});
+    for (const bt of allOpen) {
+      if (typeof bt.id === 'number' && typeof bt.windowId === 'number') {
+        openTabWindowMap.set(bt.id, bt.windowId);
+      }
+    }
+  } catch {}
+
+  const groups = new Map<string, Tab[]>();
   for (const t of tabs) {
     const real = decodeRealUrl(t.url).trim();
     let normalized = real;
@@ -126,10 +137,51 @@ export async function closeDuplicateTabs(tabs: Tab[]): Promise<number> {
     } catch {
       normalized = real;
     }
-    if (seenUrls.has(normalized)) {
-      duplicateTabIds.push(t.id);
+    const list = groups.get(normalized);
+    if (list) {
+      list.push(t);
     } else {
-      seenUrls.add(normalized);
+      groups.set(normalized, [t]);
+    }
+  }
+
+  const duplicateTabIds: string[] = [];
+
+  for (const group of groups.values()) {
+    if (group.length <= 1) continue;
+
+    const scoreTab = (t: Tab): number => {
+      if (typeof t.chromeTabId === 'number') {
+        const winId = openTabWindowMap.get(t.chromeTabId);
+        if (winId !== undefined) {
+          return hostWinId && winId === hostWinId ? 3 : 2;
+        }
+        return 1;
+      }
+      return 0;
+    };
+
+    let keeper = group[0];
+    let bestScore = scoreTab(keeper);
+    for (let i = 1; i < group.length; i++) {
+      const candidateScore = scoreTab(group[i]);
+      if (candidateScore > bestScore) {
+        keeper = group[i];
+        bestScore = candidateScore;
+      }
+    }
+
+    if (keeper.id !== group[0].id && keeper.order > group[0].order) {
+      await db.tabs.update(keeper.id, {
+        order: group[0].order,
+        updatedAt: Date.now(),
+      });
+    }
+
+    for (const item of group) {
+      if (item.id !== keeper.id) {
+        duplicateTabIds.push(item.id);
+      }
     }
   }
 
@@ -141,10 +193,10 @@ export async function closeDuplicateTabs(tabs: Tab[]): Promise<number> {
 
 export async function suspendAllTabsInCurrentWindow(): Promise<void> {
   try {
-    const curWin = await chrome.windows.getCurrent();
-    if (!curWin.id) return;
+    const winId = await getHostWindowId();
+    if (!winId) return;
 
-    const browserTabs = await chrome.tabs.query({ windowId: curWin.id });
+    const browserTabs = await chrome.tabs.query({ windowId: winId });
     const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
 
     for (const t of browserTabs) {
@@ -153,7 +205,14 @@ export async function suspendAllTabsInCurrentWindow(): Promise<void> {
       if (t.url.startsWith(dashboardUrl) || t.url.includes('/suspended.html')) continue;
 
       try {
-        await chrome.tabs.discard(t.id);
+        const oldTabId = t.id;
+        const discarded = await chrome.tabs.discard(oldTabId);
+        if (discarded?.id && discarded.id !== oldTabId) {
+          await db.tabs
+            .where('chromeTabId')
+            .equals(oldTabId)
+            .modify({ chromeTabId: discarded.id, updatedAt: Date.now() });
+        }
       } catch {}
     }
   } catch (e) {
@@ -163,10 +222,10 @@ export async function suspendAllTabsInCurrentWindow(): Promise<void> {
 
 export async function reloadAllTabsInCurrentWindow(): Promise<void> {
   try {
-    const curWin = await chrome.windows.getCurrent();
-    if (!curWin.id) return;
+    const winId = await getHostWindowId();
+    if (!winId) return;
 
-    const browserTabs = await chrome.tabs.query({ windowId: curWin.id });
+    const browserTabs = await chrome.tabs.query({ windowId: winId });
     const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
 
     for (const t of browserTabs) {

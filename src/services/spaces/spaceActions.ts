@@ -3,6 +3,17 @@ import { type Space } from '@/db/schema';
 import { recordTombstones } from '@/services/driveSync';
 
 /**
+ * Computes the next sequential order index for a newly created or saved space.
+ */
+export async function getNextSpaceOrder(): Promise<number> {
+  const allSpaces = await db.spaces.toArray();
+  const savedOrders = allSpaces
+    .filter((s) => !s.isUnsaved && typeof s.order === 'number')
+    .map((s) => s.order);
+  return savedOrders.length > 0 ? Math.max(...savedOrders) + 1 : 0;
+}
+
+/**
  * Atomically duplicates a space and all of its tabs, notes, tasks, and resource sections/items.
  */
 export async function duplicateSpace(space: Space): Promise<string> {
@@ -13,7 +24,7 @@ export async function duplicateSpace(space: Space): Promise<string> {
     'rw',
     [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
     async () => {
-      const count = await db.spaces.count();
+      const nextOrder = await getNextSpaceOrder();
       await db.spaces.add({
         id: newSpaceId,
         name: `${space.name} (Copy)`,
@@ -21,7 +32,7 @@ export async function duplicateSpace(space: Space): Promise<string> {
         color: space.color,
         description: space.description,
         section: space.section,
-        order: count,
+        order: nextOrder,
         createdAt: now,
         updatedAt: now,
         isArchived: false,

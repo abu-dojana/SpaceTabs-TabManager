@@ -16,6 +16,7 @@ import {
   suspendAllTabsInCurrentWindow,
   reloadAllTabsInCurrentWindow,
   exportSpaceToFile,
+  getNextSpaceOrder,
 } from '@/services/tabManager';
 import { decodeRealUrl, isSystemOrExtensionUrl } from '@/utils/urlFilter';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -46,23 +47,20 @@ export const TabsView: React.FC = () => {
     clearSelectedTabs,
   } = useUIStore();
 
-  // Query tabs from Dexie using valid string spaceId
-  const tabs = useLiveQuery(async () => {
-    const targetSpace = activeSpaceId || UNSAVED_SPACE_ID;
-    let result = await db.tabs
-      .where('spaceId')
-      .equals(targetSpace)
-      .sortBy('order');
+  // Query all tabs for this space from Dexie, then filter by searchQuery for display
+  const allSpaceTabs = useLiveQuery(
+    () => db.tabs.where('spaceId').equals(activeSpaceId || UNSAVED_SPACE_ID).sortBy('order'),
+    [activeSpaceId]
+  );
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) || t.url.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [activeSpaceId, searchQuery]);
+  const tabs = React.useMemo(() => {
+    if (!allSpaceTabs) return undefined;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return allSpaceTabs;
+    return allSpaceTabs.filter(
+      (t) => t.title.toLowerCase().includes(q) || t.url.toLowerCase().includes(q)
+    );
+  }, [allSpaceTabs, searchQuery]);
 
   const spaces = useLiveQuery(async () => {
     const list = await db.spaces.orderBy('order').toArray();
@@ -162,13 +160,13 @@ export const TabsView: React.FC = () => {
   const handleMoveToNewSpace = async (tabIds: string[], spaceName: string) => {
     const trimmed = spaceName.trim() || 'Untitled Space';
     const newSpaceId = crypto.randomUUID();
-    const count = await db.spaces.count();
+    const nextOrder = await getNextSpaceOrder();
     const now = Date.now();
 
     await db.spaces.add({
       id: newSpaceId,
       name: trimmed,
-      order: count,
+      order: nextOrder,
       createdAt: now,
       updatedAt: now,
       isArchived: false,
@@ -433,6 +431,7 @@ export const TabsView: React.FC = () => {
         <div className="divide-y divide-slate-800/50">
           {tabs && tabs.length > 0 ? (
             tabs.map((tab, index) => {
+              let resolvedChromeTabId = tab.chromeTabId;
               let liveWindowId = tab.chromeTabId
                 ? liveTabsMap.get(tab.chromeTabId)
                 : undefined;
@@ -441,14 +440,17 @@ export const TabsView: React.FC = () => {
               if (liveWindowId === undefined && allLiveTabsList.length > 0) {
                 const realUrl = decodeRealUrl(tab.url);
                 const match = allLiveTabsList.find((bt) => {
-                  if (!bt.url || isSystemOrExtensionUrl(bt.url)) return false;
+                  if (bt.pinned) return false;
+                  const raw = bt.url || bt.pendingUrl || '';
+                  if (!raw || isSystemOrExtensionUrl(raw)) return false;
                   return (
-                    decodeRealUrl(bt.url) === realUrl ||
+                    decodeRealUrl(bt.url || '') === realUrl ||
                     decodeRealUrl(bt.pendingUrl || '') === realUrl
                   );
                 });
                 if (match && match.windowId) {
                   liveWindowId = match.windowId;
+                  resolvedChromeTabId = match.id;
                 }
               }
 
@@ -476,8 +478,8 @@ export const TabsView: React.FC = () => {
                   newSpaceName={newSpaceNameInput}
                   renderFavicon={renderFavicon}
                   onToggleSelect={() => toggleSelectTab(tab.id)}
-                  onLocateOrOpen={() => locateOrOpenTab(tab)}
-                  onOpenInNewWindow={() => openTabInNewWindow(tab)}
+                  onLocateOrOpen={() => locateOrOpenTab({ ...tab, chromeTabId: resolvedChromeTabId })}
+                  onOpenInNewWindow={() => openTabInNewWindow({ ...tab, chromeTabId: resolvedChromeTabId })}
                   onCopyUrl={() => handleCopyUrl(tab.id, tab.url)}
                   onCloseTab={() => handleDeleteTab(tab.id)}
                   onToggleDropdown={(e) => {
@@ -536,14 +538,16 @@ export const TabsView: React.FC = () => {
                     setDragOverTabIndex(null);
                     const fromId = draggingTabId || e.dataTransfer.getData('text/plain');
                     setDraggingTabId(null);
-                    if (!fromId || !tabs) return;
+                    const fullList = allSpaceTabs || tabs;
+                    if (!fromId || !fullList) return;
 
-                    const fromIndex = tabs.findIndex((t) => t.id === fromId);
-                    if (fromIndex === -1 || fromIndex === index) return;
+                    const fromIndex = fullList.findIndex((t) => t.id === fromId);
+                    const toIndex = fullList.findIndex((t) => t.id === tab.id);
+                    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
 
-                    const reordered = [...tabs];
+                    const reordered = [...fullList];
                     const [moved] = reordered.splice(fromIndex, 1);
-                    reordered.splice(index, 0, moved);
+                    reordered.splice(toIndex, 0, moved);
 
                     await reorderTabsAndSyncBrowser(reordered);
                   }}

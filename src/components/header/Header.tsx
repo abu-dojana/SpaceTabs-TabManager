@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/uiStore';
 import {
   openSpaceInNewWindow,
   setWindowActiveSpaceId,
+  getNextSpaceOrder,
 } from '@/services/tabManager';
 import {
   ExternalLink,
@@ -112,11 +113,13 @@ export const Header: React.FC = () => {
 
     if (!activeSpaceId || activeSpace?.isUnsaved) {
       // QUICK SAVE: Transform Unsaved session into a new permanent Space!
+      const nextOrder = await getNextSpaceOrder();
       if (activeSpace?.id) {
         await db.spaces.update(activeSpace.id, {
           name: trimmed,
           icon: iconInput,
           isUnsaved: false,
+          order: nextOrder,
           updatedAt: now,
         });
         const winId = await getHostWindowId();
@@ -124,7 +127,6 @@ export const Header: React.FC = () => {
           await setWindowActiveSpaceId(winId, activeSpace.id);
         }
       } else {
-        const count = await db.spaces.count();
         const newSpaceId = crypto.randomUUID();
 
         await db.spaces.add({
@@ -134,7 +136,7 @@ export const Header: React.FC = () => {
           color: '#3b82f6',
           createdAt: now,
           updatedAt: now,
-          order: count,
+          order: nextOrder,
           isArchived: false,
         });
 

@@ -48,25 +48,15 @@ if (realUrl) {
 const initTime = Date.now();
 let isRestoring = false;
 
-function restore() {
-  if (isRestoring || !realUrl) return;
-  isRestoring = true;
+function isSafeRestoreUrl(url: string): boolean {
+  const lower = url.trim().toLowerCase();
+  return lower.startsWith('http://') || lower.startsWith('https://');
+}
 
-  if (realUrl.startsWith('http://') || realUrl.startsWith('https://')) {
-    window.location.replace(realUrl);
-  } else {
-    try {
-      chrome.tabs.getCurrent((tab) => {
-        if (tab?.id) {
-          chrome.tabs.update(tab.id, { url: realUrl });
-        } else {
-          window.location.replace(realUrl);
-        }
-      });
-    } catch {
-      window.location.replace(realUrl);
-    }
-  }
+function restore() {
+  if (isRestoring || !realUrl || !isSafeRestoreUrl(realUrl)) return;
+  isRestoring = true;
+  window.location.replace(realUrl.trim());
 }
 
 function checkVisibleAndRestore() {

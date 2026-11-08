@@ -13,7 +13,7 @@
   <a href="https://chromewebstore.google.com/detail/aiajlcdplbpcfohgekcgafcpghgjojhh?utm_source=item-share-cb">
     <img src="https://img.shields.io/badge/Chrome%20Web%20Store-SpaceTabs-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
   </a>
-  <img src="https://img.shields.io/badge/Version-1.3.1-blue?style=for-the-badge" alt="Version 1.3.1" />
+  <img src="https://img.shields.io/badge/Version-1.4.0-blue?style=for-the-badge" alt="Version 1.4.0" />
   <img src="https://img.shields.io/badge/Manifest-V3-success?style=for-the-badge" alt="Manifest V3" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="GPL-3.0 License" />
   <img src="https://img.shields.io/badge/Sync-Google%20Drive-34A853?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive Sync" />
@@ -89,7 +89,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 * **Resources Hub:** Organize recurring documentation, links, and assets into categorized sections.
 * **Notes:** Built-in markdown notes scratchpad per space with auto-saving, live split-pane preview, and formatting toolbar.
 * **Tasks:** Space checklists with completion states and ordering.
-* **Global Search:** Fast fuzzy search across all spaces, open tabs, notes, and resource items.
+* **Global Search:** Fast multi-keyword search across all spaces, open tabs, notes, tasks, and resource items.
 
 ### 🎨 Themes & Customization
 * **Independent Sidebar & Canvas Modes:** Choose between **Split Mode** (Dark sidebar + Light canvas), **All Dark**, or **All Light**.
@@ -125,7 +125,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 * **Local Database:** [Dexie.js](https://dexie.org/) (IndexedDB with live reactive hooks)
 * **Cloud Storage:** Google Drive REST API v3 (OAuth2 via `chrome.identity`)
 * **State Management:** Dexie Live Queries + Zustand (ephemeral UI state)
-* **Drag & Drop:** `@dnd-kit`
+* **Drag & Drop:** Native HTML5 Drag and Drop API
 
 ---
 

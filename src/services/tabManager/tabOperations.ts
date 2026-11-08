@@ -4,6 +4,8 @@ import { decodeRealUrl } from '@/utils/urlFilter';
 import { getHostWindowId } from '@/utils/chromeWindow';
 import { recordTombstones } from '@/services/driveSync';
 import {
+  ensureWindowUnsavedSpace,
+  getAllWindowSpaces,
   setPendingNewWindowSpace,
   setTransitionLock,
   setWindowActiveSpaceId,
@@ -138,36 +140,61 @@ export async function openTabInNewWindow(tab: {
   }
 
   try {
+    const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
     const targetChromeTabId = tab.chromeTabId || record?.chromeTabId;
-    if (targetChromeTabId) {
-      const liveTab = await chrome.tabs.get(targetChromeTabId).catch(() => null);
-      if (liveTab && liveTab.id) {
-        const sourceWinId = liveTab.windowId;
-        const newWin = await chrome.windows.create({ tabId: liveTab.id, focused: true });
-        if (newWin?.id) {
-          if (savedSpaceId) {
-            await setWindowActiveSpaceId(newWin.id, savedSpaceId);
-            await setPendingNewWindowSpace(null);
-          }
-          await db.tabs.update(tab.id, {
-            chromeTabId: liveTab.id,
-            windowId: newWin.id,
-            updatedAt: Date.now(),
-          });
-          setTimeout(async () => {
-            if (newWin.id) {
-              await setTransitionLock(newWin.id, false);
-              await syncWindowTabsToUnsaved(newWin.id);
-            }
-            if (sourceWinId && sourceWinId !== newWin.id) {
-              await syncWindowTabsToUnsaved(sourceWinId);
-            }
-          }, 300);
-        } else {
+    let liveTab = targetChromeTabId
+      ? await chrome.tabs.get(targetChromeTabId).catch(() => null)
+      : null;
+
+    // Fallback: if chromeTabId is missing/stale, check if an unclaimed live tab with this URL is open in the source window
+    if (!liveTab) {
+      const preferredWinId = record?.windowId || (await getHostWindowId());
+      if (preferredWinId) {
+        const winTabs = await chrome.tabs.query({ windowId: preferredWinId }).catch(() => []);
+        const spaceTabs = record?.spaceId
+          ? await db.tabs.where('spaceId').equals(record.spaceId).toArray()
+          : [];
+        const claimedTabIds = new Set<number>(
+          spaceTabs
+            .filter((st) => st.id !== tab.id && typeof st.chromeTabId === 'number')
+            .map((st) => st.chromeTabId!)
+        );
+        liveTab =
+          winTabs.find((wt) => {
+            if (!wt.id || wt.pinned || claimedTabIds.has(wt.id)) return false;
+            const raw = wt.url || wt.pendingUrl || '';
+            if (!raw || raw.startsWith(dashboardUrl)) return false;
+            return decodeRealUrl(raw) === realUrl;
+          }) || null;
+      }
+    }
+
+    if (liveTab && liveTab.id) {
+      const sourceWinId = liveTab.windowId;
+      const newWin = await chrome.windows.create({ tabId: liveTab.id, focused: true });
+      if (newWin?.id) {
+        if (savedSpaceId) {
+          await setWindowActiveSpaceId(newWin.id, savedSpaceId);
           await setPendingNewWindowSpace(null);
         }
-        return;
+        await db.tabs.update(tab.id, {
+          chromeTabId: liveTab.id,
+          windowId: newWin.id,
+          updatedAt: Date.now(),
+        });
+        setTimeout(async () => {
+          if (newWin.id) {
+            await setTransitionLock(newWin.id, false);
+            await syncWindowTabsToUnsaved(newWin.id);
+          }
+          if (sourceWinId && sourceWinId !== newWin.id) {
+            await syncWindowTabsToUnsaved(sourceWinId);
+          }
+        }, 300);
+      } else {
+        await setPendingNewWindowSpace(null);
       }
+      return;
     }
 
     const newWin = await chrome.windows.create({ url: realUrl, focused: true });
@@ -329,23 +356,40 @@ export async function moveTabsToSpace(
   let normalizedTarget = targetSpaceId;
 
   if (!normalizedTarget || normalizedTarget === UNSAVED_SPACE_ID) {
-    let unsavedSpace = await db.spaces
-      .filter((s) => !!s.isUnsaved && !s.isArchived)
-      .first();
-    if (!unsavedSpace) {
-      const newId = crypto.randomUUID();
-      unsavedSpace = {
-        id: newId,
-        name: '',
-        isUnsaved: true,
-        order: now,
-        createdAt: now,
-        updatedAt: now,
-        isArchived: false,
-      };
-      await db.spaces.add(unsavedSpace);
+    const hostWinId = await getHostWindowId();
+    if (hostWinId) {
+      const winSpaceId = await getAllWindowSpaces().then((m) => m.get(hostWinId));
+      const winSpace = winSpaceId ? await db.spaces.get(winSpaceId) : undefined;
+      if (winSpace?.isUnsaved && !winSpace.isArchived) {
+        normalizedTarget = winSpace.id;
+      }
     }
-    normalizedTarget = unsavedSpace.id;
+    if (!normalizedTarget || normalizedTarget === UNSAVED_SPACE_ID) {
+      let unsavedSpace = await db.spaces
+        .filter((s) => !!s.isUnsaved && !s.isArchived)
+        .first();
+      if (!unsavedSpace) {
+        const hostWin = await getHostWindowId();
+        if (hostWin) {
+          normalizedTarget = await ensureWindowUnsavedSpace(hostWin, true);
+        } else {
+          const newId = crypto.randomUUID();
+          unsavedSpace = {
+            id: newId,
+            name: '',
+            isUnsaved: true,
+            order: now,
+            createdAt: now,
+            updatedAt: now,
+            isArchived: false,
+          };
+          await db.spaces.add(unsavedSpace);
+          normalizedTarget = unsavedSpace.id;
+        }
+      } else {
+        normalizedTarget = unsavedSpace.id;
+      }
+    }
   }
 
   const targetTabs = await db.tabs
@@ -364,6 +408,7 @@ export async function moveTabsToSpace(
     await db.tabs.update(id, {
       spaceId: normalizedTarget,
       chromeTabId: undefined,
+      windowId: undefined,
       order: nextOrder++,
       updatedAt: now,
     });
@@ -380,13 +425,12 @@ export async function moveTabsToSpace(
 
 /**
  * Closes one or more tabs:
- * 1. Closes the physical Chrome browser tab if it is currently open in any window.
- * 2. Removes the tab record from the database.
+ * 1. Removes the tab records from the database first (preventing onRemoved sync races).
+ * 2. Closes the physical Chrome browser tab only if it is not owned by a surviving tab record.
  */
 export async function closeTabs(tabIds: string[]) {
   if (!tabIds || tabIds.length === 0) return;
   const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
-
   const currentWindowId = (await getHostWindowId()) ?? undefined;
 
   let allBrowserTabs: chrome.tabs.Tab[] = [];
@@ -394,32 +438,60 @@ export async function closeTabs(tabIds: string[]) {
     allBrowserTabs = await chrome.tabs.query({});
   } catch {}
 
+  const deletingSet = new Set(tabIds);
+  const [allStoredTabs, allSpaces, allWinSpaces] = await Promise.all([
+    db.tabs.toArray(),
+    db.spaces.toArray(),
+    getAllWindowSpaces(),
+  ]);
+
+  const unsavedSpaceIds = new Set(
+    allSpaces.filter((s) => s.isUnsaved).map((s) => s.id)
+  );
+  unsavedSpaceIds.add(UNSAVED_SPACE_ID);
+
+  const survivingRecords = allStoredTabs.filter((r) => !deletingSet.has(r.id));
+  const protectedChromeTabIds = new Set<number>(
+    survivingRecords
+      .map((r) => r.chromeTabId)
+      .filter((id): id is number => typeof id === 'number')
+  );
+  const survivingSpaceUrls = new Set<string>(
+    survivingRecords.map((r) => `${r.spaceId}::${decodeRealUrl(r.url)}`)
+  );
+
+  const recordMap = new Map(allStoredTabs.map((r) => [r.id, r]));
+  const browserTabIdsToClose: number[] = [];
   const tombstonesToRecord: { id: string; table: 'tabs' }[] = [];
 
   for (const id of tabIds) {
-    const record = await db.tabs.get(id);
-    if (!record) {
-      await db.tabs.delete(id);
-      continue;
-    }
+    const record = recordMap.get(id);
+    if (!record) continue;
 
     const realUrl = decodeRealUrl(record.url);
     let targetBrowserTabId: number | undefined;
 
-    // 1. Try exact match by chromeTabId
-    if (record.chromeTabId) {
+    // 1. Try exact match by chromeTabId (unless claimed by a surviving tab record)
+    if (record.chromeTabId && !protectedChromeTabIds.has(record.chromeTabId)) {
       const match = allBrowserTabs.find((t) => t.id === record.chromeTabId);
-      if (match?.id && !match.url?.startsWith(dashboardUrl)) {
+      if (match?.id && !match.pinned && !match.url?.startsWith(dashboardUrl)) {
         targetBrowserTabId = match.id;
       }
     }
 
-    // 2. Fallback: match by URL within record's windowId or current window
-    if (!targetBrowserTabId) {
+    // 2. Fallback: match by URL ONLY if no surviving record in the same space shares this URL
+    const spaceUrlKey = `${record.spaceId}::${realUrl}`;
+    if (!targetBrowserTabId && !survivingSpaceUrls.has(spaceUrlKey)) {
       const preferredWinId = record.windowId || currentWindowId;
       const match = allBrowserTabs.find((t) => {
-        if (!t.id || t.url?.startsWith(dashboardUrl)) return false;
+        if (!t.id || t.pinned || protectedChromeTabIds.has(t.id)) return false;
+        const rawUrl = t.url || t.pendingUrl || '';
+        if (!rawUrl || rawUrl.startsWith(dashboardUrl)) return false;
         if (preferredWinId && t.windowId !== preferredWinId) return false;
+        if (!record.windowId && t.windowId) {
+          const winBoundSpace = allWinSpaces.get(t.windowId);
+          if (winBoundSpace && winBoundSpace !== record.spaceId) return false;
+        }
         const tReal = decodeRealUrl(t.url || '');
         const tPending = decodeRealUrl(t.pendingUrl || '');
         return tReal === realUrl || tPending === realUrl;
@@ -429,28 +501,31 @@ export async function closeTabs(tabIds: string[]) {
       }
     }
 
-    // Close the physical browser tab in Chrome if open
     if (targetBrowserTabId) {
-      try {
-        await chrome.tabs.remove(targetBrowserTabId);
-        // Exclude the closed tab from subsequent iterations
-        allBrowserTabs = allBrowserTabs.filter((t) => t.id !== targetBrowserTabId);
-      } catch (err) {
-        // Tab might have already been closed
-      }
+      browserTabIdsToClose.push(targetBrowserTabId);
+      allBrowserTabs = allBrowserTabs.filter((t) => t.id !== targetBrowserTabId);
     }
 
-    // Collect tombstone for cloud sync if this is a saved workspace tab
-    if (record && record.spaceId !== UNSAVED_SPACE_ID) {
+    // Collect tombstone for cloud sync only if this is a saved workspace tab
+    if (record.spaceId && !unsavedSpaceIds.has(record.spaceId)) {
       tombstonesToRecord.push({ id, table: 'tabs' });
     }
-
-    // Always delete the record from Dexie
-    await db.tabs.delete(id);
   }
 
-  // Atomically record all tombstones in a single batch to avoid race conditions
+  // Delete from Dexie BEFORE removing Chrome tabs so onRemoved background sync sees the updated DB state
+  await db.tabs.bulkDelete(tabIds);
+
   if (tombstonesToRecord.length > 0) {
     await recordTombstones(tombstonesToRecord);
+  }
+
+  if (browserTabIdsToClose.length > 0) {
+    try {
+      await chrome.tabs.remove(browserTabIdsToClose);
+    } catch {
+      for (const bId of browserTabIdsToClose) {
+        await chrome.tabs.remove(bId).catch(() => {});
+      }
+    }
   }
 }

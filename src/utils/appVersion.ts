@@ -3,9 +3,9 @@
  */
 export function getAppVersion(): string {
   try {
-    return chrome.runtime?.getManifest?.()?.version || '1.3.1';
+    return chrome.runtime?.getManifest?.()?.version || '1.4.0';
   } catch {
-    return '1.3.1';
+    return '1.4.0';
   }
 }
 

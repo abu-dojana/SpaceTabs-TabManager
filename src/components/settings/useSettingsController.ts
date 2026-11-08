@@ -123,12 +123,45 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     setPatreonUrl,
   ]);
 
-  const spacesCount = useLiveQuery(() => db.spaces.count()) ?? 0;
-  const savedTabsCount =
-    useLiveQuery(() => db.tabs.where('spaceId').notEqual(UNSAVED_SPACE_ID).count()) ?? 0;
-  const notesCount = useLiveQuery(() => db.notes.count()) ?? 0;
-  const tasksCount = useLiveQuery(() => db.tasks.count()) ?? 0;
-  const resourcesCount = useLiveQuery(() => db.resourceItems.count()) ?? 0;
+  const backupMetrics = useLiveQuery(async () => {
+    const allSpaces = await db.spaces.toArray();
+    const savedSpaceIds = allSpaces
+      .filter((s) => !s.isUnsaved && !s.isArchived)
+      .map((s) => s.id);
+    if (savedSpaceIds.length === 0) {
+      return {
+        spacesCount: 0,
+        savedTabsCount: 0,
+        notesCount: 0,
+        tasksCount: 0,
+        resourcesCount: 0,
+      };
+    }
+    const [tabsCount, notesCount, tasksCount, sections] = await Promise.all([
+      db.tabs.where('spaceId').anyOf(savedSpaceIds).count(),
+      db.notes.where('spaceId').anyOf(savedSpaceIds).count(),
+      db.tasks.where('spaceId').anyOf(savedSpaceIds).count(),
+      db.resourceSections.where('spaceId').anyOf(savedSpaceIds).toArray(),
+    ]);
+    const sectionIds = sections.map((s) => s.id);
+    const resourcesCount =
+      sectionIds.length > 0
+        ? await db.resourceItems.where('sectionId').anyOf(sectionIds).count()
+        : 0;
+    return {
+      spacesCount: savedSpaceIds.length,
+      savedTabsCount: tabsCount,
+      notesCount,
+      tasksCount,
+      resourcesCount,
+    };
+  });
+
+  const spacesCount = backupMetrics?.spacesCount ?? 0;
+  const savedTabsCount = backupMetrics?.savedTabsCount ?? 0;
+  const notesCount = backupMetrics?.notesCount ?? 0;
+  const tasksCount = backupMetrics?.tasksCount ?? 0;
+  const resourcesCount = backupMetrics?.resourcesCount ?? 0;
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });

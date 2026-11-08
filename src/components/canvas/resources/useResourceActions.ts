@@ -1,6 +1,6 @@
 import React from 'react';
 import { db } from '@/db';
-import { type ResourceSection, type ResourceItem } from '@/db/schema';
+import { type ResourceSection, type ResourceItem, UNSAVED_SPACE_ID } from '@/db/schema';
 import { recordTombstone, recordTombstones } from '@/services/driveSync';
 import { focusOrOpenTab } from '@/services/tabManager';
 import { decodeRealUrl, extractDomain } from '@/utils/urlFilter';
@@ -159,10 +159,15 @@ export function useResourceActions({
       return next;
     });
     const itemsToDelete = await db.resourceItems.where('sectionId').equals(sectionId).toArray();
-    recordTombstones([
-      { id: sectionId, table: 'resource_sections' as const },
-      ...itemsToDelete.map((it) => ({ id: it.id, table: 'resource_items' as const })),
-    ]).catch(() => {});
+    if (targetSpaceId !== UNSAVED_SPACE_ID) {
+      const space = await db.spaces.get(targetSpaceId).catch(() => undefined);
+      if (!space?.isUnsaved) {
+        recordTombstones([
+          { id: sectionId, table: 'resource_sections' as const },
+          ...itemsToDelete.map((it) => ({ id: it.id, table: 'resource_items' as const })),
+        ]).catch(() => {});
+      }
+    }
 
     for (const it of itemsToDelete) {
       await db.resourceItems.delete(it.id);
@@ -197,7 +202,12 @@ export function useResourceActions({
   // Delete resource item
   const handleDeleteItem = async (itemId: string) => {
     setActiveItemMenuId(null);
-    recordTombstone(itemId, 'resource_items').catch(() => {});
+    if (targetSpaceId !== UNSAVED_SPACE_ID) {
+      const space = await db.spaces.get(targetSpaceId).catch(() => undefined);
+      if (!space?.isUnsaved) {
+        recordTombstone(itemId, 'resource_items').catch(() => {});
+      }
+    }
     await db.resourceItems.delete(itemId);
   };
 

@@ -12,6 +12,7 @@ import {
 import { notifyStatusChange } from './status';
 
 const TOMBSTONE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+let tombstoneWriteQueue: Promise<void> = Promise.resolve();
 
 /**
  * Records a tombstone when a space, tab, note, task, or resource is deleted.
@@ -21,49 +22,37 @@ export async function recordTombstone(
   id: string,
   table: Tombstone['table']
 ): Promise<void> {
-  try {
-    const list = await getTombstones();
-    const existing = list.findIndex((t) => t.id === id);
-    const item: Tombstone = { id, table, deletedAt: Date.now() };
-
-    if (existing >= 0) {
-      list[existing] = item;
-    } else {
-      list.push(item);
-    }
-
-    const thirtyDaysAgo = Date.now() - TOMBSTONE_RETENTION_MS;
-    const pruned = list.filter((t) => t.deletedAt > thirtyDaysAgo);
-
-    await chrome.storage.local.set({ [STORAGE_KEY_TOMBSTONES]: pruned });
-  } catch (err) {
-    console.warn('Failed to record tombstone:', err);
-  }
+  return recordTombstones([{ id, table }]);
 }
 
 /**
  * Records multiple tombstones in a single batch (e.g. deleting a space and all its child tabs)
+ * Serialized through an in-memory queue to prevent read-modify-write races on rapid deletions.
  */
 export async function recordTombstones(
   tombstones: { id: string; table: Tombstone['table'] }[]
 ): Promise<void> {
   if (!tombstones.length) return;
-  try {
-    const list = await getTombstones();
-    const now = Date.now();
-    const map = new Map<string, Tombstone>();
-    for (const t of list) map.set(t.id, t);
-    for (const t of tombstones) {
-      map.set(t.id, { id: t.id, table: t.table, deletedAt: now });
+  const nextTask = tombstoneWriteQueue.then(async () => {
+    try {
+      const list = await getTombstones();
+      const now = Date.now();
+      const map = new Map<string, Tombstone>();
+      for (const t of list) map.set(t.id, t);
+      for (const t of tombstones) {
+        map.set(t.id, { id: t.id, table: t.table, deletedAt: now });
+      }
+
+      const thirtyDaysAgo = now - TOMBSTONE_RETENTION_MS;
+      const pruned = Array.from(map.values()).filter((t) => t.deletedAt > thirtyDaysAgo);
+
+      await chrome.storage.local.set({ [STORAGE_KEY_TOMBSTONES]: pruned });
+    } catch (err) {
+      console.warn('Failed to record bulk tombstones:', err);
     }
-
-    const thirtyDaysAgo = now - TOMBSTONE_RETENTION_MS;
-    const pruned = Array.from(map.values()).filter((t) => t.deletedAt > thirtyDaysAgo);
-
-    await chrome.storage.local.set({ [STORAGE_KEY_TOMBSTONES]: pruned });
-  } catch (err) {
-    console.warn('Failed to record bulk tombstones:', err);
-  }
+  });
+  tombstoneWriteQueue = nextTask.catch(() => {});
+  return nextTask;
 }
 
 export async function getTombstones(): Promise<Tombstone[]> {

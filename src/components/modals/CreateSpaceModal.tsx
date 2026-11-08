@@ -1,7 +1,8 @@
 import React from 'react';
 import { db } from '@/db';
 import { useUIStore } from '@/store/uiStore';
-import { switchWindowToSpace } from '@/services/tabManager';
+import { switchWindowToSpace, getNextSpaceOrder } from '@/services/tabManager';
+import { getHostWindowId } from '@/utils/chromeWindow';
 import { X, FolderPlus } from 'lucide-react';
 
 export const EMOJI_OPTIONS = [
@@ -22,7 +23,7 @@ export const CreateSpaceModal: React.FC = () => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const count = await db.spaces.count();
+    const nextOrder = await getNextSpaceOrder();
     const id = crypto.randomUUID();
     const now = Date.now();
 
@@ -33,7 +34,7 @@ export const CreateSpaceModal: React.FC = () => {
       color: '#3b82f6',
       createdAt: now,
       updatedAt: now,
-      order: count,
+      order: nextOrder,
       isArchived: false,
     });
 
@@ -42,9 +43,9 @@ export const CreateSpaceModal: React.FC = () => {
     setActiveSpaceId(id);
 
     try {
-      const currentWin = await chrome.windows.getCurrent();
-      if (currentWin.id) {
-        await switchWindowToSpace(currentWin.id, id);
+      const hostWinId = await getHostWindowId();
+      if (hostWinId) {
+        await switchWindowToSpace(hostWinId, id);
       }
     } catch (err) {
       console.error('Failed to switch window on create:', err);

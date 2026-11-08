@@ -161,7 +161,9 @@ export const TasksView: React.FC = () => {
 
   // Delete task
   const handleDeleteTask = async (id: string) => {
-    recordTombstone(id, 'tasks').catch(() => {});
+    if (!activeSpace?.isUnsaved && targetSpaceId !== UNSAVED_SPACE_ID) {
+      recordTombstone(id, 'tasks').catch(() => {});
+    }
     await db.tasks.delete(id);
   };
 
@@ -170,7 +172,11 @@ export const TasksView: React.FC = () => {
     if (!allTasks) return;
     const completedTasks = allTasks.filter((t) => t.completed);
     if (completedTasks.length > 0) {
-      recordTombstones(completedTasks.map((t) => ({ id: t.id, table: 'tasks' as const }))).catch(() => {});
+      if (!activeSpace?.isUnsaved && targetSpaceId !== UNSAVED_SPACE_ID) {
+        recordTombstones(
+          completedTasks.map((t) => ({ id: t.id, table: 'tasks' as const }))
+        ).catch(() => {});
+      }
       for (const t of completedTasks) {
         await db.tasks.delete(t.id);
       }
@@ -193,12 +199,22 @@ export const TasksView: React.FC = () => {
     setDragOverIndex(null);
     if (!draggingTaskId || !allTasks) return;
 
+    const targetTask = filteredTasks[dropIndex];
+    if (!targetTask) {
+      setDraggingTaskId(null);
+      return;
+    }
+
     const fromIndex = allTasks.findIndex((t) => t.id === draggingTaskId);
-    if (fromIndex === -1 || fromIndex === dropIndex) return;
+    const toIndex = allTasks.findIndex((t) => t.id === targetTask.id);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
+      setDraggingTaskId(null);
+      return;
+    }
 
     const reordered = [...allTasks];
     const [moved] = reordered.splice(fromIndex, 1);
-    reordered.splice(dropIndex, 0, moved);
+    reordered.splice(toIndex, 0, moved);
 
     const now = Date.now();
     for (let i = 0; i < reordered.length; i++) {

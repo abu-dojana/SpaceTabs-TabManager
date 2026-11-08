@@ -12,10 +12,44 @@ import { syncNow } from './sync';
 export const WEB_OAUTH_CLIENT_ID =
   '406048483721-mpfdo15c5v7ras28kovgurkcoiqbq1l4.apps.googleusercontent.com';
 
+interface CachedOAuthToken {
+  token: string;
+  expiresAt: number;
+}
+
+async function getCachedWebAuthToken(): Promise<string | null> {
+  try {
+    const stored = await chrome.storage.local.get(STORAGE_KEY_TOKEN);
+    const raw = stored?.[STORAGE_KEY_TOKEN];
+    if (!raw) return null;
+    if (typeof raw === 'string') {
+      return raw;
+    }
+    if (
+      typeof raw === 'object' &&
+      typeof (raw as CachedOAuthToken).token === 'string' &&
+      typeof (raw as CachedOAuthToken).expiresAt === 'number'
+    ) {
+      if ((raw as CachedOAuthToken).expiresAt > Date.now()) {
+        return (raw as CachedOAuthToken).token;
+      }
+      await chrome.storage.local.remove([STORAGE_KEY_TOKEN]);
+    }
+  } catch {}
+  return null;
+}
+
 export async function invalidateAuthToken(token?: string): Promise<void> {
   try {
     const stored = await chrome.storage.local.get(STORAGE_KEY_TOKEN);
-    const tokenToRemove = token || stored[STORAGE_KEY_TOKEN];
+    const raw = stored?.[STORAGE_KEY_TOKEN];
+    const storedToken =
+      typeof raw === 'string'
+        ? raw
+        : typeof raw === 'object' && raw !== null
+        ? (raw as CachedOAuthToken).token
+        : undefined;
+    const tokenToRemove = token || storedToken;
     if (tokenToRemove && chrome?.identity?.removeCachedAuthToken) {
       await new Promise<void>((resolve) => {
         chrome.identity.removeCachedAuthToken({ token: tokenToRemove }, () => resolve());
@@ -79,6 +113,8 @@ export async function getAuthToken(interactive = true): Promise<string> {
   const settings = await getCloudSyncSettings();
 
   if (settings.customClientId && settings.customClientId.trim().length > 0) {
+    const cached = await getCachedWebAuthToken();
+    if (cached) return cached;
     return launchCustomOAuthFlow(settings.customClientId.trim(), interactive);
   }
 
@@ -108,6 +144,9 @@ export async function getAuthToken(interactive = true): Promise<string> {
       );
     }
   }
+
+  const cached = await getCachedWebAuthToken();
+  if (cached) return cached;
 
   return launchCustomOAuthFlow(WEB_OAUTH_CLIENT_ID, interactive);
 }
@@ -158,8 +197,17 @@ async function launchCustomOAuthFlow(clientId: string, interactive: boolean): Pr
         const hash = url.hash.substring(1);
         const params = new URLSearchParams(hash);
         const token = params.get('access_token');
+        const expiresInRaw = Number(params.get('expires_in') || '3600');
+        const expiresInSec = Number.isFinite(expiresInRaw) && expiresInRaw > 0 ? expiresInRaw : 3600;
         if (token) {
-          resolve(token);
+          const cachedPayload: CachedOAuthToken = {
+            token,
+            expiresAt: Date.now() + Math.max(60, expiresInSec - 60) * 1000,
+          };
+          chrome.storage.local
+            .set({ [STORAGE_KEY_TOKEN]: cachedPayload })
+            .catch(() => {})
+            .finally(() => resolve(token));
         } else {
           reject(new Error('No access_token found in OAuth redirect callback'));
         }
@@ -207,7 +255,15 @@ export async function signInWithGoogle(
 
     await setGoogleProfile(profile);
     const updatedSettings = await updateCloudSyncSettings({ enabled: true });
-    await chrome.storage.local.set({ [STORAGE_KEY_TOKEN]: token });
+    const existingTokenEntry = await chrome.storage.local.get(STORAGE_KEY_TOKEN);
+    const rawEntry = existingTokenEntry?.[STORAGE_KEY_TOKEN];
+    if (!rawEntry || typeof rawEntry !== 'object' || (rawEntry as CachedOAuthToken).token !== token) {
+      const fallbackCache: CachedOAuthToken = {
+        token,
+        expiresAt: Date.now() + 55 * 60 * 1000,
+      };
+      await chrome.storage.local.set({ [STORAGE_KEY_TOKEN]: fallbackCache });
+    }
     await setupDriveSyncAlarm(updatedSettings.syncIntervalMinutes);
     setSyncStatus('synced');
 

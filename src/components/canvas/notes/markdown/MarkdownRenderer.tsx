@@ -6,6 +6,19 @@ export interface MarkdownRendererProps {
   onToggleTodo?: (lineIndex: number) => void;
 }
 
+function isSafeLinkUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl.trim());
+    return (
+      parsed.protocol === 'http:' ||
+      parsed.protocol === 'https:' ||
+      parsed.protocol === 'mailto:'
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Lightweight, safe Markdown Renderer component
  */
@@ -46,18 +59,22 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, onT
           result.push(part.substring(lastIdx, match.index));
         }
         const [, label, url] = match;
-        result.push(
-          <a
-            key={`link-${match.index}`}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 underline inline-flex items-center gap-0.5 break-all font-medium"
-          >
-            {label}
-            <ExternalLink className="w-2.5 h-2.5 inline" />
-          </a>
-        );
+        if (isSafeLinkUrl(url)) {
+          result.push(
+            <a
+              key={`link-${match.index}`}
+              href={url.trim()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline inline-flex items-center gap-0.5 break-all font-medium"
+            >
+              {label}
+              <ExternalLink className="w-2.5 h-2.5 inline" />
+            </a>
+          );
+        } else {
+          result.push(match[0]);
+        }
         lastIdx = match.index + match[0].length;
       }
       if (lastIdx < part.length) {

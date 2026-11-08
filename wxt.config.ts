@@ -3,6 +3,14 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-react'],
+  zip: {
+    excludeSources: [
+      'client_secret*.json',
+      'docs/dev/**',
+      'PS Dtab-manager tree.txt',
+      'DIRECTORY_TREE.md',
+    ],
+  },
   manifest: {
     name: 'SpaceTabs — Tab Manager',
     description: 'Local-first, unlimited tab & workspace manager with Google Drive sync.',

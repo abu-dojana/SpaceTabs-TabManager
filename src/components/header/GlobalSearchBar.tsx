@@ -101,38 +101,39 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({ isLight }) => 
     setSelectedIndex(0);
   }, [searchQuery, activeCategory]);
 
+  const activateSpaceInWindow = async (targetSpaceId: string | null) => {
+    const currentTarget = activeSpaceId || null;
+    if (targetSpaceId === currentTarget) return;
+
+    const hostWinId = await getHostWindowId();
+    const winSpaces = await getAllWindowSpaces();
+
+    if (targetSpaceId) {
+      for (const [wId, sId] of winSpaces.entries()) {
+        if (sId === targetSpaceId && wId !== hostWinId) {
+          try {
+            await chrome.windows.update(wId, { focused: true });
+            return;
+          } catch {}
+        }
+      }
+    }
+
+    const settings = await getUserSettings();
+    if (settings.defaultOpenInNewWindow && targetSpaceId) {
+      await openSpaceInNewWindow(targetSpaceId);
+    } else {
+      setActiveSpaceId(targetSpaceId);
+      if (hostWinId) {
+        await switchWindowToSpace(hostWinId, targetSpaceId);
+      }
+    }
+  };
+
   const navigateToResult = async (item: SearchResultItem) => {
     try {
       setIsOpen(false);
-      const currentTarget = activeSpaceId || null;
-
-      // 1. Switch space if different
-      if (item.spaceId !== currentTarget) {
-        const hostWinId = await getHostWindowId();
-        const winSpaces = await getAllWindowSpaces();
-
-        // Check if target space is already open in another window
-        if (item.spaceId) {
-          for (const [wId, sId] of winSpaces.entries()) {
-            if (sId === item.spaceId && wId !== hostWinId) {
-              try {
-                await chrome.windows.update(wId, { focused: true });
-                break;
-              } catch {}
-            }
-          }
-        }
-
-        const settings = await getUserSettings();
-        if (settings.defaultOpenInNewWindow && item.spaceId) {
-          await openSpaceInNewWindow(item.spaceId);
-        } else {
-          setActiveSpaceId(item.spaceId);
-          if (hostWinId) {
-            await switchWindowToSpace(hostWinId, item.spaceId);
-          }
-        }
-      }
+      await activateSpaceInWindow(item.spaceId);
 
       // 2. Switch to the appropriate canvas view and activate target item
       if (item.type === 'tab') {
@@ -313,10 +314,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({ isLight }) => 
                   {/* Space Group Header */}
                   <div
                     onClick={() => {
-                      if (group.spaceId !== activeSpaceId) {
-                        setActiveSpaceId(group.spaceId);
-                      }
                       setIsOpen(false);
+                      activateSpaceInWindow(group.spaceId);
                     }}
                     className={`px-3.5 py-1.5 flex items-center justify-between cursor-pointer transition ${
                       isLight ? 'hover:bg-slate-100/80' : 'hover:bg-slate-900/70'
