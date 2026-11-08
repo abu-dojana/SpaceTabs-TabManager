@@ -15,11 +15,13 @@ import {
   renameSpace,
   updateSpaceDescription,
   exportSpaceToFile,
+  importSpacesFromFile,
   renameSection,
   archiveSectionSpaces,
   keepSectionSpacesUnsectioned,
+  type ExportFormat,
 } from '@/services/tabManager';
-import { Folder, Plus, Lock, Unlock } from 'lucide-react';
+import { Folder, Plus, Upload, Lock, Unlock } from 'lucide-react';
 import { getUserSettings } from '@/services/settings';
 import { getHostWindowId } from '@/utils/chromeWindow';
 import { useDriveSyncInfo } from '@/hooks/useDriveSyncInfo';
@@ -65,6 +67,7 @@ export const Sidebar: React.FC = () => {
   // 3-Dot Dropdown & Modals State for Spaces
   const [activeMenuSpaceId, setActiveMenuSpaceId] = React.useState<string | null>(null);
   const menuRef = React.useRef<HTMLDivElement>(null!);
+  const importSpaceInputRef = React.useRef<HTMLInputElement>(null!);
 
   const [inlineEditingSpaceId, setInlineEditingSpaceId] = React.useState<string | null>(null);
   const [inlineEditingName, setInlineEditingName] = React.useState<string>('');
@@ -271,9 +274,27 @@ export const Sidebar: React.FC = () => {
     await duplicateSpace(space);
   };
 
-  const handleExportSidebarSpace = async (space: Space) => {
+  const handleExportSidebarSpace = async (space: Space, format: ExportFormat) => {
     setActiveMenuSpaceId(null);
-    await exportSpaceToFile(space.id, space.name);
+    await exportSpaceToFile(space.id, space.name, format);
+  };
+
+  const handleImportSpaceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const res = await importSpacesFromFile(text, file.name);
+      if (res.success && res.createdSpaceId) {
+        await handleSelectSpace(res.createdSpaceId);
+      }
+    } catch (err) {
+      console.error('Failed to import space file:', err);
+    } finally {
+      if (importSpaceInputRef.current) {
+        importSpaceInputRef.current.value = '';
+      }
+    }
   };
 
   const handleArchiveSpace = async (space: Space) => {
@@ -354,7 +375,7 @@ export const Sidebar: React.FC = () => {
           setActiveMenuSpaceId(null);
           setDescriptionModalSpace(space);
         }}
-        onExport={() => handleExportSidebarSpace(space)}
+        onExport={(format) => handleExportSidebarSpace(space, format)}
         onArchive={() => handleArchiveSpace(space)}
         onDelete={() => {
           setActiveMenuSpaceId(null);
@@ -423,6 +444,20 @@ export const Sidebar: React.FC = () => {
                 ) : (
                   <Unlock className="w-3.5 h-3.5 text-amber-400" />
                 )}
+              </button>
+              <input
+                ref={importSpaceInputRef}
+                type="file"
+                accept=".json,.html,.htm"
+                onChange={handleImportSpaceFile}
+                className="hidden"
+              />
+              <button
+                onClick={() => importSpaceInputRef.current?.click()}
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
+                title="Import Space (.json / .html)"
+              >
+                <Upload className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setCreateSpaceOpen(true)}

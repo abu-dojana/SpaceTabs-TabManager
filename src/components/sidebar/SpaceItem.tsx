@@ -1,5 +1,6 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
+import { type ExportFormat } from '@/services/tabManager';
 import { Check, X, ExternalLink, MoreVertical, Crosshair, GripVertical, ChevronDown } from 'lucide-react';
 import { SpaceContextMenu } from './SpaceContextMenu';
 import { EMOJI_OPTIONS } from '@/components/modals/CreateSpaceModal';
@@ -35,7 +36,7 @@ interface SpaceItemProps {
   onDuplicate: () => void;
   onMoveToSection: () => void;
   onEditDescription: () => void;
-  onExport: () => void;
+  onExport: (format: ExportFormat) => void;
   onArchive: () => void;
   onDelete: () => void;
 }

@@ -3,9 +3,9 @@ import {
   Layers,
   Bookmark,
   FileText,
+  FileCode,
   ListTodo,
   Sparkles,
-  Download,
   Upload,
 } from 'lucide-react';
 
@@ -18,7 +18,7 @@ interface BackupTabProps {
   resourcesCount: number;
   isPurging: boolean;
   fileInputRef: React.RefObject<HTMLInputElement>;
-  onExport: () => void;
+  onExport: (format?: 'json' | 'html') => void;
   onImportFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPurge: () => void;
 }
@@ -96,16 +96,29 @@ export const BackupTab: React.FC<BackupTabProps> = ({
                 Full Workspace Backup
               </div>
               <div className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                Export all spaces, tabs, notes, tasks, and resources to a single JSON backup.
+                Export all spaces, tabs, notes, tasks, and resources as JSON or clickable HTML.
               </div>
             </div>
-            <button
-              onClick={onExport}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition"
-            >
-              <Download className="w-4 h-4" />
-              <span>Export Backup</span>
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => onExport('json')}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition"
+              >
+                <FileCode className="w-3.5 h-3.5" />
+                <span>Export JSON</span>
+              </button>
+              <button
+                onClick={() => onExport('html')}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs border transition ${
+                  isLight
+                    ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Export HTML</span>
+              </button>
+            </div>
           </div>
 
           <div
@@ -115,10 +128,10 @@ export const BackupTab: React.FC<BackupTabProps> = ({
           >
             <div>
               <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                Restore from Backup
+                Restore Backup / Import Space
               </div>
               <div className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                Restore spaces and workspace data from an existing SpaceTabs JSON backup.
+                Import a SpaceTabs JSON/HTML backup, single-space export, or browser bookmark HTML.
               </div>
             </div>
             <button
@@ -130,12 +143,12 @@ export const BackupTab: React.FC<BackupTabProps> = ({
               }`}
             >
               <Upload className="w-4 h-4" />
-              <span>Restore Backup</span>
+              <span>Import / Restore</span>
             </button>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json"
+              accept=".json,.html,.htm"
               onChange={onImportFile}
               className="hidden"
             />

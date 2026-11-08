@@ -16,7 +16,9 @@ import {
   suspendAllTabsInCurrentWindow,
   reloadAllTabsInCurrentWindow,
   exportSpaceToFile,
+  importIntoSpace,
   getNextSpaceOrder,
+  type ExportFormat,
 } from '@/services/tabManager';
 import { decodeRealUrl, isSystemOrExtensionUrl } from '@/utils/urlFilter';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -91,6 +93,7 @@ export const TabsView: React.FC = () => {
   const [showMoveAllSubmenu, setShowMoveAllSubmenu] = React.useState(false);
   const [isCopiedAll, setIsCopiedAll] = React.useState(false);
   const tabsMenuRef = React.useRef<HTMLDivElement>(null!);
+  const importSpaceInputRef = React.useRef<HTMLInputElement>(null!);
 
   // Web Favicons Visibility Preference
   const { showTabFavicons } = useUserSettings();
@@ -225,11 +228,27 @@ export const TabsView: React.FC = () => {
     }
   };
 
-  // 4. Export This Space
-  const handleExportSpace = async () => {
+  // 4. Export This Space (JSON or HTML)
+  const handleExportSpace = async (format: ExportFormat) => {
     if (!tabs) return;
     setIsTabsMenuOpen(false);
-    await exportSpaceToFile(activeSpaceId, activeSpace?.name || 'Unsaved Session');
+    await exportSpaceToFile(activeSpaceId, activeSpace?.name || 'Unsaved Session', format);
+  };
+
+  // 5. Import Into This Space
+  const handleImportIntoSpaceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      await importIntoSpace(activeSpaceId, text, file.name);
+    } catch (err) {
+      console.error('Failed to import into space:', err);
+    } finally {
+      if (importSpaceInputRef.current) {
+        importSpaceInputRef.current.value = '';
+      }
+    }
   };
 
   // 6. Move All Tabs
@@ -393,6 +412,13 @@ export const TabsView: React.FC = () => {
             />
 
             {/* Tabs Container 3-Dot Options Menu */}
+            <input
+              ref={importSpaceInputRef}
+              type="file"
+              accept=".json,.html,.htm"
+              onChange={handleImportIntoSpaceFile}
+              className="hidden"
+            />
             <TabsContainerMenu
               isOpen={isTabsMenuOpen}
               menuRef={tabsMenuRef}
@@ -414,6 +440,10 @@ export const TabsView: React.FC = () => {
               onSortAlphabetically={handleSortAlphabetically}
               onSortByDomain={handleSortByDomain}
               onExportSpace={handleExportSpace}
+              onImportIntoSpace={() => {
+                setIsTabsMenuOpen(false);
+                importSpaceInputRef.current?.click();
+              }}
               onSelectAllToggle={() => {
                 handleSelectAllToggle();
                 setIsTabsMenuOpen(false);

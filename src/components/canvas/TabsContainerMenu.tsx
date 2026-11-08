@@ -1,5 +1,6 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
+import { type ExportFormat } from '@/services/tabManager';
 import {
   MoreVertical,
   Link2,
@@ -7,6 +8,9 @@ import {
   ArrowDownAZ,
   Globe,
   Download,
+  Upload,
+  FileCode,
+  FileText,
   CheckSquare,
   FolderInput,
   ChevronRight,
@@ -29,7 +33,8 @@ interface TabsContainerMenuProps {
   onCopyAllLinks: () => void;
   onSortAlphabetically: () => void;
   onSortByDomain: () => void;
-  onExportSpace: () => void;
+  onExportSpace: (format: ExportFormat) => void;
+  onImportIntoSpace: () => void;
   onSelectAllToggle: () => void;
   onMoveAllTabs: (targetSpaceId: string | null) => void;
   onSuspendAllTabs: () => void;
@@ -52,6 +57,7 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
   onSortAlphabetically,
   onSortByDomain,
   onExportSpace,
+  onImportIntoSpace,
   onSelectAllToggle,
   onMoveAllTabs,
   onSuspendAllTabs,
@@ -59,6 +65,14 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
   onCloseDuplicates,
   onCloseAllTabs,
 }) => {
+  const [showExportSubmenu, setShowExportSubmenu] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setShowExportSubmenu(false);
+    }
+  }, [isOpen]);
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -112,18 +126,66 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
             <span>Sort by domain</span>
           </button>
 
-          {/* 4. Export this space */}
+          {/* 4. Export this space (JSON / HTML submenu) */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowExportSubmenu((prev) => !prev);
+                if (showMoveAllSubmenu) {
+                  onToggleMoveAllSubmenu(e);
+                }
+              }}
+              className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center justify-between transition"
+            >
+              <div className="flex items-center gap-2.5">
+                <Download className="w-3.5 h-3.5 text-slate-400" />
+                <span>Export this space</span>
+              </div>
+              <ChevronRight className="w-3 h-3 text-slate-500" />
+            </button>
+
+            {showExportSubmenu && (
+              <div className="absolute right-full top-0 mr-1.5 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1">
+                <div className="px-3 py-1 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
+                  Export format
+                </div>
+                <button
+                  onClick={() => {
+                    setShowExportSubmenu(false);
+                    onExportSpace('json');
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                >
+                  <FileCode className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Export as JSON (.json)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowExportSubmenu(false);
+                    onExportSpace('html');
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+                >
+                  <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Export as HTML (.html)</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 5. Import into this space */}
           <button
-            onClick={onExportSpace}
+            onClick={onImportIntoSpace}
             className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
           >
-            <Download className="w-3.5 h-3.5 text-slate-400" />
-            <span>Export this space</span>
+            <Upload className="w-3.5 h-3.5 text-slate-400" />
+            <span>Import into this space</span>
           </button>
 
           <div className="border-t border-slate-800 my-1" />
 
-          {/* 5. Select all tabs */}
+          {/* 6. Select all tabs */}
           <button
             onClick={onSelectAllToggle}
             className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
@@ -132,11 +194,14 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
             <span>{allSelected ? 'Deselect all' : 'Select all tabs'}</span>
           </button>
 
-          {/* 6. Move all tabs */}
+          {/* 7. Move all tabs */}
           {spaces && (
             <div className="relative">
               <button
-                onClick={onToggleMoveAllSubmenu}
+                onClick={(e) => {
+                  setShowExportSubmenu(false);
+                  onToggleMoveAllSubmenu(e);
+                }}
                 className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center justify-between transition"
               >
                 <div className="flex items-center gap-2.5">
@@ -177,7 +242,7 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
             </div>
           )}
 
-          {/* 7. Suspend all tabs */}
+          {/* 8. Suspend all tabs */}
           <button
             onClick={onSuspendAllTabs}
             className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
@@ -186,7 +251,7 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
             <span>Suspend all tabs</span>
           </button>
 
-          {/* 8. Reload all tabs */}
+          {/* 9. Reload all tabs */}
           <button
             onClick={onReloadAllTabs}
             className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
@@ -197,7 +262,7 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
 
           <div className="border-t border-slate-800 my-1" />
 
-          {/* 9. Close duplicate tabs */}
+          {/* 10. Close duplicate tabs */}
           <button
             onClick={onCloseDuplicates}
             className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
@@ -206,7 +271,7 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
             <span>Close duplicate tabs</span>
           </button>
 
-          {/* 10. Close all tabs */}
+          {/* 11. Close all tabs */}
           <button
             onClick={onCloseAllTabs}
             className="w-full text-left px-3 py-2 text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2.5 transition"

@@ -1,11 +1,13 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
+import { type ExportFormat } from '@/services/tabManager';
 import {
   Pencil,
   ExternalLink,
   Copy,
   FolderInput,
   FileText,
+  FileCode,
   Download,
   Archive,
   Trash2,
@@ -21,7 +23,7 @@ interface SpaceContextMenuProps {
   onDuplicate: () => void;
   onMoveToSection: () => void;
   onEditDescription: () => void;
-  onExport: () => void;
+  onExport: (format: ExportFormat) => void;
   onArchive: () => void;
   onDelete: () => void;
 }
@@ -39,6 +41,14 @@ export const SpaceContextMenu: React.FC<SpaceContextMenuProps> = ({
   onArchive,
   onDelete,
 }) => {
+  const [showExportSubmenu, setShowExportSubmenu] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setShowExportSubmenu(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -98,14 +108,47 @@ export const SpaceContextMenu: React.FC<SpaceContextMenuProps> = ({
         <span>{space.description ? 'Edit description' : 'Add description'}</span>
       </button>
 
-      {/* 6. Export Space */}
-      <button
-        onClick={onExport}
-        className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
-      >
-        <Download className="w-3.5 h-3.5 text-slate-400" />
-        <span>Export space</span>
-      </button>
+      {/* 6. Export Space (JSON / HTML) */}
+      <div className="relative">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowExportSubmenu((prev) => !prev);
+          }}
+          className="w-full text-left px-3 py-1.5 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center justify-between transition"
+        >
+          <div className="flex items-center gap-2.5">
+            <Download className="w-3.5 h-3.5 text-slate-400" />
+            <span>Export space</span>
+          </div>
+          <ChevronRight className={`w-3 h-3 text-slate-500 transition-transform ${showExportSubmenu ? 'rotate-90' : ''}`} />
+        </button>
+
+        {showExportSubmenu && (
+          <div className="bg-slate-950/80 border-y border-slate-800/80 py-1">
+            <button
+              onClick={() => {
+                setShowExportSubmenu(false);
+                onExport('json');
+              }}
+              className="w-full text-left pl-7 pr-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 transition"
+            >
+              <FileCode className="w-3.5 h-3.5 text-blue-400" />
+              <span>Export as JSON (.json)</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowExportSubmenu(false);
+                onExport('html');
+              }}
+              className="w-full text-left pl-7 pr-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 transition"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Export as HTML (.html)</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* 7. Archive */}
       <button

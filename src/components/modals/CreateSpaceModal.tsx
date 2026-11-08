@@ -1,9 +1,9 @@
 import React from 'react';
 import { db } from '@/db';
 import { useUIStore } from '@/store/uiStore';
-import { switchWindowToSpace, getNextSpaceOrder } from '@/services/tabManager';
+import { switchWindowToSpace, getNextSpaceOrder, importSpacesFromFile } from '@/services/tabManager';
 import { getHostWindowId } from '@/utils/chromeWindow';
-import { X, FolderPlus } from 'lucide-react';
+import { X, FolderPlus, Upload } from 'lucide-react';
 
 export const EMOJI_OPTIONS = [
   '📁', '🚀', '📊', '📚', '💼', '🎧',
@@ -16,6 +16,7 @@ export const CreateSpaceModal: React.FC = () => {
   const { isCreateSpaceOpen, setCreateSpaceOpen, setActiveSpaceId } = useUIStore();
   const [name, setName] = React.useState('');
   const [selectedEmoji, setSelectedEmoji] = React.useState('📁');
+  const importFileRef = React.useRef<HTMLInputElement>(null);
 
   if (!isCreateSpaceOpen) return null;
 
@@ -49,6 +50,30 @@ export const CreateSpaceModal: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to switch window on create:', err);
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const res = await importSpacesFromFile(text, file.name);
+      if (res.success && res.createdSpaceId) {
+        setName('');
+        setCreateSpaceOpen(false);
+        setActiveSpaceId(res.createdSpaceId);
+        const hostWinId = await getHostWindowId();
+        if (hostWinId) {
+          await switchWindowToSpace(hostWinId, res.createdSpaceId);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to import space file:', err);
+    } finally {
+      if (importFileRef.current) {
+        importFileRef.current.value = '';
+      }
     }
   };
 
@@ -106,21 +131,40 @@ export const CreateSpaceModal: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800">
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".json,.html,.htm"
+              onChange={handleImportFile}
+              className="hidden"
+            />
             <button
               type="button"
-              onClick={() => setCreateSpaceOpen(false)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800"
+              onClick={() => importFileRef.current?.click()}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-slate-800/70 hover:bg-slate-800 border border-slate-700/70 transition"
+              title="Import Space from a JSON or HTML file"
             >
-              Cancel
+              <Upload className="w-3.5 h-3.5 text-blue-400" />
+              <span>Import File</span>
             </button>
-            <button
-              type="submit"
-              disabled={!name.trim()}
-              className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition"
-            >
-              Create Space
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCreateSpaceOpen(false)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!name.trim()}
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition"
+              >
+                Create Space
+              </button>
+            </div>
           </div>
         </form>
       </div>

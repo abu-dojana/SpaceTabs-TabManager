@@ -261,10 +261,10 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format: 'json' | 'html' = 'json') => {
     try {
-      await exportAllSpacesBackup();
-      showToast('Backup downloaded successfully!');
+      await exportAllSpacesBackup(format);
+      showToast(`${format.toUpperCase()} backup downloaded successfully!`);
     } catch {
       showToast('Failed to export backup.', 'error');
     }
@@ -276,7 +276,7 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
 
     try {
       const text = await file.text();
-      const result = await importSpacesBackup(text);
+      const result = await importSpacesBackup(text, file.name);
       if (result.success) {
         showToast(result.message);
       } else {

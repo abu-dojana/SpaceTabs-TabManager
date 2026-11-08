@@ -13,8 +13,13 @@ export interface ChangelogRelease {
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
     version: '1.4.0',
-    title: 'Version 1.4.0 — Multi-Window Space Switch Fix, Safe Deduplication & Security Hardening',
+    title: 'Version 1.4.0 — HTML & JSON Export/Import, Multi-Window Space Switch Fix & Safe Deduplication',
     items: [
+      {
+        lead: 'HTML & JSON Space Export & Universal Import:',
+        description:
+          'Added Export as JSON and Export as HTML (styled clickable webpage + Netscape Bookmark compatible) in the Tabs menu, Sidebar Space menu, and Settings Backup tab, plus Import into Current Space and Import as New Space.',
+      },
       {
         lead: 'Side-by-Side Window Space Switch Fix:',
         description:
