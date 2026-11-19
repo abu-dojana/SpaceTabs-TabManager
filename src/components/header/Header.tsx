@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { EMOJI_OPTIONS } from '@/components/modals/CreateSpaceModal';
 import { getHostWindowId } from '@/utils/chromeWindow';
+import { extractDomain } from '@/utils/urlFilter';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAutoFocusSelect } from '@/hooks/useAutoFocusSelect';
 import { GlobalSearchBar } from './GlobalSearchBar';
@@ -58,15 +59,43 @@ export const Header: React.FC = () => {
     [activeSpaceId]
   );
 
-  // First tab in current view for quick-save naming
-  const firstTab = useLiveQuery(async () => {
+  // Tabs in current view for quick-save naming and unsaved session window title
+  const activeSpaceTabs = useLiveQuery(async () => {
     const targetSpace = activeSpaceId || UNSAVED_SPACE_ID;
-    const tabs = await db.tabs
+    return await db.tabs
       .where('spaceId')
       .equals(targetSpace)
       .sortBy('order');
-    return tabs[0] || null;
   }, [activeSpaceId]);
+
+  const firstTab = activeSpaceTabs?.[0] || null;
+
+  React.useEffect(() => {
+    if (activeSpaceId && activeSpace === undefined) {
+      return;
+    }
+
+    if (activeSpace && !activeSpace.isUnsaved && activeSpace.name.trim()) {
+      const emoji = activeSpace.icon || '📁';
+      document.title = `${emoji} ${activeSpace.name.trim()} — SpaceTabs`;
+      return;
+    }
+
+    if (activeSpaceTabs === undefined) {
+      return;
+    }
+
+    if (activeSpaceTabs.length > 0) {
+      const firstDomain = extractDomain(activeSpaceTabs[0].url) || 'New Tab';
+      const unsavedSummary =
+        activeSpaceTabs.length === 1
+          ? firstDomain
+          : `${firstDomain} + ${activeSpaceTabs.length - 1}`;
+      document.title = `${unsavedSummary} — SpaceTabs`;
+    } else {
+      document.title = 'SpaceTabs — Tab Manager';
+    }
+  }, [activeSpaceId, activeSpace, activeSpaceTabs]);
 
   const defaultTitle = activeSpace && !activeSpace.isUnsaved ? activeSpace.name : 'Unsaved';
 

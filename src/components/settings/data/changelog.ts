@@ -12,6 +12,22 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.4.2',
+    title: 'Version 1.4.2 — Dynamic Window Titles for Saved Spaces & Unsaved Sessions',
+    items: [
+      {
+        lead: 'Saved Space Window Titles with Emoji:',
+        description:
+          'When viewing the SpaceTabs Dashboard, the browser window title now displays the active saved Space’s emoji icon and name (e.g., "🎯 GCI — SpaceTabs") so multiple dashboard windows are easily distinguishable in the OS taskbar and Alt+Tab.',
+      },
+      {
+        lead: 'Unsaved Session Domain Summary Window Titles:',
+        description:
+          'Windows viewing an Unsaved session on the Dashboard now display the session’s live domain summary in the window title (e.g., "gemini.google.com + 5 — SpaceTabs") and update automatically as tabs are opened or closed.',
+      },
+    ],
+  },
+  {
     version: '1.4.1',
     title: 'Version 1.4.1 — Multi-Profile & Window-Reopen Saved Space Restoration Fix',
     items: [
