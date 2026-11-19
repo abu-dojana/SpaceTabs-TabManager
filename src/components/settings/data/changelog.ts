@@ -12,6 +12,27 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.4.1',
+    title: 'Version 1.4.1 — Multi-Profile & Window-Reopen Saved Space Restoration Fix',
+    items: [
+      {
+        lead: 'Multi-Profile & macOS Session Restoration Fix:',
+        description:
+          'Fixed a bug where closing a browser profile while another profile stayed open (or closing the last window on macOS) preserved the per-session initialization flag and caused reopened saved Spaces to open in an Unsaved session instead of restoring the active Space.',
+      },
+      {
+        lead: 'Restored Tab Attachment Timing Guard:',
+        description:
+          'Added a brief startup wait when persisted Space bindings exist so restored tabs finish attaching to the reopened window before Space matching runs.',
+      },
+      {
+        lead: 'Preserve Duplicate & Shared Tabs in Unsaved Sessions:',
+        description:
+          'Removed destructive startup deduplication on Unsaved sessions so intentional duplicate tabs and tabs whose URLs overlap with restored Spaces are preserved across browser restarts.',
+      },
+    ],
+  },
+  {
     version: '1.4.0',
     title: 'Version 1.4.0 — HTML & JSON Export/Import, Multi-Window Space Switch Fix & Safe Deduplication',
     items: [

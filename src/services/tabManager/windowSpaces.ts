@@ -58,11 +58,24 @@ export async function consumePendingNewWindowSpace(): Promise<string | null> {
 }
 
 /**
+ * Clears the per-session initialization flags so the next window that opens runs saved-space
+ * restoration again. Called when the last normal window of this profile closes while the browser
+ * process stays alive (e.g. another profile is still open, or macOS keeps the app running).
+ */
+export async function resetSessionInitialization(): Promise<void> {
+  try {
+    await chrome.storage.session.remove([SESSION_INIT_KEY, SESSION_INIT_STATUS_KEY]);
+  } catch {
+    // Ignore storage errors during browser shutdown
+  }
+}
+
+/**
  * Runs once per browser session (detected via chrome.storage.session) to:
  * 1. Clear stale chromeTabId and windowId values left over from prior browser sessions.
  * 2. Restore saved Space bindings only when open tabs genuinely overlap (> 0 URL matches).
  * 3. Recover any orphaned or '__unsaved__' notes, tasks, and resources into an Unsaved session.
- * 4. Deduplicate duplicate tab records inside unsaved spaces and prune only truly empty unsaved spaces.
+ * 4. Prune only truly empty unsaved spaces while preserving all saved and duplicate tabs.
  */
 export async function ensureSessionInitialized(): Promise<void> {
   if (sessionInitPromise) {
@@ -81,7 +94,7 @@ export async function ensureSessionInitialized(): Promise<void> {
 
       // If another extension context (e.g. background vs dashboard) is currently initializing, wait for it
       if (sessionData && sessionData[SESSION_INIT_STATUS_KEY] === 'running') {
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < 100; i++) {
           await new Promise((r) => setTimeout(r, 40));
           const check = await chrome.storage.session.get([
             SESSION_INIT_KEY,
@@ -93,7 +106,7 @@ export async function ensureSessionInitialized(): Promise<void> {
         }
       }
 
-      const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
+      let windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
       if (windows.length === 0) {
         // Browser startup window not created yet; wait for first window before locking session init
         return;
@@ -101,19 +114,35 @@ export async function ensureSessionInitialized(): Promise<void> {
 
       await chrome.storage.session.set({ [SESSION_INIT_STATUS_KEY]: 'running' });
 
+      const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
+      const localData = await chrome.storage.local.get(PERSISTED_WINDOW_SPACES_KEY);
+      const rawPersisted = (localData?.[PERSISTED_WINDOW_SPACES_KEY] || {}) as Record<string, string>;
+      const persistedSpaceIds = Array.from(new Set(Object.values(rawPersisted).filter(Boolean)));
+
+      const hasRealTabs = (tabs: chrome.tabs.Tab[]) =>
+        tabs.some((t) => {
+          if (t.pinned) return false;
+          const u = t.url || t.pendingUrl || '';
+          return !!u && !u.startsWith(dashboardUrl) && !isSystemOrExtensionUrl(u) && !isBlankOrNewTabUrl(u);
+        });
+
+      // On profile reopen, windows.onCreated can fire before restored tabs are attached
+      let allOpenTabs = await chrome.tabs.query({});
+      if (persistedSpaceIds.length > 0) {
+        for (let i = 0; i < 20 && !hasRealTabs(allOpenTabs); i++) {
+          await new Promise((r) => setTimeout(r, 100));
+          allOpenTabs = await chrome.tabs.query({});
+        }
+        windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
+      }
+
       // 1. Clear all stale runtime chromeTabId and windowId bindings from the previous browser session
       await db.tabs.toCollection().modify({
         chromeTabId: undefined,
         windowId: undefined,
       });
 
-      const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
-      const allOpenTabs = await chrome.tabs.query({});
-
       // 2. Restore saved Space bindings for windows reopened after browser restart
-      const localData = await chrome.storage.local.get(PERSISTED_WINDOW_SPACES_KEY);
-      const rawPersisted = (localData?.[PERSISTED_WINDOW_SPACES_KEY] || {}) as Record<string, string>;
-      const persistedSpaceIds = Array.from(new Set(Object.values(rawPersisted).filter(Boolean)));
 
       const activeSpaces = await db.spaces.filter((s) => !s.isArchived).toArray();
       const savedSpacesMap = new Map(
@@ -122,7 +151,6 @@ export async function ensureSessionInitialized(): Promise<void> {
       const persistedSavedSpaceIds = persistedSpaceIds.filter((id) => savedSpacesMap.has(id));
       const claimedSavedSpaceIds = new Set<string>();
       const restoredSavedSpaceWindowIds = new Set<number>();
-      const restoredSavedSpaceUrls = new Set<string>();
       const newPersistedMap: Record<string, string> = {};
 
       for (const win of windows) {
@@ -189,14 +217,6 @@ export async function ensureSessionInitialized(): Promise<void> {
           restoredSavedSpaceWindowIds.add(win.id);
           newPersistedMap[String(win.id)] = matchedSavedSpaceId;
           await chrome.storage.session.set({ [`window_${win.id}_space`]: matchedSavedSpaceId });
-
-          for (const u of winUrlSet) {
-            restoredSavedSpaceUrls.add(u);
-          }
-          const sTabs = await db.tabs.where('spaceId').equals(matchedSavedSpaceId).toArray();
-          for (const st of sTabs) {
-            restoredSavedSpaceUrls.add(decodeRealUrl(st.url));
-          }
         }
       }
 
@@ -207,20 +227,7 @@ export async function ensureSessionInitialized(): Promise<void> {
       // Recover any '__unsaved__' or orphaned notes, tasks, and resources into an Unsaved session
       await recoverOrphanedContent();
 
-      // 3. Count how many copies of each URL are currently open in non-saved-space (Unsaved) windows
-      const openUrlCounts = new Map<string, number>();
-      for (const t of allOpenTabs) {
-        if (t.pinned) continue;
-        if (t.windowId && restoredSavedSpaceWindowIds.has(t.windowId)) continue;
-        const rawUrl = t.url || t.pendingUrl || '';
-        if (!rawUrl || rawUrl.startsWith(dashboardUrl) || isSystemOrExtensionUrl(rawUrl)) {
-          continue;
-        }
-        const realUrl = decodeRealUrl(rawUrl);
-        openUrlCounts.set(realUrl, (openUrlCounts.get(realUrl) || 0) + 1);
-      }
-
-      // 4. Deduplicate tabs inside each unsaved space and remove tabs that belong to a restored saved Space
+      // 3. Identify truly empty unsaved spaces for cleanup (preserving all tabs, including duplicates)
       const unsavedSpaces = await db.spaces
         .filter((s) => !!s.isUnsaved && !s.isArchived)
         .toArray();
@@ -228,45 +235,8 @@ export async function ensureSessionInitialized(): Promise<void> {
       const emptyUnsavedSpaceIds: string[] = [];
 
       for (const uSpace of unsavedSpaces) {
-        const uTabs = await db.tabs
-          .where('spaceId')
-          .equals(uSpace.id)
-          .sortBy('order');
-
-        if (uTabs.length === 0 || (await isSessionEmpty(uSpace.id))) {
-          if (await isSessionEmpty(uSpace.id)) {
-            emptyUnsavedSpaceIds.push(uSpace.id);
-          }
-          continue;
-        }
-
-        const seenUrlCounts = new Map<string, number>();
-        const duplicateTabIds: string[] = [];
-
-        for (const tab of uTabs) {
-          const realUrl = decodeRealUrl(tab.url);
-
-          // If this tab's URL belongs to a saved Space restored on startup and isn't open in any Unsaved window, remove it
-          if (restoredSavedSpaceUrls.has(realUrl) && !openUrlCounts.has(realUrl)) {
-            duplicateTabIds.push(tab.id);
-            continue;
-          }
-
-          const countSoFar = seenUrlCounts.get(realUrl) || 0;
-          const maxAllowed = Math.max(1, openUrlCounts.get(realUrl) || 1);
-
-          if (countSoFar >= maxAllowed) {
-            duplicateTabIds.push(tab.id);
-          } else {
-            seenUrlCounts.set(realUrl, countSoFar + 1);
-          }
-        }
-
-        if (duplicateTabIds.length > 0) {
-          await db.tabs.bulkDelete(duplicateTabIds);
-          if (duplicateTabIds.length === uTabs.length && (await isSessionEmpty(uSpace.id))) {
-            emptyUnsavedSpaceIds.push(uSpace.id);
-          }
+        if (await isSessionEmpty(uSpace.id)) {
+          emptyUnsavedSpaceIds.push(uSpace.id);
         }
       }
 

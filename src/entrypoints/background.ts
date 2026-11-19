@@ -4,6 +4,7 @@ import {
   syncWindowTabsToUnsaved,
   ensureWindowUnsavedSpace,
   ensureSessionInitialized,
+  resetSessionInitialization,
   getWindowActiveSpaceId,
   setWindowActiveSpaceId,
   removeWindowSpaceBinding,
@@ -300,6 +301,13 @@ export default defineBackground(() => {
         .where('windowId')
         .equals(windowId)
         .modify({ chromeTabId: undefined, windowId: undefined });
+
+      // If this profile has no windows left but the browser process stays alive (another profile is
+      // open, or macOS), treat it as a session end so reopening the profile restores saved Spaces.
+      const remaining = await chrome.windows.getAll({ windowTypes: ['normal'] });
+      if (remaining.filter((w) => w.id !== windowId).length === 0) {
+        await resetSessionInitialization();
+      }
     } catch {
       // Ignored
     }

@@ -347,7 +347,6 @@ async function executeSyncWindowTabs(windowId: number) {
 
     const validTabIds = new Set(validTabs.map((t) => t.id));
     const matchedRecordIds = new Set<string>();
-    const matchedUrls = new Set<string>();
     const tabMatches = new Map<number, Tab>();
 
     // Pass 1: Match by exact chromeTabId across all open tabs in this window first
@@ -461,8 +460,6 @@ async function executeSyncWindowTabs(windowId: number) {
             : title;
         const tabFavicon = isValidWebFavicon(favIconUrl) ? favIconUrl : match.favIconUrl;
 
-        matchedUrls.add(decodeRealUrl(tabUrl));
-
         // If this record was matched by URL to a DIFFERENT live tab in another window, preserve that binding;
         // if match.chromeTabId === browserTab.id, it is the same tab now located in this window.
         const isLiveInOtherWindow =
@@ -488,7 +485,6 @@ async function executeSyncWindowTabs(windowId: number) {
       } else {
         const newId = crypto.randomUUID();
         matchedRecordIds.add(newId);
-        matchedUrls.add(realUrl);
         const targetOrder = hasTabsOutsideThisWindow ? nextNewOrder++ : i;
         await db.tabs.add({
           id: newId,
@@ -538,10 +534,9 @@ async function executeSyncWindowTabs(windowId: number) {
           await db.tabs.delete(record.id);
         }
       } else if (!record.chromeTabId) {
-        const recordRealUrl = decodeRealUrl(record.url);
-        // Only prune unclaimed duplicate/stale records inside Unsaved sessions;
-        // never delete dormant saved-space tabs that happen to share a URL.
-        if (isUnsavedSpace && (matchedUrls.has(recordRealUrl) || allTabsLoaded)) {
+        // Only prune stale unclaimed records inside active Unsaved sessions once all tabs finish loading;
+        // never delete dormant saved-space tabs or mid-load duplicate tabs.
+        if (isUnsavedSpace && allTabsLoaded) {
           await db.tabs.delete(record.id);
         }
       }
