@@ -171,9 +171,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 darkPalette={c.darkPalette}
                 lightPalette={c.lightPalette}
                 sidebarWidth={c.sidebarWidth}
+                rightFloatingPanel={c.rightFloatingPanel}
+                rightPanelWidth={c.rightPanelWidth}
+                showSectionActiveDot={c.showSectionActiveDot}
                 onApplyPreset={c.handleApplyPreset}
                 onSidebarThemeChange={c.handleSidebarThemeChange}
                 onSidebarWidthChange={c.handleSidebarWidthChange}
+                onToggleRightFloatingPanel={() => c.handleToggle('rightFloatingPanel')}
+                onRightPanelWidthChange={c.handleRightPanelWidthChange}
+                onToggleSectionActiveDot={() => c.handleToggle('showSectionActiveDot')}
                 onDashboardThemeChange={c.handleDashboardThemeChange}
                 onAccentColorChange={c.handleAccentColorChange}
                 onDarkPaletteChange={c.handleDarkPaletteChange}

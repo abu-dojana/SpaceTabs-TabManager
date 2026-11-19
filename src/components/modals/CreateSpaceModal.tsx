@@ -13,7 +13,12 @@ export const EMOJI_OPTIONS = [
 ];
 
 export const CreateSpaceModal: React.FC = () => {
-  const { isCreateSpaceOpen, setCreateSpaceOpen, setActiveSpaceId } = useUIStore();
+  const {
+    isCreateSpaceOpen,
+    createSpaceDefaultSection,
+    setCreateSpaceOpen,
+    setActiveSpaceId,
+  } = useUIStore();
   const [name, setName] = React.useState('');
   const [selectedEmoji, setSelectedEmoji] = React.useState('📁');
   const importFileRef = React.useRef<HTMLInputElement>(null);
@@ -28,11 +33,23 @@ export const CreateSpaceModal: React.FC = () => {
     const id = crypto.randomUUID();
     const now = Date.now();
 
+    let sectionOrder: number | undefined;
+    if (createSpaceDefaultSection) {
+      const existingInSection = await db.spaces
+        .filter((s) => !s.isArchived && s.section?.trim() === createSpaceDefaultSection)
+        .toArray();
+      sectionOrder = existingInSection.find(
+        (s) => typeof s.sectionOrder === 'number'
+      )?.sectionOrder;
+    }
+
     await db.spaces.add({
       id,
       name: name.trim(),
       icon: selectedEmoji,
       color: '#3b82f6',
+      section: createSpaceDefaultSection || undefined,
+      sectionOrder,
       createdAt: now,
       updatedAt: now,
       order: nextOrder,
@@ -81,9 +98,16 @@ export const CreateSpaceModal: React.FC = () => {
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-sm w-full p-5 shadow-2xl">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-          <div className="flex items-center gap-2">
-            <FolderPlus className="w-5 h-5 text-blue-400" />
-            <h3 className="text-sm font-semibold text-slate-100">Create Space</h3>
+          <div className="flex items-center gap-2 min-w-0">
+            <FolderPlus className="w-5 h-5 text-blue-400 flex-shrink-0" />
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-slate-100">Create Space</h3>
+              {createSpaceDefaultSection && (
+                <p className="text-[11px] text-blue-400 font-medium truncate">
+                  in section: {createSpaceDefaultSection}
+                </p>
+              )}
+            </div>
           </div>
           <button
             onClick={() => setCreateSpaceOpen(false)}

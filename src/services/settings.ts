@@ -22,6 +22,9 @@ export interface UserSettings {
   darkPalette: DarkPalette;
   lightPalette: LightPalette;
   sidebarWidth: number;
+  rightFloatingPanel: boolean;
+  rightPanelWidth: number;
+  showSectionActiveDot: boolean;
   patreonUrl: string;
 }
 
@@ -37,6 +40,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   darkPalette: 'slate',
   lightPalette: 'snow',
   sidebarWidth: 260,
+  rightFloatingPanel: false,
+  rightPanelWidth: 240,
+  showSectionActiveDot: true,
   patreonUrl: 'https://www.patreon.com/abudojana',
 };
 
@@ -57,7 +63,11 @@ export async function getUserSettings(): Promise<UserSettings> {
         delete raw.nativeCleanUrlSuspension;
         await chrome.storage.local.set({ [SETTINGS_STORAGE_KEY]: { ...DEFAULT_SETTINGS, ...raw } });
       }
-      return { ...DEFAULT_SETTINGS, ...raw };
+      const merged: UserSettings = { ...DEFAULT_SETTINGS, ...raw };
+      if (typeof merged.showSectionActiveDot !== 'boolean') {
+        merged.showSectionActiveDot = true;
+      }
+      return merged;
     }
   } catch (err) {
     console.warn('Failed to load user settings from storage:', err);

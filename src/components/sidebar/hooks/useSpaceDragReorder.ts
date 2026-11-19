@@ -46,8 +46,20 @@ export function useSpaceDragReorder({
     setIsSpacesLocked(next);
     try {
       localStorage.setItem('spacetabs_spaces_locked', String(next));
+      window.dispatchEvent(new CustomEvent('spacetabs-spaces-lock-change', { detail: next }));
     } catch {}
   };
+
+  React.useEffect(() => {
+    const handleLockSync = (e: Event) => {
+      const custom = e as CustomEvent<boolean>;
+      if (typeof custom.detail === 'boolean') {
+        setIsSpacesLocked(custom.detail);
+      }
+    };
+    window.addEventListener('spacetabs-spaces-lock-change', handleLockSync);
+    return () => window.removeEventListener('spacetabs-spaces-lock-change', handleLockSync);
+  }, []);
 
   const handleDropOnSpace = async (e: React.DragEvent, targetSpaceId: string | null) => {
     e.preventDefault();

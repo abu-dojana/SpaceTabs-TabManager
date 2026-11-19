@@ -76,6 +76,22 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
         </h3>
         <div className="space-y-3.5">
           <ToggleRow
+            title="Live Green Dot on Active Section"
+            description="Display a blinking green indicator dot on the section containing your currently active space."
+            checked={settings.showSectionActiveDot !== false}
+            onToggle={() => onToggle('showSectionActiveDot')}
+            isLight={isLight}
+          />
+
+          <ToggleRow
+            title="Right Floating Panel"
+            description="Keep sections compact in the left sidebar and open a floating panel on the right (pushing the canvas) to display spaces when a section is clicked."
+            checked={Boolean(settings.rightFloatingPanel)}
+            onToggle={() => onToggle('rightFloatingPanel')}
+            isLight={isLight}
+          />
+
+          <ToggleRow
             title="Show Web Favicons"
             description="Display site favicons next to tabs and resources."
             checked={settings.showTabFavicons}

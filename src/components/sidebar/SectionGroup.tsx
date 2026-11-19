@@ -21,6 +21,9 @@ interface SectionGroupProps {
   renamingValue: string;
   isMenuOpen: boolean;
   isSpacesLocked?: boolean;
+  isFloatingPanelMode?: boolean;
+  isSelectedSection?: boolean;
+  hasActiveSpaceInSection?: boolean;
   isDraggingThisSection?: boolean;
   dropIndicator?: 'before' | 'after' | null;
   canMoveUp?: boolean;
@@ -52,6 +55,9 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
   renamingValue,
   isMenuOpen,
   isSpacesLocked = true,
+  isFloatingPanelMode = false,
+  isSelectedSection = false,
+  hasActiveSpaceInSection = false,
   isDraggingThisSection = false,
   dropIndicator = null,
   canMoveUp = false,
@@ -133,24 +139,49 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
             draggable={!isSpacesLocked && !isEditing}
             onDragStart={onSectionDragStart}
             onDragEnd={onSectionDragEnd}
-            className={`flex items-center justify-between px-2 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-200 rounded transition group ${
-              !isSpacesLocked ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-            }`}
+            className={`flex items-center justify-between px-2 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg transition group ${
+              isFloatingPanelMode && isSelectedSection
+                ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+            } ${!isSpacesLocked ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
           >
             <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
               {!isSpacesLocked && (
                 <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 flex-shrink-0 -ml-1 cursor-grab active:cursor-grabbing" />
               )}
-              {isCollapsed ? (
+              {isFloatingPanelMode ? (
+                <ChevronRight
+                  className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${
+                    isSelectedSection
+                      ? 'text-blue-400 translate-x-0.5'
+                      : 'text-slate-500 group-hover:text-slate-300'
+                  }`}
+                />
+              ) : isCollapsed ? (
                 <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
               ) : (
                 <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
               )}
               <span className="truncate">{sectionName}</span>
+              {hasActiveSpaceInSection && (
+                <span
+                  className="relative flex h-2 w-2 flex-shrink-0 ml-0.5"
+                  title="Contains active space"
+                >
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.85)]" />
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-1 flex-shrink-0">
-              <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800/80 text-slate-400">
+              <span
+                className={`min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold ${
+                  isFloatingPanelMode && isSelectedSection
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : 'bg-slate-800/80 text-slate-400'
+                }`}
+              >
                 {spaces.length}
               </span>
 
@@ -222,8 +253,8 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
         </div>
       )}
 
-      {/* Section Spaces */}
-      {!isCollapsed && (
+      {/* Section Spaces (Inline only when Right Floating Panel mode is disabled) */}
+      {!isFloatingPanelMode && !isCollapsed && (
         <div className="space-y-0.5 mt-1 pl-2 border-l border-slate-800/80 ml-2">
           {spaces.map((space) => renderSpaceItem(space, sectionName))}
         </div>

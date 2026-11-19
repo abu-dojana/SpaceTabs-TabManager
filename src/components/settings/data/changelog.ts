@@ -12,6 +12,27 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.4.3',
+    title: 'Version 1.4.3 — Right Floating Panel for Section Spaces & Live Active Section Indicator',
+    items: [
+      {
+        lead: 'Right Floating Panel for Section Navigation:',
+        description:
+          'Added an optional "Right Floating Panel" layout toggle in Settings (General & Appearance). When enabled, sections in the left sidebar stay compact and clicking a section opens its Spaces in a floating panel on the right side of the canvas—supporting space switching, drag-and-drop tab movement, space reordering, and quick space creation directly inside the selected section.',
+      },
+      {
+        lead: 'Live Blinking Green Dot on Active Sections:',
+        description:
+          'Sections containing your currently active Space now display a live pulsing green indicator dot in the sidebar so you can spot your active section at a glance across large workspaces (enabled by default, with a toggle in Settings).',
+      },
+      {
+        lead: 'Independent Right Floating Panel Width Slider:',
+        description:
+          'Added a dedicated width slider (180px–360px) and quick presets (Compact, Default, Wide) in Appearance Settings to resize the Right Floating Panel independently of the left sidebar.',
+      },
+    ],
+  },
+  {
     version: '1.4.2',
     title: 'Version 1.4.2 — Dynamic Window Titles for Saved Spaces & Unsaved Sessions',
     items: [

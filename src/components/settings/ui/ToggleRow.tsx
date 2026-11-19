@@ -17,11 +17,11 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
 }) => {
   return (
     <div
-      className={`flex items-center justify-between p-4 rounded-xl border ${
+      className={`flex items-center justify-between gap-4 p-4 rounded-xl border ${
         isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/70 border-slate-800'
       }`}
     >
-      <div>
+      <div className="flex-1 min-w-0">
         <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
           {title}
         </div>
@@ -30,8 +30,9 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
         </div>
       </div>
       <button
+        type="button"
         onClick={onToggle}
-        className={`w-12 h-6 flex items-center rounded-full p-1 transition duration-200 ease-in-out ${
+        className={`w-12 h-6 flex-shrink-0 flex items-center rounded-full p-1 transition duration-200 ease-in-out cursor-pointer ${
           checked ? 'bg-blue-600' : isLight ? 'bg-slate-300' : 'bg-slate-700'
         }`}
       >

@@ -16,6 +16,9 @@ export function useHydrateUiFromSettings(
     setDarkPalette,
     setLightPalette,
     setSidebarWidth,
+    setRightFloatingPanel,
+    setRightPanelWidth,
+    setShowSectionActiveDot,
     setPatreonUrl,
   } = useUIStore();
 
@@ -35,6 +38,11 @@ export function useHydrateUiFromSettings(
       if (loaded.darkPalette) setDarkPalette(loaded.darkPalette);
       if (loaded.lightPalette) setLightPalette(loaded.lightPalette);
       if (loaded.sidebarWidth) setSidebarWidth(loaded.sidebarWidth);
+      if (typeof loaded.rightFloatingPanel === 'boolean') {
+        setRightFloatingPanel(loaded.rightFloatingPanel);
+      }
+      if (loaded.rightPanelWidth) setRightPanelWidth(loaded.rightPanelWidth);
+      setShowSectionActiveDot(loaded.showSectionActiveDot !== false);
       if (loaded.patreonUrl) setPatreonUrl(loaded.patreonUrl);
       onLoadedRef.current?.(loaded);
     });
@@ -49,6 +57,9 @@ export function useHydrateUiFromSettings(
     setDarkPalette,
     setLightPalette,
     setSidebarWidth,
+    setRightFloatingPanel,
+    setRightPanelWidth,
+    setShowSectionActiveDot,
     setPatreonUrl,
   ]);
 }

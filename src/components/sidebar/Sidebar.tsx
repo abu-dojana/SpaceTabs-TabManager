@@ -48,6 +48,10 @@ export const Sidebar: React.FC = () => {
     setMoveSectionSpaceId,
     setSettingsOpen,
     sidebarWidth,
+    rightFloatingPanel,
+    showSectionActiveDot,
+    selectedSection,
+    setSelectedSection,
     accentColor,
   } = useUIStore();
 
@@ -210,6 +214,10 @@ export const Sidebar: React.FC = () => {
   };
 
   const toggleSection = (sectionName: string) => {
+    if (rightFloatingPanel) {
+      setSelectedSection(selectedSection === sectionName ? null : sectionName);
+      return;
+    }
     setCollapsedSections((prev) => {
       const next = new Set(prev);
       if (next.has(sectionName)) next.delete(sectionName);
@@ -221,6 +229,9 @@ export const Sidebar: React.FC = () => {
   const handleCommitRenameSection = async (oldName: string) => {
     const trimmed = await renameSection(oldName, renamingSectionValue);
     if (trimmed) {
+      if (selectedSection === oldName) {
+        setSelectedSection(trimmed);
+      }
       setCollapsedSections((prev) => {
         if (prev.has(oldName)) {
           const next = new Set(prev);
@@ -236,6 +247,9 @@ export const Sidebar: React.FC = () => {
 
   const handleArchiveSectionSpaces = async (sectionName: string) => {
     const archivedIds = await archiveSectionSpaces(sectionName);
+    if (selectedSection === sectionName) {
+      setSelectedSection(null);
+    }
     setCollapsedSections((prev) => {
       if (!prev.has(sectionName)) return prev;
       const next = new Set(prev);
@@ -250,6 +264,9 @@ export const Sidebar: React.FC = () => {
 
   const handleKeepSectionSpaces = async (sectionName: string) => {
     await keepSectionSpacesUnsectioned(sectionName);
+    if (selectedSection === sectionName) {
+      setSelectedSection(null);
+    }
     setCollapsedSections((prev) => {
       if (!prev.has(sectionName)) return prev;
       const next = new Set(prev);
@@ -491,6 +508,12 @@ export const Sidebar: React.FC = () => {
                 renamingValue={renamingSectionValue}
                 isMenuOpen={activeSectionMenu === sectionName}
                 isSpacesLocked={drag.isSpacesLocked}
+                isFloatingPanelMode={rightFloatingPanel}
+                isSelectedSection={selectedSection === sectionName}
+                hasActiveSpaceInSection={
+                  showSectionActiveDot !== false &&
+                  sectionSpaces.some((s) => s.id === activeSpaceId)
+                }
                 isDraggingThisSection={drag.draggedSectionName === sectionName}
                 dropIndicator={
                   drag.dragOverTargetSection === sectionName ? drag.sectionDropPosition : null
@@ -517,7 +540,16 @@ export const Sidebar: React.FC = () => {
                 }}
                 onSectionDragStart={(e) => drag.handleSectionDragStart(e, sectionName)}
                 onSectionDragEnd={drag.handleSectionDragEnd}
-                onSectionDragOver={(e) => drag.handleSectionDragOver(e, sectionName)}
+                onSectionDragOver={(e) => {
+                  if (rightFloatingPanel && !drag.draggedSectionName && !drag.draggedSpaceId) {
+                    e.preventDefault();
+                    if (selectedSection !== sectionName) {
+                      setSelectedSection(sectionName);
+                    }
+                    return;
+                  }
+                  drag.handleSectionDragOver(e, sectionName);
+                }}
                 onSectionDragLeave={(e) => drag.handleSectionDragLeave(e, sectionName)}
                 onSectionDrop={(e) => drag.handleSectionDrop(e, sectionName)}
                 onMoveSectionUp={() => drag.handleMoveSectionByOffset(sectionName, -1)}

@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db';
 import { type Space, type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 import { extractDomain } from '@/utils/urlFilter';
+import { useUIStore } from '@/store/uiStore';
 
 export function useSidebarSpaces() {
   const spaces = useLiveQuery(async () => {
@@ -102,6 +103,54 @@ export function useSidebarSpaces() {
 
     return { unsectionedSpaces: unsectioned, sectionsMap: new Map(sortedEntries) };
   }, [spaces]);
+
+  const { activeSpaceId, rightFloatingPanel, selectedSection, setSelectedSection } = useUIStore();
+
+  // Sync selectedSection when activeSpaceId changes to a sectioned space
+  const prevActiveSpaceIdRef = React.useRef<string | null | undefined>(undefined);
+  React.useEffect(() => {
+    if (!spaces) return;
+    if (prevActiveSpaceIdRef.current !== activeSpaceId) {
+      prevActiveSpaceIdRef.current = activeSpaceId;
+      if (activeSpaceId) {
+        const activeSpace = spaces.find((s) => s.id === activeSpaceId);
+        const sec = activeSpace?.section?.trim();
+        if (sec) {
+          setSelectedSection(sec);
+        }
+      }
+    }
+  }, [activeSpaceId, spaces, setSelectedSection]);
+
+  // When Right Floating Panel is toggled ON, ensure a valid section is selected by default
+  const prevRightFloatingPanelRef = React.useRef<boolean>(rightFloatingPanel);
+  React.useEffect(() => {
+    if (!spaces) return;
+    const justEnabled = rightFloatingPanel && !prevRightFloatingPanelRef.current;
+    prevRightFloatingPanelRef.current = rightFloatingPanel;
+
+    if (rightFloatingPanel) {
+      if (selectedSection && !sectionsMap.has(selectedSection)) {
+        const activeSpace = spaces.find((s) => s.id === activeSpaceId);
+        const activeSec = activeSpace?.section?.trim();
+        const fallback =
+          activeSec && sectionsMap.has(activeSec)
+            ? activeSec
+            : Array.from(sectionsMap.keys())[0] || null;
+        setSelectedSection(fallback);
+      } else if (justEnabled && !selectedSection) {
+        const activeSpace = spaces.find((s) => s.id === activeSpaceId);
+        const activeSec = activeSpace?.section?.trim();
+        const initialSec =
+          activeSec && sectionsMap.has(activeSec)
+            ? activeSec
+            : Array.from(sectionsMap.keys())[0] || null;
+        if (initialSec) {
+          setSelectedSection(initialSec);
+        }
+      }
+    }
+  }, [rightFloatingPanel, selectedSection, sectionsMap, spaces, activeSpaceId, setSelectedSection]);
 
   return {
     spaces,

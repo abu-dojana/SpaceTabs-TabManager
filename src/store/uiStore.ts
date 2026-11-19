@@ -8,6 +8,7 @@ interface UIState {
   pendingNoteId: string | null;
   searchQuery: string;
   isCreateSpaceOpen: boolean;
+  createSpaceDefaultSection: string | null;
   moveSectionSpaceId: string | null;
   sidebarTheme: 'dark' | 'light';
   dashboardTheme: 'dark' | 'light';
@@ -15,6 +16,10 @@ interface UIState {
   darkPalette: DarkPalette;
   lightPalette: LightPalette;
   sidebarWidth: number;
+  rightFloatingPanel: boolean;
+  rightPanelWidth: number;
+  showSectionActiveDot: boolean;
+  selectedSection: string | null;
   patreonUrl: string;
   isSettingsOpen: boolean;
   settingsTab: 'general' | 'appearance' | 'suspension' | 'cloud' | 'backup' | 'shortcuts' | 'about' | 'contact';
@@ -26,7 +31,7 @@ interface UIState {
   toggleSelectTab: (id: string) => void;
   selectAllTabs: (ids: string[]) => void;
   clearSelectedTabs: () => void;
-  setCreateSpaceOpen: (open: boolean) => void;
+  setCreateSpaceOpen: (open: boolean, defaultSection?: string | null) => void;
   setMoveSectionSpaceId: (id: string | null) => void;
   setSidebarTheme: (theme: 'dark' | 'light') => void;
   setDashboardTheme: (theme: 'dark' | 'light') => void;
@@ -34,6 +39,10 @@ interface UIState {
   setDarkPalette: (palette: DarkPalette) => void;
   setLightPalette: (palette: LightPalette) => void;
   setSidebarWidth: (width: number) => void;
+  setRightFloatingPanel: (enabled: boolean) => void;
+  setRightPanelWidth: (width: number) => void;
+  setShowSectionActiveDot: (show: boolean) => void;
+  setSelectedSection: (section: string | null) => void;
   setPatreonUrl: (url: string) => void;
   setSettingsOpen: (
     open: boolean,
@@ -49,6 +58,7 @@ export const useUIStore = create<UIState>((set) => ({
   pendingNoteId: null,
   searchQuery: '',
   isCreateSpaceOpen: false,
+  createSpaceDefaultSection: null,
   moveSectionSpaceId: null,
   sidebarTheme: 'dark',
   dashboardTheme: 'dark',
@@ -56,6 +66,10 @@ export const useUIStore = create<UIState>((set) => ({
   darkPalette: 'slate',
   lightPalette: 'snow',
   sidebarWidth: 260,
+  rightFloatingPanel: false,
+  rightPanelWidth: 240,
+  showSectionActiveDot: true,
+  selectedSection: null,
   patreonUrl: 'https://www.patreon.com/abudojana',
   isSettingsOpen: false,
   settingsTab: 'general',
@@ -78,7 +92,11 @@ export const useUIStore = create<UIState>((set) => ({
 
   selectAllTabs: (ids) => set({ selectedTabIds: new Set(ids) }),
   clearSelectedTabs: () => set({ selectedTabIds: new Set() }),
-  setCreateSpaceOpen: (open) => set({ isCreateSpaceOpen: open }),
+  setCreateSpaceOpen: (open, defaultSection = null) =>
+    set({
+      isCreateSpaceOpen: open,
+      createSpaceDefaultSection: open ? (defaultSection ?? null) : null,
+    }),
   setMoveSectionSpaceId: (id) => set({ moveSectionSpaceId: id }),
   setSidebarTheme: (theme) => set({ sidebarTheme: theme }),
   setDashboardTheme: (theme) => set({ dashboardTheme: theme }),
@@ -86,6 +104,10 @@ export const useUIStore = create<UIState>((set) => ({
   setDarkPalette: (palette) => set({ darkPalette: palette }),
   setLightPalette: (palette) => set({ lightPalette: palette }),
   setSidebarWidth: (width) => set({ sidebarWidth: width }),
+  setRightFloatingPanel: (enabled) => set({ rightFloatingPanel: enabled }),
+  setRightPanelWidth: (width) => set({ rightPanelWidth: width }),
+  setShowSectionActiveDot: (show) => set({ showSectionActiveDot: show }),
+  setSelectedSection: (section) => set({ selectedSection: section }),
   setSettingsOpen: (open, tab, scrollTarget = null) =>
     set((state) => ({
       isSettingsOpen: open,

@@ -6,10 +6,12 @@ import {
   Sun,
   Check,
   PanelLeft,
+  PanelRight,
   Layout,
   Pipette,
 } from 'lucide-react';
 import { ThemeOptionCard } from '../ui/ThemeOptionCard';
+import { ToggleRow } from '../ui/ToggleRow';
 import type { DarkPalette, LightPalette } from '@/services/settings';
 
 interface AppearanceTabProps {
@@ -20,9 +22,15 @@ interface AppearanceTabProps {
   darkPalette: DarkPalette;
   lightPalette: LightPalette;
   sidebarWidth: number;
+  rightFloatingPanel?: boolean;
+  rightPanelWidth?: number;
+  showSectionActiveDot?: boolean;
   onApplyPreset: (sb: 'dark' | 'light', dbTheme: 'dark' | 'light') => void;
   onSidebarThemeChange: (theme: 'dark' | 'light') => void;
   onSidebarWidthChange: (width: number) => void;
+  onToggleRightFloatingPanel?: () => void;
+  onRightPanelWidthChange?: (width: number) => void;
+  onToggleSectionActiveDot?: () => void;
   onDashboardThemeChange: (theme: 'dark' | 'light') => void;
   onAccentColorChange: (color: string) => void;
   onDarkPaletteChange: (palette: DarkPalette) => void;
@@ -69,9 +77,15 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = ({
   darkPalette,
   lightPalette,
   sidebarWidth,
+  rightFloatingPanel = false,
+  rightPanelWidth = 240,
+  showSectionActiveDot = true,
   onApplyPreset,
   onSidebarThemeChange,
   onSidebarWidthChange,
+  onToggleRightFloatingPanel,
+  onRightPanelWidthChange,
+  onToggleSectionActiveDot,
   onDashboardThemeChange,
   onAccentColorChange,
   onDarkPaletteChange,
@@ -247,6 +261,100 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Section: Right Floating Panel & Section Indicators */}
+        {onToggleRightFloatingPanel && (
+          <div className="mb-7 space-y-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <PanelRight className="w-4 h-4 text-blue-500" />
+              <h4
+                className={`text-xs font-bold uppercase tracking-wider ${
+                  isLight ? 'text-slate-800' : 'text-slate-200'
+                }`}
+              >
+                Section Navigation & Floating Panel
+              </h4>
+            </div>
+
+            {onToggleSectionActiveDot && (
+              <ToggleRow
+                title="Live Green Dot on Active Section"
+                description="Display a blinking green indicator dot on the section containing your currently active space."
+                checked={showSectionActiveDot !== false}
+                onToggle={onToggleSectionActiveDot}
+                isLight={isLight}
+              />
+            )}
+
+            <ToggleRow
+              title="Right Floating Panel"
+              description="Keep sections compact in the left sidebar and open a floating panel on the right (pushing the canvas) to display spaces when a section is clicked."
+              checked={Boolean(rightFloatingPanel)}
+              onToggle={onToggleRightFloatingPanel}
+              isLight={isLight}
+            />
+
+            {onRightPanelWidthChange && (
+              <div
+                className={`p-4 rounded-xl border ${
+                  isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-slate-950 border-slate-750'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <PanelRight className="w-4 h-4 text-blue-500" />
+                    <h4
+                      className={`text-xs font-bold uppercase tracking-wider ${
+                        isLight ? 'text-slate-800' : 'text-slate-200'
+                      }`}
+                    >
+                      Right Floating Panel Width
+                    </h4>
+                  </div>
+                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-blue-500/15 text-blue-400 border-blue-500/30">
+                    {rightPanelWidth <= 210 ? 'Compact' : rightPanelWidth >= 280 ? 'Wide' : 'Default'} ({rightPanelWidth || 240}px)
+                  </span>
+                </div>
+                <p className={`text-xs mb-3.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                  Adjust the width of the right floating panel independently from the left sidebar.
+                </p>
+                <div className="space-y-3">
+                  <input
+                    type="range"
+                    min={180}
+                    max={360}
+                    step={4}
+                    value={rightPanelWidth || 240}
+                    onChange={(e) => onRightPanelWidthChange(Number(e.target.value))}
+                    className="w-full h-2 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    {[
+                      { label: 'Compact (200px)', val: 200, active: rightPanelWidth <= 210 },
+                      { label: 'Default (240px)', val: 240, active: rightPanelWidth > 210 && rightPanelWidth < 280 },
+                      { label: 'Wide (300px)', val: 300, active: rightPanelWidth >= 280 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        onClick={() => onRightPanelWidthChange(preset.val)}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold border transition cursor-pointer text-center ${
+                          preset.active
+                            ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                            : isLight
+                            ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Section 2: Dashboard Canvas Theme */}
         <div className="mb-7">

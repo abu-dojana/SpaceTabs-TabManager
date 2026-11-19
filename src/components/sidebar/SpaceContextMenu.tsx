@@ -54,7 +54,7 @@ export const SpaceContextMenu: React.FC<SpaceContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute right-1 top-full mt-1 z-50 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+      className="absolute right-1 top-full mt-1 z-50 w-52 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
       onClick={(e) => e.stopPropagation()}
     >
       {/* 1. Rename the space */}

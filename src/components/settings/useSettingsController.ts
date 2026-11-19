@@ -40,12 +40,18 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     darkPalette,
     lightPalette,
     sidebarWidth,
+    rightFloatingPanel,
+    rightPanelWidth,
+    showSectionActiveDot,
     setSidebarTheme,
     setDashboardTheme,
     setAccentColor,
     setDarkPalette,
     setLightPalette,
     setSidebarWidth,
+    setRightFloatingPanel,
+    setRightPanelWidth,
+    setShowSectionActiveDot,
     setPatreonUrl,
   } = useUIStore();
 
@@ -96,6 +102,11 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
         if (loaded.darkPalette) setDarkPalette(loaded.darkPalette);
         if (loaded.lightPalette) setLightPalette(loaded.lightPalette);
         if (loaded.sidebarWidth) setSidebarWidth(loaded.sidebarWidth);
+        if (typeof loaded.rightFloatingPanel === 'boolean') {
+          setRightFloatingPanel(loaded.rightFloatingPanel);
+        }
+        if (loaded.rightPanelWidth) setRightPanelWidth(loaded.rightPanelWidth);
+        setShowSectionActiveDot(loaded.showSectionActiveDot !== false);
         if (loaded.patreonUrl) {
           setPatreonUrl(loaded.patreonUrl);
         }
@@ -120,6 +131,9 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     setDarkPalette,
     setLightPalette,
     setSidebarWidth,
+    setRightFloatingPanel,
+    setRightPanelWidth,
+    setShowSectionActiveDot,
     setPatreonUrl,
   ]);
 
@@ -171,7 +185,17 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
   };
 
   const handleToggle = async (key: keyof UserSettings) => {
-    const updated = await updateUserSettings({ [key]: !settings[key] });
+    const currentVal =
+      key === 'showSectionActiveDot'
+        ? settings.showSectionActiveDot !== false
+        : Boolean(settings[key]);
+    const nextVal = !currentVal;
+    if (key === 'rightFloatingPanel') {
+      setRightFloatingPanel(nextVal);
+    } else if (key === 'showSectionActiveDot') {
+      setShowSectionActiveDot(nextVal);
+    }
+    const updated = await updateUserSettings({ [key]: nextVal });
     setSettings(updated);
     showToast('Setting saved');
   };
@@ -192,6 +216,12 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
   const handleSidebarWidthChange = async (width: number) => {
     setSidebarWidth(width);
     const updated = await updateUserSettings({ sidebarWidth: width });
+    setSettings(updated);
+  };
+
+  const handleRightPanelWidthChange = async (width: number) => {
+    setRightPanelWidth(width);
+    const updated = await updateUserSettings({ rightPanelWidth: width });
     setSettings(updated);
   };
 
@@ -384,6 +414,9 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     darkPalette,
     lightPalette,
     sidebarWidth,
+    rightFloatingPanel,
+    rightPanelWidth,
+    showSectionActiveDot,
     settings,
     toastMessage,
     isSuspending,
@@ -407,6 +440,7 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     handleSelectThreshold,
     handleSidebarThemeChange,
     handleSidebarWidthChange,
+    handleRightPanelWidthChange,
     handleDashboardThemeChange,
     handleAccentColorChange,
     handleDarkPaletteChange,
