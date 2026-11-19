@@ -30,6 +30,11 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
         description:
           'Removed destructive startup deduplication on Unsaved sessions so intentional duplicate tabs and tabs whose URLs overlap with restored Spaces are preserved across browser restarts.',
       },
+      {
+        lead: 'Open Unsaved Sessions in a New Window:',
+        description:
+          'Added an "Open in new window" button (and Ctrl+Click shortcut + other-window switcher) to Unsaved sessions in the sidebar and Dashboard header.',
+      },
     ],
   },
   {

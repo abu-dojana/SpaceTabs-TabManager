@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Plus, Trash2 } from 'lucide-react';
+import { Layers, Plus, Trash2, ExternalLink, Crosshair } from 'lucide-react';
 import { type Space, type Tab, UNSAVED_SPACE_ID } from '@/db/schema';
 
 interface UnsavedSessionsSectionProps {
@@ -14,6 +14,7 @@ interface UnsavedSessionsSectionProps {
   onSetDragOverSpaceId: (spaceId: string | null) => void;
   onCreateNewUnsavedSession: () => void;
   onSelectUnsavedSession: (spaceId: string) => void;
+  onOpenUnsavedInNewWindow: (spaceId: string) => void;
   onDeleteUnsavedSession: (spaceId: string) => void;
   onDropOnSpace: (e: React.DragEvent, targetSpaceId: string | null) => void;
 }
@@ -30,6 +31,7 @@ export const UnsavedSessionsSection: React.FC<UnsavedSessionsSectionProps> = ({
   onSetDragOverSpaceId,
   onCreateNewUnsavedSession,
   onSelectUnsavedSession,
+  onOpenUnsavedInNewWindow,
   onDeleteUnsavedSession,
   onDropOnSpace,
 }) => {
@@ -113,7 +115,13 @@ export const UnsavedSessionsSection: React.FC<UnsavedSessionsSectionProps> = ({
             return (
               <div key={uSpace.id} className="group relative">
                 <button
-                  onClick={() => onSelectUnsavedSession(uSpace.id)}
+                  onClick={(e) => {
+                    if (e.ctrlKey || e.metaKey) {
+                      onOpenUnsavedInNewWindow(uSpace.id);
+                      return;
+                    }
+                    onSelectUnsavedSession(uSpace.id);
+                  }}
                   onDragOver={(e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
@@ -157,23 +165,52 @@ export const UnsavedSessionsSection: React.FC<UnsavedSessionsSectionProps> = ({
                     <span className="truncate italic font-medium">{uTitle}</span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     {uTabs.length > 0 && (
                       <span className="min-w-[18px] h-4 px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 group-hover:hidden">
                         {uTabs.length}
                       </span>
                     )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteUnsavedSession(uSpace.id);
-                      }}
-                      className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded transition opacity-0 group-hover:opacity-100"
-                      title="Discard session"
+                    <div
+                      className="hidden group-hover:flex items-center gap-0.5"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                      {isOpenInOtherWindow && otherWindowId && (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await chrome.windows.update(otherWindowId, { focused: true });
+                          }}
+                          className="p-1 hover:bg-amber-500/20 text-amber-400 hover:text-amber-200 rounded transition"
+                          title="Switch to window with this session"
+                        >
+                          <Crosshair className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenUnsavedInNewWindow(uSpace.id);
+                        }}
+                        className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
+                        title="Open in new window (Ctrl+Click)"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteUnsavedSession(uSpace.id);
+                        }}
+                        className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded transition"
+                        title="Discard session"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </button>
               </div>

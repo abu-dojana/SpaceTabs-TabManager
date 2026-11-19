@@ -409,14 +409,32 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           {/* Workona-style Quick SAVE button when on Unsaved */}
           {(!activeSpace || activeSpace.isUnsaved) ? (
-            <button
-              onClick={startEditing}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
-              title="Quick save current tabs into a new space"
-            >
-              <BookmarkCheck className="w-4 h-4" />
-              <span>SAVE</span>
-            </button>
+            <>
+              <button
+                onClick={startEditing}
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
+                title="Quick save current tabs into a new space"
+              >
+                <BookmarkCheck className="w-4 h-4" />
+                <span>SAVE</span>
+              </button>
+
+              {activeSpaceId && (
+                <button
+                  onClick={handleOpenInNewWindow}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    isLight
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60'
+                  }`}
+                  title="Open session tabs in a clean separate window"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                  <span className="hidden lg:inline">Open in Window</span>
+                  <span className="hidden sm:inline lg:hidden">Window</span>
+                </button>
+              )}
+            </>
           ) : (
             <>
               <button

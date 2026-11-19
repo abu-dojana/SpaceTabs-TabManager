@@ -2,6 +2,7 @@ import { db } from '@/db';
 import { UNSAVED_SPACE_ID } from '@/db/schema';
 import {
   isSystemOrExtensionUrl,
+  isBlankOrNewTabUrl,
   decodeRealUrl,
   isSuspendableUrl,
   isMeaningfulTitle,
@@ -356,12 +357,7 @@ export async function openSpaceInNewWindow(spaceId: string) {
       // Identify initial blank tab created by the browser with the new window
       const initialTabs = await chrome.tabs.query({ windowId: winId });
       const initialBlankTab = initialTabs.find(
-        (t) =>
-          !t.pinned &&
-          (!t.url ||
-            t.url === 'chrome://newtab/' ||
-            t.pendingUrl === 'chrome://newtab/' ||
-            t.url === 'about:blank')
+        (t) => !t.pinned && isBlankOrNewTabUrl(t.url || t.pendingUrl || '')
       );
 
       // Ensure active space remains bound to new window

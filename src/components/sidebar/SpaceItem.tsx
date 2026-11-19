@@ -181,7 +181,13 @@ export const SpaceItem: React.FC<SpaceItemProps> = ({
         </div>
       ) : (
         <button
-          onClick={onSelectSpace}
+          onClick={(e) => {
+            if (e.ctrlKey || e.metaKey) {
+              onOpenNewWindow();
+              return;
+            }
+            onSelectSpace();
+          }}
           draggable={!isSpacesLocked && !isRenaming}
           onDragStart={onSpaceDragStart}
           onDragEnd={onSpaceDragEnd}

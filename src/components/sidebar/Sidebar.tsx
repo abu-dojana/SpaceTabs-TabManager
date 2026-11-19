@@ -409,6 +409,7 @@ export const Sidebar: React.FC = () => {
           onSetDragOverSpaceId={drag.setDragOverSpaceId}
           onCreateNewUnsavedSession={handleCreateNewUnsavedSession}
           onSelectUnsavedSession={handleSelectUnsavedSession}
+          onOpenUnsavedInNewWindow={handleOpenNewWindow}
           onDeleteUnsavedSession={handleDeleteUnsavedSession}
           onDropOnSpace={drag.handleDropOnSpace}
         />
