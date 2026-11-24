@@ -194,8 +194,13 @@ export function useGlobalSearch(
     // Quick Recall when search box is empty: 6 most recently updated items across active spaces
     if (searchWords.length === 0) {
       const candidates: SearchResultItem[] = [];
+      const isDismissedOrCleared = (id: string, ts: number) =>
+        ts <= quickRecallClearedAt || Boolean(dismissedRecallIds?.has(id));
+
       for (const tab of allTabs || []) {
         if (tab.spaceId !== UNSAVED_SPACE_ID && !spaceMap.has(tab.spaceId)) continue;
+        const ts = tab.updatedAt || tab.createdAt || 0;
+        if (isDismissedOrCleared(tab.id, ts)) continue;
         const meta = getSpaceMeta(tab.spaceId);
         if (meta.isArchived) continue;
         const realUrl = decodeRealUrl(tab.url);
@@ -207,12 +212,14 @@ export function useGlobalSearch(
           domain: extractDomain(realUrl),
           ...meta,
           score: 0,
-          updatedAt: tab.updatedAt || tab.createdAt || 0,
+          updatedAt: ts,
           matchedWords: [],
         });
       }
       for (const note of allNotes || []) {
         if (note.spaceId !== UNSAVED_SPACE_ID && !spaceMap.has(note.spaceId)) continue;
+        const ts = note.updatedAt || note.createdAt || 0;
+        if (isDismissedOrCleared(note.id, ts)) continue;
         const meta = getSpaceMeta(note.spaceId);
         if (meta.isArchived) continue;
         candidates.push({
@@ -222,13 +229,15 @@ export function useGlobalSearch(
           snippet: extractSnippet(note.content, []),
           ...meta,
           score: 0,
-          updatedAt: note.updatedAt || note.createdAt || 0,
+          updatedAt: ts,
           matchedWords: [],
         });
       }
       for (const task of allTasks || []) {
         if (task.spaceId !== UNSAVED_SPACE_ID && !spaceMap.has(task.spaceId)) continue;
         if (task.completed) continue;
+        const ts = task.updatedAt || task.createdAt || 0;
+        if (isDismissedOrCleared(task.id, ts)) continue;
         const meta = getSpaceMeta(task.spaceId);
         if (meta.isArchived) continue;
         candidates.push({
@@ -239,7 +248,7 @@ export function useGlobalSearch(
           dueDate: task.dueDate,
           ...meta,
           score: 0,
-          updatedAt: task.updatedAt || task.createdAt || 0,
+          updatedAt: ts,
           matchedWords: [],
         });
       }
@@ -505,6 +514,8 @@ export function useGlobalSearch(
     activeSpaceId,
     activeCategory,
     includeArchived,
+    quickRecallClearedAt,
+    dismissedRecallIds,
   ]);
 
   return {
