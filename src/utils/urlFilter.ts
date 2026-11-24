@@ -114,10 +114,7 @@ export function isValidWebFavicon(favIconUrl?: string): boolean {
   if (!favIconUrl) return false;
   const trimmed = favIconUrl.trim();
   if (!trimmed) return false;
-  if (
-    trimmed.startsWith('chrome-extension://') ||
-    trimmed.startsWith('moz-extension://')
-  ) {
+  if (trimmed.startsWith('chrome-extension://')) {
     return false;
   }
   return true;

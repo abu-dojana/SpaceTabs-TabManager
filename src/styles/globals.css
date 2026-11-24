@@ -356,22 +356,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
 }
 
-input[type="range"]::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 9999px;
-  background-color: var(--accent-color, #2563eb) !important;
-  border: 2px solid #ffffff !important;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
-  cursor: pointer;
-}
-
 /* =========================================================================
    CUSTOM CHECKBOX STYLING (Standardized across all Chromium / theme variants)
    ========================================================================= */
 input[type="checkbox"] {
   -webkit-appearance: none !important;
-  -moz-appearance: none !important;
   appearance: none !important;
   width: 16px !important;
   height: 16px !important;
