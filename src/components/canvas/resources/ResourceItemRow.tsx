@@ -20,8 +20,14 @@ interface ResourceItemRowProps {
   showTabFavicons: boolean;
   copiedId: string | null;
   isMenuOpen: boolean;
+  isDragging?: boolean;
+  dropIndicator?: 'top' | 'bottom' | null;
   itemMenuRef: React.RefObject<HTMLDivElement>;
   onDragStart: (e: React.DragEvent, itemId: string) => void;
+  onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent, itemId: string) => void;
+  onDragLeave: (itemId: string) => void;
+  onDrop: (e: React.DragEvent, itemId: string) => void;
   onOpenResource: (url: string) => void;
   onCopyLink: (id: string, url: string) => void;
   onToggleMenu: () => void;
@@ -36,8 +42,14 @@ export const ResourceItemRow: React.FC<ResourceItemRowProps> = ({
   showTabFavicons,
   copiedId,
   isMenuOpen,
+  isDragging = false,
+  dropIndicator = null,
   itemMenuRef,
   onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
   onOpenResource,
   onCopyLink,
   onToggleMenu,
@@ -55,7 +67,19 @@ export const ResourceItemRow: React.FC<ResourceItemRowProps> = ({
     <div
       draggable={true}
       onDragStart={(e) => onDragStart(e, item.id)}
-      className="flex items-center justify-between px-3.5 py-2 hover:bg-slate-800/40 transition group cursor-pointer"
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => onDragOver(e, item.id)}
+      onDragLeave={() => onDragLeave(item.id)}
+      onDrop={(e) => onDrop(e, item.id)}
+      className={`flex items-center justify-between px-3.5 py-2 hover:bg-slate-800/40 transition group cursor-pointer relative ${
+        isDragging ? 'opacity-40 bg-blue-500/5' : ''
+      } ${
+        dropIndicator === 'top'
+          ? 'border-t-2 border-blue-500'
+          : dropIndicator === 'bottom'
+          ? 'border-b-2 border-blue-500'
+          : ''
+      }`}
       onClick={() => onOpenResource(item.url)}
     >
       {/* Left: Drag Handle + Icon + Title + Domain */}
@@ -63,6 +87,7 @@ export const ResourceItemRow: React.FC<ResourceItemRowProps> = ({
         <span
           className="opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 transition"
           onClick={(e) => e.stopPropagation()}
+          title="Drag to reorder or move between sections"
         >
           <GripVertical className="w-3.5 h-3.5" />
         </span>

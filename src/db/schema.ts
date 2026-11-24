@@ -59,6 +59,7 @@ export interface Note {
   spaceId: string;                // FK -> spaces.id
   title: string;
   content: string;                // Markdown
+  order?: number;                 // Custom display order in Notes list
   createdAt: number;
   updatedAt: number;
 }

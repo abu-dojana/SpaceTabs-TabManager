@@ -34,6 +34,10 @@ export class TabManagerDB extends Dexie {
     this.version(3).stores({
       tabs: 'id, chromeTabId, spaceId, windowId, order, updatedAt',
     });
+
+    this.version(4).stores({
+      notes: 'id, spaceId, order, updatedAt',
+    });
   }
 }
 

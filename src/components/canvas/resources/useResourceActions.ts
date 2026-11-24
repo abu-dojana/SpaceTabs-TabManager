@@ -5,7 +5,14 @@ import { recordTombstone, recordTombstones } from '@/services/driveSync';
 import { focusOrOpenTab } from '@/services/tabManager';
 import { decodeRealUrl, extractDomain } from '@/utils/urlFilter';
 import { usePersistedSet } from '@/hooks/usePersistedSet';
-import { detectResourceType, normalizeResourceUrl } from './resourceUtils';
+import {
+  detectResourceType,
+  normalizeResourceUrl,
+  reorderResourceItemToTarget,
+  reorderResourceSectionToTarget,
+  sortResourceSectionsAlphabetically,
+  sortSectionResourceItems,
+} from './resourceUtils';
 
 export interface ResourceModalState {
   isOpen: boolean;
@@ -51,9 +58,19 @@ export function useResourceActions({
     url: '',
   });
 
-  // Drag and drop state
+  // Drag and drop state (items & sections)
   const [draggingItemId, setDraggingItemId] = React.useState<string | null>(null);
   const [dragOverSectionId, setDragOverSectionId] = React.useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = React.useState<string | null>(null);
+  const [dragOverItemPosition, setDragOverItemPosition] = React.useState<'top' | 'bottom' | null>(
+    null
+  );
+
+  const [draggingSectionId, setDraggingSectionId] = React.useState<string | null>(null);
+  const [dragOverSectionCardId, setDragOverSectionCardId] = React.useState<string | null>(null);
+  const [dragOverSectionPosition, setDragOverSectionPosition] = React.useState<
+    'top' | 'bottom' | null
+  >(null);
 
   const sectionMenuRef = React.useRef<HTMLDivElement>(null);
   const itemMenuRef = React.useRef<HTMLDivElement>(null);
@@ -305,29 +322,187 @@ export function useResourceActions({
     setAddOpenTabSectionId(null);
   };
 
-  // Drag and drop handlers
+  // Drag and drop handlers (Items & Sections)
   const handleItemDragStart = (e: React.DragEvent, itemId: string) => {
+    e.stopPropagation();
     setDraggingItemId(itemId);
+    setDraggingSectionId(null);
     e.dataTransfer.setData('text/plain', itemId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleItemDragEnd = () => {
+    setDraggingItemId(null);
+    setDragOverItemId(null);
+    setDragOverItemPosition(null);
+    setDragOverSectionId(null);
+  };
+
+  const handleItemDragOver = (e: React.DragEvent, itemId: string) => {
+    if (!draggingItemId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+
+    if (draggingItemId === itemId) {
+      if (dragOverItemId !== null) {
+        setDragOverItemId(null);
+        setDragOverItemPosition(null);
+      }
+      return;
+    }
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const pos: 'top' | 'bottom' = e.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
+    if (dragOverItemId !== itemId || dragOverItemPosition !== pos) {
+      setDragOverItemId(itemId);
+      setDragOverItemPosition(pos);
+    }
+  };
+
+  const handleItemDragLeave = (itemId: string) => {
+    if (dragOverItemId === itemId) {
+      setDragOverItemId(null);
+      setDragOverItemPosition(null);
+    }
+  };
+
+  const handleItemDrop = async (
+    e: React.DragEvent,
+    targetSectionId: string,
+    targetItemId: string
+  ) => {
+    if (!draggingItemId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const dropPos = dragOverItemPosition || 'bottom';
+    const fromItemId = draggingItemId;
+
+    setDraggingItemId(null);
+    setDragOverItemId(null);
+    setDragOverItemPosition(null);
+    setDragOverSectionId(null);
+
+    await reorderResourceItemToTarget(fromItemId, targetSectionId, targetItemId, dropPos);
+  };
+
+  const handleSectionDragStart = (e: React.DragEvent, sectionId: string) => {
+    if (draggingItemId) return;
+    setDraggingSectionId(sectionId);
+    e.dataTransfer.setData('application/x-resource-section', sectionId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSectionDragEnd = () => {
+    setDraggingSectionId(null);
+    setDragOverSectionCardId(null);
+    setDragOverSectionPosition(null);
+  };
+
+  const handleSectionCardDragOver = (e: React.DragEvent, sectionId: string) => {
+    if (draggingSectionId) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggingSectionId === sectionId) {
+        if (dragOverSectionCardId !== null) {
+          setDragOverSectionCardId(null);
+          setDragOverSectionPosition(null);
+        }
+        return;
+      }
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const pos: 'top' | 'bottom' = e.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom';
+      if (dragOverSectionCardId !== sectionId || dragOverSectionPosition !== pos) {
+        setDragOverSectionCardId(sectionId);
+        setDragOverSectionPosition(pos);
+      }
+      return;
+    }
+
+    if (draggingItemId) {
+      e.preventDefault();
+      if (dragOverSectionId !== sectionId) {
+        setDragOverSectionId(sectionId);
+      }
+    }
+  };
+
+  const handleSectionCardDragLeave = (e: React.DragEvent, sectionId: string) => {
+    const currentTarget = e.currentTarget as HTMLElement;
+    if (currentTarget.contains(e.relatedTarget as Node)) return;
+    if (dragOverSectionId === sectionId) {
+      setDragOverSectionId(null);
+    }
+    if (dragOverSectionCardId === sectionId) {
+      setDragOverSectionCardId(null);
+      setDragOverSectionPosition(null);
+    }
   };
 
   const handleSectionDrop = async (e: React.DragEvent, targetSectionId: string) => {
     e.preventDefault();
     setDragOverSectionId(null);
+
+    if (draggingSectionId && sections) {
+      const fromSectionId = draggingSectionId;
+      const dropPos = dragOverSectionPosition || 'bottom';
+      setDraggingSectionId(null);
+      setDragOverSectionCardId(null);
+      setDragOverSectionPosition(null);
+      await reorderResourceSectionToTarget(sections, fromSectionId, targetSectionId, dropPos);
+      return;
+    }
+
     if (!draggingItemId) return;
 
     const item = await db.resourceItems.get(draggingItemId);
+    setDraggingItemId(null);
+    setDragOverItemId(null);
+    setDragOverItemPosition(null);
     if (!item) return;
 
     if (item.sectionId !== targetSectionId) {
       const targetItems = itemsBySection.get(targetSectionId) || [];
-      await db.resourceItems.update(draggingItemId, {
+      await db.resourceItems.update(item.id, {
         sectionId: targetSectionId,
         order: targetItems.length,
         updatedAt: Date.now(),
       });
     }
-    setDraggingItemId(null);
+  };
+
+  // Move section up or down
+  const handleMoveSectionByOffset = async (sectionId: string, offset: -1 | 1) => {
+    setActiveSectionMenuId(null);
+    if (!sections || sections.length < 2) return;
+    const idx = sections.findIndex((s) => s.id === sectionId);
+    const targetIdx = idx + offset;
+    if (idx === -1 || targetIdx < 0 || targetIdx >= sections.length) return;
+    await reorderResourceSectionToTarget(
+      sections,
+      sectionId,
+      sections[targetIdx].id,
+      offset < 0 ? 'top' : 'bottom'
+    );
+  };
+
+  // Sort all sections in this space alphabetically (A-Z)
+  const handleSortSectionsAlphabetically = async () => {
+    if (!sections) return;
+    await sortResourceSectionsAlphabetically(sections);
+  };
+
+  // Sort items inside a section alphabetically (A-Z)
+  const handleSortSectionItemsAlphabetically = async (sectionId: string) => {
+    setActiveSectionMenuId(null);
+    await sortSectionResourceItems(sectionId, 'title');
+  };
+
+  // Sort items inside a section by domain
+  const handleSortSectionItemsByDomain = async (sectionId: string) => {
+    setActiveSectionMenuId(null);
+    await sortSectionResourceItems(sectionId, 'domain');
   };
 
   return {
@@ -349,8 +524,14 @@ export function useResourceActions({
     copiedId,
     resourceModal,
     setResourceModal,
+    draggingItemId,
     dragOverSectionId,
     setDragOverSectionId,
+    dragOverItemId,
+    dragOverItemPosition,
+    draggingSectionId,
+    dragOverSectionCardId,
+    dragOverSectionPosition,
     sectionMenuRef,
     itemMenuRef,
     openTabsDropdownRef,
@@ -370,6 +551,18 @@ export function useResourceActions({
     handleSaveResource,
     handleAddOpenTabAsResource,
     handleItemDragStart,
+    handleItemDragEnd,
+    handleItemDragOver,
+    handleItemDragLeave,
+    handleItemDrop,
+    handleSectionDragStart,
+    handleSectionDragEnd,
+    handleSectionCardDragOver,
+    handleSectionCardDragLeave,
     handleSectionDrop,
+    handleMoveSectionByOffset,
+    handleSortSectionsAlphabetically,
+    handleSortSectionItemsAlphabetically,
+    handleSortSectionItemsByDomain,
   };
 }

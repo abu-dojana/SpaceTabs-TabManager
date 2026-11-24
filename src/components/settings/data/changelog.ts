@@ -30,6 +30,11 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
         description:
           'Fixed dropdown and 3-dot context menus in the Sidebar, Right Floating Panel, Resources (Add Open Tab & 3-dot menus), Tasks, Notes, and Tabs so popups never get clipped by scroll containers or require scrolling down.',
       },
+      {
+        lead: 'Drag-and-Drop Reordering & Sorting for Resources & Notes:',
+        description:
+          'Added drag-and-drop reordering and 1-click sorting for Resource sections (drag cards, Move section up/down, Sort Sections A–Z), Resource items inside sections (drag to reorder within or across sections, Sort items A–Z, Sort items by domain), and Notes (drag to reorder notes plus a Sort menu for A–Z, Z–A, Recently Updated, and Date Created).',
+      },
     ],
   },
   {

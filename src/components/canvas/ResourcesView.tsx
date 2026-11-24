@@ -4,7 +4,7 @@ import { db } from '@/db';
 import { type ResourceItem, UNSAVED_SPACE_ID } from '@/db/schema';
 import { useUIStore } from '@/store/uiStore';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { Bookmark, Plus, Folder, FolderPlus } from 'lucide-react';
+import { Bookmark, Plus, Folder, FolderPlus, ArrowDownAZ } from 'lucide-react';
 import { useResourceActions } from './resources/useResourceActions';
 import { ResourceSectionCard } from './resources/ResourceSectionCard';
 import { ResourceModal } from './resources/ResourceModal';
@@ -85,8 +85,13 @@ export const ResourcesView: React.FC = () => {
     copiedId,
     resourceModal,
     setResourceModal,
+    draggingItemId,
     dragOverSectionId,
-    setDragOverSectionId,
+    dragOverItemId,
+    dragOverItemPosition,
+    draggingSectionId,
+    dragOverSectionCardId,
+    dragOverSectionPosition,
     sectionMenuRef,
     itemMenuRef,
     openTabsDropdownRef,
@@ -106,7 +111,19 @@ export const ResourcesView: React.FC = () => {
     handleSaveResource,
     handleAddOpenTabAsResource,
     handleItemDragStart,
+    handleItemDragEnd,
+    handleItemDragOver,
+    handleItemDragLeave,
+    handleItemDrop,
+    handleSectionDragStart,
+    handleSectionDragEnd,
+    handleSectionCardDragOver,
+    handleSectionCardDragLeave,
     handleSectionDrop,
+    handleMoveSectionByOffset,
+    handleSortSectionsAlphabetically,
+    handleSortSectionItemsAlphabetically,
+    handleSortSectionItemsByDomain,
   } = useResourceActions({
     targetSpaceId,
     sections,
@@ -137,13 +154,25 @@ export const ResourcesView: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => setIsAddingSection(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
-        >
-          <FolderPlus className="w-3.5 h-3.5" />
-          <span>Add Section</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {sections && sections.length > 1 && (
+            <button
+              onClick={handleSortSectionsAlphabetically}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition"
+              title="Sort sections alphabetically (A–Z)"
+            >
+              <ArrowDownAZ className="w-3.5 h-3.5 text-slate-400" />
+              <span>Sort Sections</span>
+            </button>
+          )}
+          <button
+            onClick={() => setIsAddingSection(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 transition"
+          >
+            <FolderPlus className="w-3.5 h-3.5" />
+            <span>Add Section</span>
+          </button>
+        </div>
       </div>
 
       {/* Add New Section Inline Form */}
@@ -185,7 +214,7 @@ export const ResourcesView: React.FC = () => {
       {/* Resource Sections List */}
       <div className="space-y-6">
         {sections && sections.length > 0 ? (
-          sections.map((section) => (
+          sections.map((section, idx) => (
             <ResourceSectionCard
               key={section.id}
               section={section}
@@ -195,6 +224,15 @@ export const ResourcesView: React.FC = () => {
               showTabFavicons={showTabFavicons}
               isCollapsed={collapsedSections.has(section.id)}
               isDragOver={dragOverSectionId === section.id}
+              isDraggingSection={draggingSectionId === section.id}
+              sectionDropPosition={
+                dragOverSectionCardId === section.id ? dragOverSectionPosition : null
+              }
+              draggingItemId={draggingItemId}
+              dragOverItemId={dragOverItemId}
+              dragOverItemPosition={dragOverItemPosition}
+              canMoveUp={idx > 0}
+              canMoveDown={idx < sections.length - 1}
               editingSectionId={editingSectionId}
               editingSectionTitle={editingSectionTitle}
               editSectionInputRef={editSectionInputRef}
@@ -205,8 +243,15 @@ export const ResourcesView: React.FC = () => {
               addOpenTabSectionId={addOpenTabSectionId}
               openTabsDropdownRef={openTabsDropdownRef}
               copiedId={copiedId}
-              onDragOverSection={setDragOverSectionId}
+              onSectionDragStart={handleSectionDragStart}
+              onSectionDragEnd={handleSectionDragEnd}
+              onSectionCardDragOver={handleSectionCardDragOver}
+              onSectionCardDragLeave={handleSectionCardDragLeave}
               onSectionDrop={handleSectionDrop}
+              onMoveSectionUp={() => handleMoveSectionByOffset(section.id, -1)}
+              onMoveSectionDown={() => handleMoveSectionByOffset(section.id, 1)}
+              onSortItemsAlphabetically={handleSortSectionItemsAlphabetically}
+              onSortItemsByDomain={handleSortSectionItemsByDomain}
               onToggleCollapse={toggleSectionCollapse}
               onStartRenameSection={handleStartRenameSection}
               onEditingSectionTitleChange={setEditingSectionTitle}
@@ -223,6 +268,10 @@ export const ResourcesView: React.FC = () => {
               onOpenAllInSection={handleOpenAllInSection}
               onDeleteSection={handleDeleteSection}
               onItemDragStart={handleItemDragStart}
+              onItemDragEnd={handleItemDragEnd}
+              onItemDragOver={handleItemDragOver}
+              onItemDragLeave={handleItemDragLeave}
+              onItemDrop={handleItemDrop}
               onOpenResource={handleOpenResource}
               onCopyLink={handleCopyLink}
               onToggleItemMenu={(itemId) =>

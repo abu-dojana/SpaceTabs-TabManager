@@ -252,11 +252,18 @@ export function useNoteEditor({
 
     const id = crypto.randomUUID();
     const now = Date.now();
+    const existingOrders = (notes || [])
+      .map((n) => n.order)
+      .filter((o): o is number => typeof o === 'number');
+    const nextOrder =
+      existingOrders.length > 0 ? Math.min(...existingOrders) - 1 : 0;
+
     const newNote: Note = {
       id,
       spaceId: targetSpaceId,
       title: 'Untitled Note',
       content: '',
+      order: nextOrder,
       createdAt: now,
       updatedAt: now,
     };

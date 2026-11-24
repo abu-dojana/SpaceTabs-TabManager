@@ -27,17 +27,31 @@ export const NotesView: React.FC = () => {
     [targetSpaceId]
   );
 
+  // Sort notes by custom order (falling back to updatedAt desc for legacy notes without order)
+  const sortedNotes = React.useMemo(() => {
+    if (!notes) return [];
+    return [...notes].sort((a, b) => {
+      const aHasOrder = typeof a.order === 'number';
+      const bHasOrder = typeof b.order === 'number';
+      if (aHasOrder && bHasOrder && a.order !== b.order) {
+        return a.order! - b.order!;
+      }
+      if (aHasOrder !== bHasOrder) {
+        return aHasOrder ? -1 : 1;
+      }
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    });
+  }, [notes]);
+
   // Filter notes based on global search query
   const filteredNotes = React.useMemo(() => {
-    if (!notes) return [];
     const query = searchQuery.trim().toLowerCase();
-    const sorted = [...notes].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    if (!query) return sorted;
-    return sorted.filter(
+    if (!query) return sortedNotes;
+    return sortedNotes.filter(
       (n) =>
         n.title.toLowerCase().includes(query) || n.content.toLowerCase().includes(query)
     );
-  }, [notes, searchQuery]);
+  }, [sortedNotes, searchQuery]);
 
   const {
     selectedNoteId,
@@ -67,6 +81,58 @@ export const NotesView: React.FC = () => {
     filteredNotes,
   });
 
+  const handleReorderNotes = async (
+    fromId: string,
+    toId: string,
+    position: 'top' | 'bottom'
+  ) => {
+    if (fromId === toId || sortedNotes.length < 2) return;
+    await flushSave();
+    const fromNote = sortedNotes.find((n) => n.id === fromId);
+    if (!fromNote) return;
+
+    const withoutDragged = sortedNotes.filter((n) => n.id !== fromId);
+    const targetIdx = withoutDragged.findIndex((n) => n.id === toId);
+    if (targetIdx === -1) return;
+
+    const insertIdx = position === 'bottom' ? targetIdx + 1 : targetIdx;
+    const reordered = [...withoutDragged];
+    reordered.splice(insertIdx, 0, fromNote);
+
+    await Promise.all(
+      reordered.map((n, idx) => db.notes.update(n.id, { order: idx }))
+    );
+  };
+
+  const handleSortNotes = async (mode: 'az' | 'za' | 'updated' | 'created') => {
+    if (sortedNotes.length < 2) return;
+    await flushSave();
+    const sorted = [...sortedNotes].sort((a, b) => {
+      if (mode === 'az') {
+        return (a.title || 'Untitled Note').localeCompare(
+          b.title || 'Untitled Note',
+          undefined,
+          { numeric: true, sensitivity: 'base' }
+        );
+      }
+      if (mode === 'za') {
+        return (b.title || 'Untitled Note').localeCompare(
+          a.title || 'Untitled Note',
+          undefined,
+          { numeric: true, sensitivity: 'base' }
+        );
+      }
+      if (mode === 'created') {
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      }
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    });
+
+    await Promise.all(
+      sorted.map((n, idx) => db.notes.update(n.id, { order: idx }))
+    );
+  };
+
   return (
     <div className="flex-1 flex h-full overflow-hidden select-none">
       {/* Left Sidebar: Notes List */}
@@ -76,6 +142,8 @@ export const NotesView: React.FC = () => {
         onSelectNote={handleSelectNote}
         onCreateNewNote={handleCreateNewNote}
         onRequestDeleteNote={(id) => setConfirmDeleteId(id)}
+        onReorderNotes={handleReorderNotes}
+        onSortNotes={handleSortNotes}
       />
 
       {/* Main Workspace Area: Active Note Editor & Preview */}
