@@ -13,6 +13,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { SOCIAL_CONTACT_LINKS, type SocialContactLink } from '../data/contactLinks';
+import { ProductHuntBadge } from '../ui/ProductHuntBadge';
 
 interface ContactTabProps {
   isLight: boolean;
@@ -69,6 +70,36 @@ export const ContactTab: React.FC<ContactTabProps> = ({ isLight, onCopyBkash }) 
               Hi there! I designed and built SpaceTabs to give power users a clean, fast, privacy-first workspace manager with zero paywalls. If SpaceTabs helps you declutter your browser and saves you time, your support helps me continue actively developing and maintaining this project!
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Product Hunt Launch Callout */}
+      <div
+        className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
+          isLight
+            ? 'bg-orange-50/70 border-orange-200 text-slate-800 shadow-sm'
+            : 'bg-orange-950/20 border-orange-900/50 text-slate-200'
+        }`}
+      >
+        <div className="space-y-1 text-center sm:text-left">
+          <div className="flex items-center justify-center sm:justify-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#ff6154] text-white font-extrabold text-[11px] inline-flex items-center justify-center flex-shrink-0 shadow-sm">
+              P
+            </span>
+            <span className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              Support SpaceTabs on Product Hunt!
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ff6154]/15 text-[#ff6154] border border-[#ff6154]/30">
+              Free Upvote ▲
+            </span>
+          </div>
+          <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+            Leaving an upvote, comment, or review on our Product Hunt launch page is one of the best free ways to help more people discover SpaceTabs!
+          </p>
+        </div>
+
+        <div className="flex-shrink-0">
+          <ProductHuntBadge isLight={isLight} />
         </div>
       </div>
 

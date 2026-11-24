@@ -23,6 +23,7 @@ import { hexToRgba, adjustBrightness } from '@/utils/color';
 import { getHostWindowId } from '@/utils/chromeWindow';
 import { getAppVersion } from '@/utils/appVersion';
 import { useHydrateUiFromSettings } from '@/hooks/useHydrateUiFromSettings';
+import { PRODUCT_HUNT_URL } from '@/components/settings/ui/ProductHuntBadge';
 import { AlertTriangle, Heart, MessageSquare } from 'lucide-react';
 
 interface ErrorBoundaryProps {
@@ -269,18 +270,38 @@ export default function App() {
               </button>
             </div>
 
-            <button
-              onClick={() => setSettingsOpen(true, 'contact')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition border group cursor-pointer ${
-                dashboardTheme === 'light'
-                  ? 'border-emerald-600/35 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600'
-                  : 'border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/70'
-              }`}
-              title="Support Abu Dojana (SupportKori, bKash, Patreon, SociaBuzz)"
-            >
-              <Heart className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500/15 group-hover:fill-emerald-500 transition-all group-hover:scale-110" />
-              <span>Support Creator</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href={PRODUCT_HUNT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition border group cursor-pointer ${
+                  dashboardTheme === 'light'
+                    ? 'border-[#ff6154]/40 text-[#da552f] hover:bg-[#ff6154]/10 hover:border-[#ff6154]'
+                    : 'border-[#ff6154]/35 text-[#ff786c] hover:bg-[#ff6154]/10 hover:border-[#ff6154]/70'
+                }`}
+                title="Find & upvote SpaceTabs on Product Hunt"
+              >
+                <span className="w-3.5 h-3.5 rounded-full bg-[#ff6154] text-white text-[9px] font-extrabold inline-flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  P
+                </span>
+                <span className="hidden sm:inline">Product Hunt</span>
+                <span className="text-[10px] font-bold">▲</span>
+              </a>
+
+              <button
+                onClick={() => setSettingsOpen(true, 'contact')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition border group cursor-pointer ${
+                  dashboardTheme === 'light'
+                    ? 'border-emerald-600/35 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600'
+                    : 'border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/70'
+                }`}
+                title="Support Abu Dojana (SupportKori, bKash, Patreon, SociaBuzz)"
+              >
+                <Heart className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500/15 group-hover:fill-emerald-500 transition-all group-hover:scale-110" />
+                <span>Support Creator</span>
+              </button>
+            </div>
           </footer>
         </main>
 

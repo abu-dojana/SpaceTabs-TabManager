@@ -22,7 +22,12 @@ import {
 import {
   getRecentSearches,
   saveRecentSearch,
+  removeRecentSearch,
   clearRecentSearches,
+  getQuickRecallClearedAt,
+  clearQuickRecallHistory,
+  getDismissedQuickRecallIds,
+  dismissQuickRecallItem,
 } from './search/searchScoring';
 import { SpaceResultsBlock, SpaceGroupSection } from './search/SpaceResultsBlock';
 import { QuickRecallPanel } from './search/QuickRecallPanel';
@@ -62,6 +67,12 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({ isLight }) => 
   const [showAllSpaces, setShowAllSpaces] = React.useState(false);
   const [recentSearches, setRecentSearches] = React.useState<string[]>(() =>
     getRecentSearches()
+  );
+  const [quickRecallClearedAt, setQuickRecallClearedAt] = React.useState<number>(() =>
+    getQuickRecallClearedAt()
+  );
+  const [dismissedRecallIds, setDismissedRecallIds] = React.useState<Set<string>>(() =>
+    getDismissedQuickRecallIds()
   );
 
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -109,7 +120,14 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({ isLight }) => 
     recentItems,
     activeCategory,
     setActiveCategory,
-  } = useGlobalSearch(searchQuery, activeSpaceId, includeArchived, isOpen);
+  } = useGlobalSearch(
+    searchQuery,
+    activeSpaceId,
+    includeArchived,
+    isOpen,
+    quickRecallClearedAt,
+    dismissedRecallIds
+  );
 
   React.useEffect(() => {
     setSelectedIndex(0);
@@ -384,9 +402,17 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({ isLight }) => 
               setSearchQuery(q);
               inputRef.current?.focus();
             }}
+            onRemoveSearchQuery={(q) => setRecentSearches(removeRecentSearch(q))}
             onClearRecentSearches={() => {
               clearRecentSearches();
               setRecentSearches([]);
+            }}
+            onDismissRecentItem={(id) =>
+              setDismissedRecallIds(dismissQuickRecallItem(id))
+            }
+            onClearRecentItems={() => {
+              setQuickRecallClearedAt(clearQuickRecallHistory());
+              setDismissedRecallIds(new Set());
             }}
             onSelectIndex={setSelectedIndex}
             onNavigateToResult={navigateToResult}

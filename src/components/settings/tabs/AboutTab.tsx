@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { getAppVersion } from '@/utils/appVersion';
 import { CHANGELOG_RELEASES } from '../data/changelog';
+import { ProductHuntBadge } from '../ui/ProductHuntBadge';
 
 interface AboutTabProps {
   isLight: boolean;
@@ -59,6 +60,10 @@ export const AboutTab: React.FC<AboutTabProps> = ({
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 text-xs font-bold mt-3">
           <CheckCircle2 className="w-4 h-4" />
           <span>No Limits — Free, Private & Open Workspace Suite!</span>
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <ProductHuntBadge isLight={isLight} />
         </div>
       </div>
 

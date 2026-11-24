@@ -7,6 +7,7 @@ import {
   Bookmark,
   ExternalLink,
   Archive,
+  X,
 } from 'lucide-react';
 import { formatDueDateBadge, formatRelativeTime } from '@/utils/time';
 import { type SearchResultItem } from '../useGlobalSearch';
@@ -21,6 +22,7 @@ interface SearchResultRowProps {
   onMouseEnter: () => void;
   onClick: () => void;
   onOpenLinkOnly: (e: React.MouseEvent, url: string) => void;
+  onDismiss?: (e: React.MouseEvent) => void;
 }
 
 export const SearchResultRow: React.FC<SearchResultRowProps> = ({
@@ -32,6 +34,7 @@ export const SearchResultRow: React.FC<SearchResultRowProps> = ({
   onMouseEnter,
   onClick,
   onOpenLinkOnly,
+  onDismiss,
 }) => {
   const highlightTokens = item.matchedWords.length ? item.matchedWords : searchWords;
 
@@ -233,6 +236,20 @@ export const SearchResultRow: React.FC<SearchResultRowProps> = ({
             title="Open in new background tab"
           >
             <ExternalLink className="w-3 h-3" />
+          </button>
+        )}
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[10px] font-medium flex items-center gap-1 transition ${
+              isLight
+                ? 'bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-500 border border-slate-200 shadow-sm'
+                : 'bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700'
+            }`}
+            title="Remove from recent history"
+          >
+            <X className="w-3 h-3" />
           </button>
         )}
       </div>

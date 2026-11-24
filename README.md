@@ -10,10 +10,20 @@
 </p>
 
 <p align="center">
+  <a href="https://www.producthunt.com/products/spacetabs-tab-manager?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-spacetabs-tab-manager" target="_blank" rel="noopener noreferrer">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1327375&amp;theme=dark&amp;t=1795502083139" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1327375&amp;theme=light&amp;t=1795502045284" />
+      <img alt="SpaceTabs — Tab Manager - Local-first, unlimited Chrome tab &amp; workspace manager | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1327375&amp;theme=neutral&amp;t=1795502066333" />
+    </picture>
+  </a>
+</p>
+
+<p align="center">
   <a href="https://chromewebstore.google.com/detail/aiajlcdplbpcfohgekcgafcpghgjojhh?utm_source=item-share-cb">
     <img src="https://img.shields.io/badge/Chrome%20Web%20Store-SpaceTabs-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
   </a>
-  <img src="https://img.shields.io/badge/Version-1.4.1-blue?style=for-the-badge" alt="Version 1.4.1" />
+  <img src="https://img.shields.io/badge/Version-1.4.4-blue?style=for-the-badge" alt="Version 1.4.4" />
   <img src="https://img.shields.io/badge/Manifest-V3-success?style=for-the-badge" alt="Manifest V3" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="GPL-3.0 License" />
   <img src="https://img.shields.io/badge/Sync-Google%20Drive-34A853?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive Sync" />
