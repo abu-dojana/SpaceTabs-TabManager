@@ -43,6 +43,14 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
             isLight={isLight}
           />
 
+          <ToggleRow
+            title="Include Archived Spaces in Search"
+            description="Allow global search to also search inside archived spaces and their tabs, notes, tasks, and resources (off by default to keep search results focused)."
+            checked={Boolean(settings.searchInArchive)}
+            onToggle={() => onToggle('searchInArchive')}
+            isLight={isLight}
+          />
+
           {onRestoreAllSuspended && (
             <div
               className={`p-3.5 rounded-xl border flex items-center justify-between gap-4 ${

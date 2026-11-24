@@ -13,8 +13,15 @@ export interface ChangelogRelease {
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
     version: '1.4.4',
-    title: 'Version 1.4.4 — Quick New Window Button & Live Workspace Item Counts',
+    title: 'Version 1.4.4 — Smarter ADHD-Friendly Search, Quick New Window & Resource/Note Sorting',
     items: [
+      {
+        lead: 'Smarter, ADHD & Forgetful-Friendly Global Search (',
+        codeTag: 'Ctrl + K',
+        leadSuffix: '):',
+        description:
+          'Spaces now appear as first-class search results at the top of the dropdown with a dedicated Spaces filter pill and relevance ranking (exact > prefix > whole-word > substring > fuzzy typo match). Added typo tolerance, semantic site-type recall (search "sheet", "doc", "colab", "video", "ai", "pdf"), a Quick Recall panel with Recent Searches and Recently Active items on focus, and an optional "Include Archived Spaces in Search" toggle in Settings → General.',
+      },
       {
         lead: 'Quick "Open a New Window" Button in Sidebar Unsaved Header:',
         description:

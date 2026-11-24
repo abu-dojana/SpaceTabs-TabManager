@@ -25,6 +25,7 @@ export interface UserSettings {
   rightFloatingPanel: boolean;
   rightPanelWidth: number;
   showSectionActiveDot: boolean;
+  searchInArchive: boolean;
   patreonUrl: string;
 }
 
@@ -43,6 +44,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   rightFloatingPanel: false,
   rightPanelWidth: 240,
   showSectionActiveDot: true,
+  searchInArchive: false,
   patreonUrl: 'https://www.patreon.com/abudojana',
 };
 
