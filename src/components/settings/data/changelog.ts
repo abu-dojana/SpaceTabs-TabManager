@@ -25,6 +25,11 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
         description:
           'Workspace navigation tabs now display live item counts directly beside each category label (e.g., Tabs(9), Resources(2), Notes(3), Tasks(4)) and automatically hide the number when a category has zero items.',
       },
+      {
+        lead: 'Viewport-Aware Dropdown & Popup Menus Across Sidebar & Canvas:',
+        description:
+          'Fixed dropdown and 3-dot context menus in the Sidebar, Right Floating Panel, Resources (Add Open Tab & 3-dot menus), Tasks, Notes, and Tabs so popups never get clipped by scroll containers or require scrolling down.',
+      },
     ],
   },
   {

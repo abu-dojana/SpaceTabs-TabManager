@@ -1,6 +1,7 @@
 import React from 'react';
 import { type ResourceItem, type Tab } from '@/db/schema';
 import { decodeRealUrl } from '@/utils/urlFilter';
+import { useFixedPopover } from '@/hooks/useFixedPopover';
 import { Layers, Check, Plus } from 'lucide-react';
 
 interface AddFromOpenTabsDropdownProps {
@@ -22,6 +23,8 @@ export const AddFromOpenTabsDropdown: React.FC<AddFromOpenTabsDropdownProps> = (
   onToggle,
   onAddTab,
 }) => {
+  const popoverRef = useFixedPopover({ isOpen, align: 'right', offset: 6 });
+
   return (
     <div className="relative" ref={isOpen ? dropdownRef : undefined}>
       <button
@@ -34,7 +37,10 @@ export const AddFromOpenTabsDropdown: React.FC<AddFromOpenTabsDropdownProps> = (
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1.5 z-50 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 max-h-64 overflow-y-auto">
+        <div
+          ref={popoverRef}
+          className="fixed z-50 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 max-h-64 overflow-y-auto"
+        >
           <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800 flex items-center justify-between">
             <span>Open Tabs in this Space</span>
             <span className="font-mono text-slate-500">{openTabs?.length || 0}</span>

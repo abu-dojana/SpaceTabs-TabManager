@@ -1,6 +1,7 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
 import { type ExportFormat } from '@/services/tabManager';
+import { useFixedPopover } from '@/hooks/useFixedPopover';
 import { Check, X, ExternalLink, MoreVertical, Crosshair, GripVertical, ChevronDown } from 'lucide-react';
 import { SpaceContextMenu } from './SpaceContextMenu';
 import { EMOJI_OPTIONS } from '@/components/modals/CreateSpaceModal';
@@ -79,6 +80,11 @@ export const SpaceItem: React.FC<SpaceItemProps> = ({
   const [selectedEmoji, setSelectedEmoji] = React.useState(space.icon || '📁');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = React.useState(false);
   const emojiPickerRef = React.useRef<HTMLDivElement>(null);
+  const emojiPopoverRef = useFixedPopover({
+    isOpen: isEmojiPickerOpen,
+    align: 'left',
+    offset: 6,
+  });
 
   React.useEffect(() => {
     if (isRenaming) {
@@ -118,8 +124,9 @@ export const SpaceItem: React.FC<SpaceItemProps> = ({
             </button>
             {isEmojiPickerOpen && (
               <div
+                ref={emojiPopoverRef}
                 onMouseDown={(e) => e.preventDefault()}
-                className="absolute left-0 top-full mt-1.5 p-2 rounded-xl shadow-2xl bg-slate-900 border border-slate-700 z-50 grid grid-cols-5 gap-1.5 w-48"
+                className="fixed p-2 rounded-xl shadow-2xl bg-slate-900 border border-slate-700 z-50 grid grid-cols-5 gap-1.5 w-48"
               >
                 {EMOJI_OPTIONS.map((emoji) => (
                   <button

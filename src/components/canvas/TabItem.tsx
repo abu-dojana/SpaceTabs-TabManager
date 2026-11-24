@@ -1,5 +1,6 @@
 import React from 'react';
 import { type Tab, type Space } from '@/db/schema';
+import { useFixedPopover } from '@/hooks/useFixedPopover';
 import {
   GripVertical,
   Crosshair,
@@ -81,6 +82,12 @@ export const TabItem: React.FC<TabItemProps> = ({
   onDragLeave,
   onDrop,
 }) => {
+  const movePopoverRef = useFixedPopover({
+    isOpen: isDropdownOpen,
+    align: 'right',
+    offset: 6,
+  });
+
   return (
     <div
       key={tab.id}
@@ -218,9 +225,8 @@ export const TabItem: React.FC<TabItemProps> = ({
 
           {isDropdownOpen && (
             <div
-              className={`absolute right-0 z-50 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 overflow-hidden ${
-                isNearBottom ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
-              }`}
+              ref={movePopoverRef}
+              className="fixed z-50 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 overflow-hidden"
             >
               <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
                 Move tab to

@@ -184,7 +184,11 @@ export default function App() {
           <Header />
 
           <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 overflow-y-auto min-w-0">
+            <div
+              className={`flex-1 min-w-0 ${
+                activeView === 'notes' ? 'flex overflow-hidden' : 'overflow-y-auto'
+              }`}
+            >
               {activeView === 'tabs' && <TabsView />}
 
               {activeView === 'resources' && <ResourcesView />}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
+import { useFixedPopover } from '@/hooks/useFixedPopover';
 import {
   ChevronRight,
   ChevronDown,
@@ -80,6 +81,8 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
   onMoveSectionDown,
   renderSpaceItem,
 }) => {
+  useFixedPopover({ isOpen: isMenuOpen, align: 'right', offset: 4 }, sectionMenuRef);
+
   return (
     <div
       key={sectionName}
@@ -206,7 +209,7 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
           {isMenuOpen && (
             <div
               ref={sectionMenuRef}
-              className="absolute right-1 top-full mt-1 z-50 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+              className="fixed z-50 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
               onClick={(e) => e.stopPropagation()}
             >
               {canMoveUp && onMoveSectionUp && (

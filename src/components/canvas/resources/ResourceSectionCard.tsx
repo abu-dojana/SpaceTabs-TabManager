@@ -1,5 +1,6 @@
 import React from 'react';
 import { type ResourceSection, type ResourceItem, type Tab } from '@/db/schema';
+import { useFixedPopover } from '@/hooks/useFixedPopover';
 import { AddFromOpenTabsDropdown } from './AddFromOpenTabsDropdown';
 import { ResourceItemRow } from './ResourceItemRow';
 import {
@@ -95,6 +96,13 @@ export const ResourceSectionCard: React.FC<ResourceSectionCardProps> = ({
   onMoveItemToSection,
   onDeleteItem,
 }) => {
+  const isSectionMenuOpen = activeSectionMenuId === section.id;
+  const sectionPopoverRef = useFixedPopover({
+    isOpen: isSectionMenuOpen,
+    align: 'right',
+    offset: 6,
+  });
+
   return (
     <div
       onDragOver={(e) => {
@@ -191,8 +199,11 @@ export const ResourceSectionCard: React.FC<ResourceSectionCardProps> = ({
               <MoreVertical className="w-4 h-4" />
             </button>
 
-            {activeSectionMenuId === section.id && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs">
+            {isSectionMenuOpen && (
+              <div
+                ref={sectionPopoverRef}
+                className="fixed z-50 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs"
+              >
                 {items.length > 0 && (
                   <button
                     onClick={() => onOpenAllInSection(section.id)}

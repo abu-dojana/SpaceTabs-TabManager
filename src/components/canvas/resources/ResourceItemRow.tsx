@@ -1,6 +1,7 @@
 import React from 'react';
 import { type ResourceItem, type ResourceSection } from '@/db/schema';
 import { extractDomain } from '@/utils/urlFilter';
+import { useFixedPopover } from '@/hooks/useFixedPopover';
 import { renderResourceIcon } from './resourceUtils';
 import {
   GripVertical,
@@ -44,6 +45,12 @@ export const ResourceItemRow: React.FC<ResourceItemRowProps> = ({
   onMoveToSection,
   onDeleteItem,
 }) => {
+  const itemPopoverRef = useFixedPopover({
+    isOpen: isMenuOpen,
+    align: 'right',
+    offset: 4,
+  });
+
   return (
     <div
       draggable={true}
@@ -75,7 +82,9 @@ export const ResourceItemRow: React.FC<ResourceItemRowProps> = ({
 
       {/* Right: Quick Actions */}
       <div
-        className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition"
+        className={`flex items-center gap-1 transition ${
+          isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Copy Link */}
@@ -110,7 +119,10 @@ export const ResourceItemRow: React.FC<ResourceItemRowProps> = ({
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs">
+            <div
+              ref={itemPopoverRef}
+              className="fixed z-50 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 text-xs"
+            >
               <button
                 onClick={() => onEditResource(item)}
                 className="w-full text-left px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2"

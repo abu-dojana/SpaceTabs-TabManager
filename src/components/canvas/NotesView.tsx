@@ -68,7 +68,7 @@ export const NotesView: React.FC = () => {
   });
 
   return (
-    <div className="flex-1 flex h-[calc(100vh-68px)] overflow-hidden select-none">
+    <div className="flex-1 flex h-full overflow-hidden select-none">
       {/* Left Sidebar: Notes List */}
       <NotesList
         notes={filteredNotes}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
+import { useFixedPopover } from '@/hooks/useFixedPopover';
 import { FolderInput, Trash2, Plus, X, ExternalLink } from 'lucide-react';
 
 interface TabBatchBarProps {
@@ -45,6 +46,12 @@ export const TabBatchBar: React.FC<TabBatchBarProps> = ({
   onSetNewSpaceName,
   onMoveToNewSpace,
 }) => {
+  const movePopoverRef = useFixedPopover({
+    isOpen: isMoveDropdownOpen,
+    align: 'right',
+    offset: 6,
+  });
+
   if (selectedCount === 0) return null;
 
   return (
@@ -71,7 +78,10 @@ export const TabBatchBar: React.FC<TabBatchBarProps> = ({
           </button>
 
           {isMoveDropdownOpen && (
-            <div className="absolute right-0 top-full mt-1.5 z-50 w-60 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 overflow-hidden">
+            <div
+              ref={movePopoverRef}
+              className="fixed z-50 w-60 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 overflow-hidden"
+            >
               <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
                 Move {selectedCount} tabs to
               </div>

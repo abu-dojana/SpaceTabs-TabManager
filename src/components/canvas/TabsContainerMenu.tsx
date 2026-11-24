@@ -1,6 +1,7 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
 import { type ExportFormat } from '@/services/tabManager';
+import { useFixedPopover } from '@/hooks/useFixedPopover';
 import {
   MoreVertical,
   Link2,
@@ -66,6 +67,11 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
   onCloseAllTabs,
 }) => {
   const [showExportSubmenu, setShowExportSubmenu] = React.useState(false);
+  const menuPopoverRef = useFixedPopover({
+    isOpen,
+    align: 'right',
+    offset: 6,
+  });
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -89,7 +95,8 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
 
       {isOpen && (
         <div
-          className="absolute right-0 top-full mt-1.5 z-50 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+          ref={menuPopoverRef}
+          className="fixed z-50 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 1. Copy all links */}
@@ -212,7 +219,7 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
               </button>
 
               {showMoveAllSubmenu && (
-                <div className="absolute right-full top-0 mr-1.5 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 max-h-48 overflow-y-auto">
+                <div className="absolute right-full bottom-0 mr-1.5 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 max-h-48 overflow-y-auto">
                   <div className="px-3 py-1 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
                     Move all tabs to
                   </div>
