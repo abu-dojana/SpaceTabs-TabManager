@@ -12,6 +12,27 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.5.0',
+    title: 'Version 1.5.0 — Close from Tab Strip (Keep in Space), "Open Here" Batch Restore & Multi-Window Protection',
+    items: [
+      {
+        lead: 'Close from Tab Strip (Keep Saved in Space):',
+        description:
+          'Added a "Close from tab strip (keep saved in space)" button on open tab rows, "Close from Strip" in the batch selection bar, and "Close all from tab strip" in the Tabs 3-dot menu so you can close tabs from Chrome’s top tab bar to free RAM and declutter while keeping them saved in your Space.',
+      },
+      {
+        lead: '"Open Here" Batch Restore & Compact Single-Line Batch Action Bar:',
+        description:
+          'Added an "Open Here" button in the batch selection bar (and updated the "Open in this window" button on closed tab rows) to reopen selected closed/dormant tabs directly into the current window’s tab strip, alongside a streamlined single-line batch bar (Move to, Open Here, Open in New Window, Close from Strip).',
+      },
+      {
+        lead: 'Multi-Window Early Window-Close Tab Protection & Duplicate Preservation:',
+        description:
+          'Fixed a race condition where moving or opening a tab from a saved Space into a new window and closing that window before the tab or extension finished loading could delete the tab from the Space. Also preserved deliberate duplicate and dormant tabs across background sync cycles.',
+      },
+    ],
+  },
+  {
     version: '1.4.4',
     title: 'Version 1.4.4 — Smarter ADHD-Friendly Search, Quick New Window & Resource/Note Sorting',
     items: [
@@ -20,7 +41,7 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
         codeTag: 'Ctrl + K',
         leadSuffix: '):',
         description:
-          'Spaces now appear as first-class search results at the top of the dropdown with a dedicated Spaces filter pill and relevance ranking (exact > prefix > whole-word > substring > fuzzy typo match). Added typo tolerance, semantic site-type recall (search "sheet", "doc", "colab", "video", "ai", "pdf"), a Quick Recall panel with Recent Searches and Recently Active items on focus, and an optional "Include Archived Spaces in Search" toggle in Settings → General.',
+          'Spaces now appear as first-class search results at the top of the dropdown with a dedicated Spaces filter pill and relevance ranking (exact > prefix > whole-word > substring > fuzzy typo match). Added typo tolerance, semantic site-type recall (search "sheet", "doc", "colab", "video", "ai", "pdf"), a Quick Recall panel with Recent Searches and Recently Active items on focus (with Clear history & per-item dismiss buttons), and an optional "Include Archived Spaces in Search" toggle in Settings → General.',
       },
       {
         lead: 'Quick "Open a New Window" Button in Sidebar Unsaved Header:',
@@ -41,11 +62,6 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
         lead: 'Drag-and-Drop Reordering & Sorting for Resources & Notes:',
         description:
           'Added drag-and-drop reordering and 1-click sorting for Resource sections (drag cards, Move section up/down, Sort Sections A–Z), Resource items inside sections (drag to reorder within or across sections, Sort items A–Z, Sort items by domain), and Notes (drag to reorder notes plus a Sort menu for A–Z, Z–A, Recently Updated, and Date Created).',
-      },
-      {
-        lead: 'Close from Tab Strip (Keep in Space) & Multi-Window Close Protection:',
-        description:
-          'Added a "Close from tab strip (keep saved in space)" button on open tab rows, in the batch selection bar, and in the Tabs 3-dot menu to close tabs from Chrome’s top tab bar while keeping them saved in your Space with 0 RAM usage. Also fixed a race condition where closing a new window before a moved/opened tab finished loading could delete the tab from the Space.',
       },
     ],
   },
