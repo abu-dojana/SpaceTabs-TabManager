@@ -8,11 +8,13 @@ import {
   locateOrOpenTab,
   openTabInNewWindow,
   openSelectedTabsInNewWindow,
+  openTabsInCurrentWindow,
   closeTabs,
   reorderTabsAndSyncBrowser,
   sortTabsAlphabetically,
   sortTabsByDomain,
   closeDuplicateTabs,
+  closeTabsFromStripKeepInSpace,
   suspendAllTabsInCurrentWindow,
   reloadAllTabsInCurrentWindow,
   exportSpaceToFile,
@@ -133,21 +135,28 @@ export const TabsView: React.FC = () => {
   };
 
   const handleMoveSelected = async (targetSpaceId: string | null) => {
-    const ids = Array.from(selectedTabIds);
-    await moveTabsToSpace(ids, targetSpaceId);
+    await moveTabsToSpace(Array.from(selectedTabIds), targetSpaceId);
     clearSelectedTabs();
     setMoveDropdownTabId(null);
   };
 
   const handleDeleteSelected = async () => {
-    const ids = Array.from(selectedTabIds);
-    await closeTabs(ids);
+    await closeTabs(Array.from(selectedTabIds));
+    clearSelectedTabs();
+  };
+
+  const handleOpenSelectedInCurrentWindow = async () => {
+    await openTabsInCurrentWindow(Array.from(selectedTabIds));
     clearSelectedTabs();
   };
 
   const handleOpenSelectedInNewWindow = async () => {
-    const ids = Array.from(selectedTabIds);
-    await openSelectedTabsInNewWindow(ids);
+    await openSelectedTabsInNewWindow(Array.from(selectedTabIds));
+    clearSelectedTabs();
+  };
+
+  const handleCloseSelectedFromStrip = async () => {
+    await closeTabsFromStripKeepInSpace(Array.from(selectedTabIds));
     clearSelectedTabs();
   };
 
@@ -156,16 +165,14 @@ export const TabsView: React.FC = () => {
     setMoveDropdownTabId(null);
   };
 
-  const handleDeleteTab = async (tabId: string) => {
-    await closeTabs([tabId]);
-  };
+  const handleDeleteTab = (tabId: string) => closeTabs([tabId]);
+  const handleCloseTabFromStrip = (tabId: string) => closeTabsFromStripKeepInSpace([tabId]);
 
   const handleMoveToNewSpace = async (tabIds: string[], spaceName: string) => {
     const trimmed = spaceName.trim() || 'Untitled Space';
     const newSpaceId = crypto.randomUUID();
     const nextOrder = await getNextSpaceOrder();
     const now = Date.now();
-
     await db.spaces.add({
       id: newSpaceId,
       name: trimmed,
@@ -174,9 +181,7 @@ export const TabsView: React.FC = () => {
       updatedAt: now,
       isArchived: false,
     });
-
     await moveTabsToSpace(tabIds, newSpaceId);
-
     setIsCreatingNewSpaceForTabs(false);
     setNewSpaceNameInput('');
     setMoveDropdownTabId(null);
@@ -185,23 +190,16 @@ export const TabsView: React.FC = () => {
 
   const handleCopyUrl = async (tabId: string, url: string) => {
     try {
-      const realUrl = decodeRealUrl(url);
-      await navigator.clipboard.writeText(realUrl);
+      await navigator.clipboard.writeText(decodeRealUrl(url));
       setCopiedId(tabId);
-      setTimeout(() => {
-        setCopiedId(null);
-      }, 1500);
-    } catch {
-      // Failed to copy
-    }
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch {}
   };
 
-  // 1. Copy All Links
   const handleCopyAllLinks = async () => {
     if (!tabs || tabs.length === 0) return;
-    const links = tabs.map((t) => decodeRealUrl(t.url)).join('\n');
     try {
-      await navigator.clipboard.writeText(links);
+      await navigator.clipboard.writeText(tabs.map((t) => decodeRealUrl(t.url)).join('\n'));
       setIsCopiedAll(true);
       setTimeout(() => {
         setIsCopiedAll(false);
@@ -212,79 +210,64 @@ export const TabsView: React.FC = () => {
     }
   };
 
-  // 2. Sort Alphabetically
   const handleSortAlphabetically = async () => {
     setIsTabsMenuOpen(false);
-    if (tabs && tabs.length > 1) {
-      await sortTabsAlphabetically(tabs);
-    }
+    if (tabs && tabs.length > 1) await sortTabsAlphabetically(tabs);
   };
 
-  // 3. Sort by Domain
   const handleSortByDomain = async () => {
     setIsTabsMenuOpen(false);
-    if (tabs && tabs.length > 1) {
-      await sortTabsByDomain(tabs);
-    }
+    if (tabs && tabs.length > 1) await sortTabsByDomain(tabs);
   };
 
-  // 4. Export This Space (JSON or HTML)
   const handleExportSpace = async (format: ExportFormat) => {
     if (!tabs) return;
     setIsTabsMenuOpen(false);
     await exportSpaceToFile(activeSpaceId, activeSpace?.name || 'Unsaved Session', format);
   };
 
-  // 5. Import Into This Space
   const handleImportIntoSpaceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const text = await file.text();
-      await importIntoSpace(activeSpaceId, text, file.name);
+      await importIntoSpace(activeSpaceId, await file.text(), file.name);
     } catch (err) {
       console.error('Failed to import into space:', err);
     } finally {
-      if (importSpaceInputRef.current) {
-        importSpaceInputRef.current.value = '';
-      }
+      if (importSpaceInputRef.current) importSpaceInputRef.current.value = '';
     }
   };
 
-  // 6. Move All Tabs
   const handleMoveAllTabs = async (targetSpaceId: string | null) => {
     if (!tabs || tabs.length === 0) return;
     setIsTabsMenuOpen(false);
     setShowMoveAllSubmenu(false);
-    await moveTabsToSpace(
-      tabs.map((t) => t.id),
-      targetSpaceId
-    );
+    await moveTabsToSpace(tabs.map((t) => t.id), targetSpaceId);
   };
 
-  // 7. Suspend All Tabs in Current Workspace
   const handleSuspendAllTabs = async () => {
     if (!tabs || tabs.length === 0) return;
     setIsTabsMenuOpen(false);
     await suspendAllTabsInCurrentWindow();
   };
 
-  // 8. Reload All Tabs
+  const handleCloseAllFromStrip = async () => {
+    if (!tabs || tabs.length === 0) return;
+    setIsTabsMenuOpen(false);
+    await closeTabsFromStripKeepInSpace(tabs.map((t) => t.id));
+  };
+
   const handleReloadAllTabs = async () => {
     if (!tabs || tabs.length === 0) return;
     setIsTabsMenuOpen(false);
     await reloadAllTabsInCurrentWindow();
   };
 
-  // 9. Close Duplicate Tabs
   const handleCloseDuplicates = async () => {
     setIsTabsMenuOpen(false);
-    if (tabs && tabs.length > 1) {
-      await closeDuplicateTabs(tabs);
-    }
+    if (tabs && tabs.length > 1) await closeDuplicateTabs(tabs);
   };
 
-  // 10. Close All Tabs
   const handleCloseAllTabs = async () => {
     if (!tabs || tabs.length === 0) return;
     setIsTabsMenuOpen(false);
@@ -294,19 +277,14 @@ export const TabsView: React.FC = () => {
   const getFaviconUrl = (url: string, storedFavicon?: string) => {
     if (storedFavicon && storedFavicon.startsWith('http')) return storedFavicon;
     try {
-      return chrome.runtime.getURL(
-        `/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`
-      );
+      return chrome.runtime.getURL(`/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`);
     } catch {
       return '';
     }
   };
 
   const renderFavicon = (url: string, storedFavicon?: string) => {
-    if (!showTabFavicons) {
-      return null;
-    }
-
+    if (!showTabFavicons) return null;
     const isInternal =
       url.startsWith('chrome://') ||
       url.startsWith('about:') ||
@@ -314,21 +292,11 @@ export const TabsView: React.FC = () => {
       url.startsWith('brave://');
 
     if (isInternal) {
-      if (url.includes('extension')) {
-        return <Puzzle className="w-4 h-4 text-blue-400 flex-shrink-0" />;
-      }
-      if (url.includes('setting')) {
-        return <Settings className="w-4 h-4 text-slate-400 flex-shrink-0" />;
-      }
-      if (url.includes('bookmark')) {
-        return <Bookmark className="w-4 h-4 text-amber-400 flex-shrink-0" />;
-      }
-      if (url.includes('download')) {
-        return <Download className="w-4 h-4 text-emerald-400 flex-shrink-0" />;
-      }
-      if (url.includes('history')) {
-        return <History className="w-4 h-4 text-purple-400 flex-shrink-0" />;
-      }
+      if (url.includes('extension')) return <Puzzle className="w-4 h-4 text-blue-400 flex-shrink-0" />;
+      if (url.includes('setting')) return <Settings className="w-4 h-4 text-slate-400 flex-shrink-0" />;
+      if (url.includes('bookmark')) return <Bookmark className="w-4 h-4 text-amber-400 flex-shrink-0" />;
+      if (url.includes('download')) return <Download className="w-4 h-4 text-emerald-400 flex-shrink-0" />;
+      if (url.includes('history')) return <History className="w-4 h-4 text-purple-400 flex-shrink-0" />;
       return <Compass className="w-4 h-4 text-slate-400 flex-shrink-0" />;
     }
 
@@ -345,9 +313,18 @@ export const TabsView: React.FC = () => {
         />
       );
     }
-
     return <Globe className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />;
   };
+
+  const claimedChromeTabIds = React.useMemo(
+    () =>
+      new Set(
+        (tabs || [])
+          .map((t) => t.chromeTabId)
+          .filter((id): id is number => typeof id === 'number')
+      ),
+    [tabs]
+  );
 
   return (
     <div className="px-8 py-6 max-w-4xl mx-auto w-full select-none pb-32 relative overflow-visible">
@@ -398,7 +375,9 @@ export const TabsView: React.FC = () => {
                 setMoveDropdownTabId(moveDropdownTabId === 'bulk' ? null : 'bulk');
               }}
               onMoveSelected={handleMoveSelected}
+              onOpenSelectedInCurrentWindow={handleOpenSelectedInCurrentWindow}
               onOpenSelectedInNewWindow={handleOpenSelectedInNewWindow}
+              onCloseSelectedFromStrip={handleCloseSelectedFromStrip}
               onDeleteSelected={handleDeleteSelected}
               onStartCreateNewSpace={() => setIsCreatingNewSpaceForTabs(true)}
               onCancelCreateNewSpace={() => {
@@ -450,6 +429,7 @@ export const TabsView: React.FC = () => {
               }}
               onMoveAllTabs={handleMoveAllTabs}
               onSuspendAllTabs={handleSuspendAllTabs}
+              onCloseAllFromStrip={handleCloseAllFromStrip}
               onReloadAllTabs={handleReloadAllTabs}
               onCloseDuplicates={handleCloseDuplicates}
               onCloseAllTabs={handleCloseAllTabs}
@@ -467,10 +447,14 @@ export const TabsView: React.FC = () => {
                 : undefined;
 
               // Fallback URL match if tab record's chromeTabId is stale or from a prior session
-              if (liveWindowId === undefined && allLiveTabsList.length > 0) {
+              if (
+                liveWindowId === undefined &&
+                tab.chromeTabId !== undefined &&
+                allLiveTabsList.length > 0
+              ) {
                 const realUrl = decodeRealUrl(tab.url);
                 const match = allLiveTabsList.find((bt) => {
-                  if (bt.pinned) return false;
+                  if (bt.pinned || (bt.id && claimedChromeTabIds.has(bt.id))) return false;
                   const raw = bt.url || bt.pendingUrl || '';
                   if (!raw || isSystemOrExtensionUrl(raw)) return false;
                   return (
@@ -511,6 +495,7 @@ export const TabsView: React.FC = () => {
                   onLocateOrOpen={() => locateOrOpenTab({ ...tab, chromeTabId: resolvedChromeTabId })}
                   onOpenInNewWindow={() => openTabInNewWindow({ ...tab, chromeTabId: resolvedChromeTabId })}
                   onCopyUrl={() => handleCopyUrl(tab.id, tab.url)}
+                  onCloseFromStrip={() => handleCloseTabFromStrip(tab.id)}
                   onCloseTab={() => handleDeleteTab(tab.id)}
                   onToggleDropdown={(e) => {
                     e.stopPropagation();

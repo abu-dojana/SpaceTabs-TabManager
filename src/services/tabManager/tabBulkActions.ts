@@ -3,6 +3,7 @@ import { type Tab } from '@/db/schema';
 import { decodeRealUrl, extractDomain, isSystemOrExtensionUrl } from '@/utils/urlFilter';
 import { getHostWindowId } from '@/utils/chromeWindow';
 import { setTransitionLock } from './windowSpaces';
+import { markTabClosingWithWindow } from './windowLocks';
 import { closeTabs } from './tabOperations';
 
 /**
@@ -245,5 +246,175 @@ export async function reloadAllTabsInCurrentWindow(): Promise<void> {
     }
   } catch (e) {
     console.warn('Failed to reload all tabs:', e);
+  }
+}
+
+/**
+ * Closes one or more open tabs from Chrome's top tab strip while keeping
+ * their tab records saved inside the Space as dormant tabs (0 RAM, 0 tab-strip clutter).
+ */
+export async function closeTabsFromStripKeepInSpace(tabIds: string[]): Promise<void> {
+  if (!tabIds || tabIds.length === 0) return;
+  const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
+  const currentWindowId = (await getHostWindowId()) ?? undefined;
+
+  let allBrowserTabs: chrome.tabs.Tab[] = [];
+  try {
+    allBrowserTabs = await chrome.tabs.query({});
+  } catch {}
+
+  const allStoredTabs = await db.tabs.toArray();
+  const targetSet = new Set(tabIds);
+  const otherRecords = allStoredTabs.filter((r) => !targetSet.has(r.id));
+  const claimedByOtherRecords = new Set<number>(
+    otherRecords
+      .map((r) => r.chromeTabId)
+      .filter((id): id is number => typeof id === 'number')
+  );
+
+  const recordMap = new Map(allStoredTabs.map((r) => [r.id, r]));
+  const browserTabIdsToClose: number[] = [];
+  const now = Date.now();
+
+  for (const id of tabIds) {
+    const record = recordMap.get(id);
+    if (!record) continue;
+
+    const realUrl = decodeRealUrl(record.url);
+    let targetBrowserTabId: number | undefined;
+
+    if (record.chromeTabId && !claimedByOtherRecords.has(record.chromeTabId)) {
+      const match = allBrowserTabs.find((t) => t.id === record.chromeTabId);
+      if (match?.id && !match.pinned && !match.url?.startsWith(dashboardUrl)) {
+        targetBrowserTabId = match.id;
+      }
+    }
+
+    if (!targetBrowserTabId) {
+      const preferredWinId = record.windowId || currentWindowId;
+      const match = allBrowserTabs.find((t) => {
+        if (!t.id || t.pinned || claimedByOtherRecords.has(t.id)) return false;
+        const rawUrl = t.url || t.pendingUrl || '';
+        if (!rawUrl || rawUrl.startsWith(dashboardUrl)) return false;
+        if (preferredWinId && t.windowId !== preferredWinId) return false;
+        return (
+          decodeRealUrl(t.url || '') === realUrl ||
+          decodeRealUrl(t.pendingUrl || '') === realUrl
+        );
+      });
+      if (match?.id) {
+        targetBrowserTabId = match.id;
+      }
+    }
+
+    if (targetBrowserTabId) {
+      browserTabIdsToClose.push(targetBrowserTabId);
+      markTabClosingWithWindow(targetBrowserTabId);
+      allBrowserTabs = allBrowserTabs.filter((t) => t.id !== targetBrowserTabId);
+    }
+
+    // Unlink chromeTabId and windowId BEFORE closing the physical browser tab
+    await db.tabs.update(id, {
+      chromeTabId: undefined,
+      windowId: undefined,
+      updatedAt: now,
+    });
+  }
+
+  if (browserTabIdsToClose.length > 0) {
+    try {
+      await chrome.tabs.remove(browserTabIdsToClose);
+    } catch {
+      for (const bId of browserTabIdsToClose) {
+        await chrome.tabs.remove(bId).catch(() => {});
+      }
+    }
+  }
+}
+
+/**
+ * Opens one or more selected (closed/dormant or other-window) tabs directly
+ * into the current browser window's tab strip.
+ */
+export async function openTabsInCurrentWindow(tabIds: string[]): Promise<void> {
+  if (!tabIds || tabIds.length === 0) return;
+  const winId = await getHostWindowId();
+  if (!winId) return;
+
+  const dashboardUrl = chrome.runtime.getURL('/dashboard.html');
+  const records = await db.tabs.where('id').anyOf(tabIds).sortBy('order');
+  if (records.length === 0) return;
+
+  let allBrowserTabs: chrome.tabs.Tab[] = [];
+  try {
+    allBrowserTabs = await chrome.tabs.query({});
+  } catch {}
+
+  const openByTabId = new Map<number, chrome.tabs.Tab>();
+  for (const bt of allBrowserTabs) {
+    if (typeof bt.id === 'number') {
+      openByTabId.set(bt.id, bt);
+    }
+  }
+
+  const now = Date.now();
+
+  for (const rec of records) {
+    const realUrl = decodeRealUrl(rec.url);
+    if (!realUrl) continue;
+
+    let liveTab =
+      typeof rec.chromeTabId === 'number' ? openByTabId.get(rec.chromeTabId) : undefined;
+
+    if (!liveTab) {
+      liveTab = allBrowserTabs.find((bt) => {
+        if (!bt.id || bt.pinned || bt.windowId !== winId) return false;
+        const raw = bt.url || bt.pendingUrl || '';
+        if (!raw || raw.startsWith(dashboardUrl)) return false;
+        return (
+          decodeRealUrl(bt.url || '') === realUrl ||
+          decodeRealUrl(bt.pendingUrl || '') === realUrl
+        );
+      });
+    }
+
+    if (liveTab && liveTab.id) {
+      if (liveTab.windowId === winId) {
+        await db.tabs.update(rec.id, {
+          chromeTabId: liveTab.id,
+          windowId: winId,
+          updatedAt: now,
+        });
+        if (records.length === 1) {
+          await chrome.tabs.update(liveTab.id, { active: true }).catch(() => {});
+        }
+        continue;
+      }
+
+      try {
+        await chrome.tabs.move(liveTab.id, { windowId: winId, index: -1 });
+        await db.tabs.update(rec.id, {
+          chromeTabId: liveTab.id,
+          windowId: winId,
+          updatedAt: now,
+        });
+        continue;
+      } catch {}
+    }
+
+    try {
+      const created = await chrome.tabs.create({
+        windowId: winId,
+        url: realUrl,
+        active: records.length === 1,
+      });
+      if (created.id) {
+        await db.tabs.update(rec.id, {
+          chromeTabId: created.id,
+          windowId: winId,
+          updatedAt: now,
+        });
+      }
+    } catch {}
   }
 }

@@ -9,6 +9,7 @@ import {
   FolderInput,
   Trash2,
   ExternalLink,
+  PanelTopClose,
   Plus,
   X,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ interface TabItemProps {
   onLocateOrOpen: () => void;
   onOpenInNewWindow: () => void;
   onCopyUrl: () => void;
+  onCloseFromStrip: () => void;
   onCloseTab: () => void;
   onToggleDropdown: (e: React.MouseEvent) => void;
   onMoveToSpace: (targetSpaceId: string | null) => void;
@@ -68,6 +70,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   onLocateOrOpen,
   onOpenInNewWindow,
   onCopyUrl,
+  onCloseFromStrip,
   onCloseTab,
   onToggleDropdown,
   onMoveToSpace,
@@ -182,7 +185,7 @@ export const TabItem: React.FC<TabItemProps> = ({
               ? 'Locate & switch to tab in another window'
               : isOpenInThisWindow
               ? 'Locate & switch to tab in this window'
-              : 'Open and focus tab'
+              : 'Open in this window'
           }
         >
           <Crosshair className="w-3.5 h-3.5" />
@@ -312,11 +315,22 @@ export const TabItem: React.FC<TabItemProps> = ({
           )}
         </div>
 
-        {/* Close Tab */}
+        {/* Close from Tab Strip (Keep Saved in Space) */}
+        {(isOpenInThisWindow || isOpenInOtherWindow) && (
+          <button
+            onClick={onCloseFromStrip}
+            className="p-1 hover:bg-amber-500/20 rounded text-slate-400 hover:text-amber-400 transition"
+            title="Close from tab strip (keep saved in space)"
+          >
+            <PanelTopClose className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {/* Delete Tab from Space & Close */}
         <button
           onClick={onCloseTab}
           className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400 transition"
-          title="Close Tab"
+          title="Delete from space & close tab"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>

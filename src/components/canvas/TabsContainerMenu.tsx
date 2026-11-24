@@ -16,6 +16,7 @@ import {
   FolderInput,
   ChevronRight,
   PauseCircle,
+  PanelTopClose,
   RotateCw,
   Layers,
   Trash2,
@@ -39,6 +40,7 @@ interface TabsContainerMenuProps {
   onSelectAllToggle: () => void;
   onMoveAllTabs: (targetSpaceId: string | null) => void;
   onSuspendAllTabs: () => void;
+  onCloseAllFromStrip: () => void;
   onReloadAllTabs: () => void;
   onCloseDuplicates: () => void;
   onCloseAllTabs: () => void;
@@ -62,6 +64,7 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
   onSelectAllToggle,
   onMoveAllTabs,
   onSuspendAllTabs,
+  onCloseAllFromStrip,
   onReloadAllTabs,
   onCloseDuplicates,
   onCloseAllTabs,
@@ -258,7 +261,17 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
             <span>Suspend all tabs</span>
           </button>
 
-          {/* 9. Reload all tabs */}
+          {/* 9. Close all from tab strip (keep in space) */}
+          <button
+            onClick={onCloseAllFromStrip}
+            className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+            title="Close open browser tabs from top tab strip while keeping them saved in this space"
+          >
+            <PanelTopClose className="w-3.5 h-3.5 text-amber-400" />
+            <span>Close all from tab strip</span>
+          </button>
+
+          {/* 10. Reload all tabs */}
           <button
             onClick={onReloadAllTabs}
             className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"

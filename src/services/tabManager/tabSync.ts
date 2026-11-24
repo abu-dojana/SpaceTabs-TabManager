@@ -16,6 +16,7 @@ import {
   getAllWindowSpaces,
   withWindowLock,
 } from './windowSpaces';
+import { isTabOrWindowClosing } from './windowLocks';
 import { recordTombstone } from '@/services/driveSync';
 import {
   isSessionEmpty,
@@ -501,16 +502,26 @@ async function executeSyncWindowTabs(windowId: number) {
       }
     }
 
-    const allTabsLoaded =
-      validTabs.length > 0 && validTabs.every((t) => t.status === 'complete');
-
-    // Clean up closed or stale duplicate tabs in this space
+    // Clean up closed tabs in this space
     for (const record of existing) {
       // Critical Guard: NEVER delete a record that was matched or updated during this sync cycle!
       if (matchedRecordIds.has(record.id)) continue;
 
       if (record.chromeTabId && !validTabIds.has(record.chromeTabId)) {
-        // Safe check: Verify if the tab is truly alive as a normal tab in another window
+        // 1. If this tab or its window is closing as part of a window close (or stashed from strip),
+        // unlink runtime IDs so the tab remains saved in the space!
+        if (
+          isTabOrWindowClosing(record.chromeTabId, record.windowId) ||
+          isTabOrWindowClosing(record.chromeTabId, windowId)
+        ) {
+          await db.tabs.update(record.id, {
+            chromeTabId: undefined,
+            windowId: undefined,
+          });
+          continue;
+        }
+
+        // 2. Safe check: Verify if the tab is truly alive as a normal tab in another window
         let stillExistsInOtherWindow = false;
         try {
           const checkTab = await chrome.tabs.get(record.chromeTabId);
@@ -528,15 +539,31 @@ async function executeSyncWindowTabs(windowId: number) {
         }
 
         if (!stillExistsInOtherWindow) {
+          // 3. Verify this window is still open and that this tab was not owned by another window
+          // that just closed (e.g. opened/dragged to a new window and closed before loading).
+          let currentWindowStillOpen = true;
+          try {
+            await chrome.windows.get(windowId);
+          } catch {
+            currentWindowStillOpen = false;
+          }
+
+          if (
+            !currentWindowStillOpen ||
+            isTabOrWindowClosing(record.chromeTabId, record.windowId) ||
+            isTabOrWindowClosing(record.chromeTabId, windowId) ||
+            (!isUnsavedSpace && record.windowId !== windowId)
+          ) {
+            await db.tabs.update(record.id, {
+              chromeTabId: undefined,
+              windowId: undefined,
+            });
+            continue;
+          }
+
           if (record.spaceId && record.spaceId !== UNSAVED_SPACE_ID && !isUnsavedSpace) {
             await recordTombstone(record.id, 'tabs');
           }
-          await db.tabs.delete(record.id);
-        }
-      } else if (!record.chromeTabId) {
-        // Only prune stale unclaimed records inside active Unsaved sessions once all tabs finish loading;
-        // never delete dormant saved-space tabs or mid-load duplicate tabs.
-        if (isUnsavedSpace && allTabsLoaded) {
           await db.tabs.delete(record.id);
         }
       }

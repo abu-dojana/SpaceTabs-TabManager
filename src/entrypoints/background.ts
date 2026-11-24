@@ -14,6 +14,8 @@ import {
   migrateLegacyUnsavedTabs,
   isSessionEmpty,
   deleteUnsavedSession,
+  markWindowClosing,
+  markTabClosingWithWindow,
 } from '@/services/tabManager';
 import {
   setupSuspensionAlarms,
@@ -288,6 +290,12 @@ export default defineBackground(() => {
 
   chrome.windows.onRemoved.addListener(async (windowId) => {
     try {
+      markWindowClosing(windowId);
+      await db.tabs
+        .where('windowId')
+        .equals(windowId)
+        .modify({ chromeTabId: undefined, windowId: undefined });
+
       const spaceId = await getWindowActiveSpaceId(windowId);
       if (spaceId) {
         const space = await db.spaces.get(spaceId);
@@ -297,10 +305,6 @@ export default defineBackground(() => {
       }
       dashboardTabIds.delete(windowId);
       await removeWindowSpaceBinding(windowId);
-      await db.tabs
-        .where('windowId')
-        .equals(windowId)
-        .modify({ chromeTabId: undefined, windowId: undefined });
 
       // If this profile has no windows left but the browser process stays alive (another profile is
       // open, or macOS), treat it as a session end so reopening the profile restores saved Spaces.
@@ -313,14 +317,28 @@ export default defineBackground(() => {
     }
   });
 
-  // 2. Tab Removed Guard (Prevents Zombie Windows)
+  // 2. Tab Removed Guard (Prevents Zombie Windows & Early Window-Close Tab Loss)
   chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     forgetTabActivity(tabId);
     if (dashboardTabIds.get(removeInfo.windowId) === tabId) {
       dashboardTabIds.delete(removeInfo.windowId);
     }
-    // Critical Guard: NEVER recreate if the entire window is closing
-    if (removeInfo.isWindowClosing) return;
+    // Critical Guard: When an entire window is closing, immediately unlink runtime tab/window IDs
+    // by both chromeTabId and windowId so no concurrent sync in another window deletes the tab!
+    if (removeInfo.isWindowClosing) {
+      markTabClosingWithWindow(tabId, removeInfo.windowId);
+      try {
+        await db.tabs
+          .where('chromeTabId')
+          .equals(tabId)
+          .modify({ chromeTabId: undefined, windowId: undefined });
+        await db.tabs
+          .where('windowId')
+          .equals(removeInfo.windowId)
+          .modify({ chromeTabId: undefined, windowId: undefined });
+      } catch {}
+      return;
+    }
 
     await ensurePinnedIndexTab(removeInfo.windowId);
     await syncWindowTabsToUnsaved(removeInfo.windowId);
@@ -419,7 +437,13 @@ export default defineBackground(() => {
     await syncWindowTabsToUnsaved(attachInfo.newWindowId);
   });
 
-  chrome.tabs.onDetached.addListener(async (_tabId, detachInfo) => {
+  chrome.tabs.onDetached.addListener(async (tabId, detachInfo) => {
+    try {
+      await db.tabs
+        .where('chromeTabId')
+        .equals(tabId)
+        .modify({ windowId: undefined });
+    } catch {}
     await ensurePinnedIndexTab(detachInfo.oldWindowId, false);
     await syncWindowTabsToUnsaved(detachInfo.oldWindowId);
   });

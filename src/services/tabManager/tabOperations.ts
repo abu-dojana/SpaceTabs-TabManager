@@ -203,7 +203,11 @@ export async function openTabInNewWindow(tab: {
         await setWindowActiveSpaceId(newWin.id, savedSpaceId);
         await setPendingNewWindowSpace(null);
       }
-      const createdTab = newWin.tabs?.find((t) => !t.pinned) || newWin.tabs?.[0];
+      const winTabs =
+        newWin.tabs && newWin.tabs.length > 0
+          ? newWin.tabs
+          : await chrome.tabs.query({ windowId: newWin.id }).catch(() => []);
+      const createdTab = winTabs.find((t) => !t.pinned) || winTabs[0];
       await db.tabs.update(tab.id, {
         chromeTabId: createdTab?.id,
         windowId: newWin.id,

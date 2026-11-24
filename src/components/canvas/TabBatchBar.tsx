@@ -1,7 +1,15 @@
 import React from 'react';
 import { type Space } from '@/db/schema';
 import { useFixedPopover } from '@/hooks/useFixedPopover';
-import { FolderInput, Trash2, Plus, X, ExternalLink } from 'lucide-react';
+import {
+  FolderInput,
+  Trash2,
+  Plus,
+  X,
+  ExternalLink,
+  PanelTopClose,
+  Crosshair,
+} from 'lucide-react';
 
 interface TabBatchBarProps {
   selectedCount: number;
@@ -17,7 +25,9 @@ interface TabBatchBarProps {
   onSelectAllToggle: () => void;
   onToggleMoveDropdown: (e: React.MouseEvent) => void;
   onMoveSelected: (targetSpaceId: string | null) => void;
+  onOpenSelectedInCurrentWindow: () => void;
   onOpenSelectedInNewWindow: () => void;
+  onCloseSelectedFromStrip: () => void;
   onDeleteSelected: () => void;
   onStartCreateNewSpace: () => void;
   onCancelCreateNewSpace: () => void;
@@ -39,7 +49,9 @@ export const TabBatchBar: React.FC<TabBatchBarProps> = ({
   onSelectAllToggle,
   onToggleMoveDropdown,
   onMoveSelected,
+  onOpenSelectedInCurrentWindow,
   onOpenSelectedInNewWindow,
+  onCloseSelectedFromStrip,
   onDeleteSelected,
   onStartCreateNewSpace,
   onCancelCreateNewSpace,
@@ -55,14 +67,14 @@ export const TabBatchBar: React.FC<TabBatchBarProps> = ({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 mr-2">
-      <span className="text-xs text-blue-400 font-medium">
+    <div className="flex items-center gap-1.5 mr-1">
+      <span className="text-[11px] text-blue-400 font-medium whitespace-nowrap">
         {selectedCount} selected
       </span>
 
       <button
         onClick={onSelectAllToggle}
-        className="px-2 py-0.5 rounded hover:bg-slate-800 text-[11px] text-slate-400 hover:text-slate-200 transition"
+        className="px-1.5 py-0.5 rounded hover:bg-slate-800 text-[11px] text-slate-400 hover:text-slate-200 transition whitespace-nowrap"
       >
         {allSelected ? 'Deselect all' : `Select all (${totalCount})`}
       </button>
@@ -71,10 +83,10 @@ export const TabBatchBar: React.FC<TabBatchBarProps> = ({
         <div className="relative" ref={isMoveDropdownOpen ? dropdownRef : undefined}>
           <button
             onClick={onToggleMoveDropdown}
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition shadow-sm"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-[11px] font-medium text-white transition shadow-sm whitespace-nowrap"
           >
-            <FolderInput className="w-3.5 h-3.5" />
-            <span>Move to Space</span>
+            <FolderInput className="w-3 h-3 flex-shrink-0" />
+            <span>Move to</span>
           </button>
 
           {isMoveDropdownOpen && (
@@ -166,21 +178,41 @@ export const TabBatchBar: React.FC<TabBatchBarProps> = ({
         </div>
       )}
 
+      {/* Button: Open Selected Tabs in This Window */}
+      <button
+        onClick={onOpenSelectedInCurrentWindow}
+        className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 hover:bg-emerald-500/20 text-[11px] font-medium text-slate-200 hover:text-emerald-300 transition border border-slate-700/60 hover:border-emerald-500/40 shadow-sm cursor-pointer whitespace-nowrap"
+        title="Open selected closed tabs in this window's tab strip"
+      >
+        <Crosshair className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+        <span className="hidden sm:inline">Open Here</span>
+      </button>
+
       {/* Button: Open Selected Tabs in a New Window */}
       <button
         onClick={onOpenSelectedInNewWindow}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition border border-slate-700/60 shadow-sm cursor-pointer"
+        className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-slate-200 transition border border-slate-700/60 shadow-sm cursor-pointer whitespace-nowrap"
         title="Open selected tabs in a new window"
       >
-        <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+        <ExternalLink className="w-3 h-3 text-blue-400 flex-shrink-0" />
         <span className="hidden sm:inline">Open in New Window</span>
         <span className="sm:hidden">Window</span>
       </button>
 
+      {/* Button: Close Selected Tabs from Tab Strip (Keep Saved in Space) */}
+      <button
+        onClick={onCloseSelectedFromStrip}
+        className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 hover:bg-amber-500/20 text-[11px] font-medium text-slate-200 hover:text-amber-300 transition border border-slate-700/60 hover:border-amber-500/40 shadow-sm cursor-pointer whitespace-nowrap"
+        title="Close selected tabs from top tab strip (keep saved in space)"
+      >
+        <PanelTopClose className="w-3 h-3 text-amber-400 flex-shrink-0" />
+        <span className="hidden sm:inline">Close from Strip</span>
+      </button>
+
       <button
         onClick={onDeleteSelected}
-        className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400 transition"
-        title="Delete selected tabs"
+        className="p-1 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400 transition flex-shrink-0"
+        title="Delete selected tabs from space"
       >
         <Trash2 className="w-3.5 h-3.5" />
       </button>

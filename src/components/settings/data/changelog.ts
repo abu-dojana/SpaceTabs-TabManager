@@ -42,6 +42,11 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
         description:
           'Added drag-and-drop reordering and 1-click sorting for Resource sections (drag cards, Move section up/down, Sort Sections A–Z), Resource items inside sections (drag to reorder within or across sections, Sort items A–Z, Sort items by domain), and Notes (drag to reorder notes plus a Sort menu for A–Z, Z–A, Recently Updated, and Date Created).',
       },
+      {
+        lead: 'Close from Tab Strip (Keep in Space) & Multi-Window Close Protection:',
+        description:
+          'Added a "Close from tab strip (keep saved in space)" button on open tab rows, in the batch selection bar, and in the Tabs 3-dot menu to close tabs from Chrome’s top tab bar while keeping them saved in your Space with 0 RAM usage. Also fixed a race condition where closing a new window before a moved/opened tab finished loading could delete the tab from the Space.',
+      },
     ],
   },
   {

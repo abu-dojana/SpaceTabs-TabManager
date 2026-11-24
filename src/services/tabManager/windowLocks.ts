@@ -1,4 +1,32 @@
 const inProcessWindowQueues = new Map<number, Promise<unknown>>();
+const closingWindowIds = new Map<number, number>();
+const closingWindowTabIds = new Map<number, number>();
+const CLOSING_TTL_MS = 10000;
+
+export function markWindowClosing(windowId: number): void {
+  closingWindowIds.set(windowId, Date.now() + CLOSING_TTL_MS);
+}
+
+export function markTabClosingWithWindow(tabId: number, windowId?: number): void {
+  const exp = Date.now() + CLOSING_TTL_MS;
+  closingWindowTabIds.set(tabId, exp);
+  if (typeof windowId === 'number') {
+    closingWindowIds.set(windowId, exp);
+  }
+}
+
+export function isTabOrWindowClosing(tabId?: number, windowId?: number): boolean {
+  const now = Date.now();
+  if (typeof tabId === 'number') {
+    const exp = closingWindowTabIds.get(tabId);
+    if (exp && now < exp) return true;
+  }
+  if (typeof windowId === 'number') {
+    const exp = closingWindowIds.get(windowId);
+    if (exp && now < exp) return true;
+  }
+  return false;
+}
 
 export async function withUnsavedLock<T>(windowId: number, fn: () => Promise<T>): Promise<T> {
   if (typeof navigator !== 'undefined' && 'locks' in navigator && navigator.locks?.request) {
