@@ -1,0 +1,28 @@
+{
+  "name": "spacetabs-promo-video",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node scripts/capture-demo.mjs",
+    "audio": "node scripts/generate-audio.mjs",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts SpaceTabsPromo out/spacetabs-promo.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.280",
+    "@remotion/media-utils": "^4.0.280",
+    "@remotion/transitions": "^4.0.280",
+    "lucide-react": "^0.474.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.280"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "playwright": "^1.51.0",
+    "typescript": "^5.7.3"
+  }
+}

@@ -12,6 +12,22 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.4.4',
+    title: 'Version 1.4.4 — Quick New Window Button & Live Workspace Item Counts',
+    items: [
+      {
+        lead: 'Quick "Open a New Window" Button in Sidebar Unsaved Header:',
+        description:
+          'Added an "Open a New window" button right beside the "+" icon on the UNSAVED header in the sidebar to launch a fresh browser window with a single click (just like pressing Ctrl+N).',
+      },
+      {
+        lead: 'Live Non-Zero Item Counts Beside Tabs, Resources, Notes & Tasks:',
+        description:
+          'Workspace navigation tabs now display live item counts directly beside each category label (e.g., Tabs(9), Resources(2), Notes(3), Tasks(4)) and automatically hide the number when a category has zero items.',
+      },
+    ],
+  },
+  {
     version: '1.4.3',
     title: 'Version 1.4.3 — Right Floating Panel for Section Spaces & Live Active Section Indicator',
     items: [

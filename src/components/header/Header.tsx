@@ -62,11 +62,29 @@ export const Header: React.FC = () => {
   // Tabs in current view for quick-save naming and unsaved session window title
   const activeSpaceTabs = useLiveQuery(async () => {
     const targetSpace = activeSpaceId || UNSAVED_SPACE_ID;
-    return await db.tabs
-      .where('spaceId')
-      .equals(targetSpace)
-      .sortBy('order');
+    return await db.tabs.where('spaceId').equals(targetSpace).sortBy('order');
   }, [activeSpaceId]);
+
+  // Live counts for Resources, Notes, and Tasks in the current space
+  const spaceCounts = useLiveQuery(async () => {
+    const targetSpace = activeSpaceId || UNSAVED_SPACE_ID;
+    const [sections, notesCount, tasksCount] = await Promise.all([
+      db.resourceSections.where('spaceId').equals(targetSpace).toArray(),
+      db.notes.where('spaceId').equals(targetSpace).count(),
+      db.tasks.where('spaceId').equals(targetSpace).count(),
+    ]);
+    const sectionIds = sections.map((s) => s.id);
+    const resourcesCount =
+      sectionIds.length > 0
+        ? await db.resourceItems.where('sectionId').anyOf(sectionIds).count()
+        : 0;
+    return { resourcesCount, notesCount, tasksCount };
+  }, [activeSpaceId]);
+
+  const tabsCount = activeSpaceTabs?.length || 0;
+  const resourcesCount = spaceCounts?.resourcesCount || 0;
+  const notesCount = spaceCounts?.notesCount || 0;
+  const tasksCount = spaceCounts?.tasksCount || 0;
 
   const firstTab = activeSpaceTabs?.[0] || null;
 
@@ -520,7 +538,7 @@ export const Header: React.FC = () => {
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>Tabs</span>
+          <span>{tabsCount > 0 ? `Tabs(${tabsCount})` : 'Tabs'}</span>
         </button>
 
         <button
@@ -532,7 +550,7 @@ export const Header: React.FC = () => {
           }`}
         >
           <Bookmark className="w-3.5 h-3.5" />
-          <span>Resources</span>
+          <span>{resourcesCount > 0 ? `Resources(${resourcesCount})` : 'Resources'}</span>
         </button>
 
         <button
@@ -544,7 +562,7 @@ export const Header: React.FC = () => {
           }`}
         >
           <FileText className="w-3.5 h-3.5" />
-          <span>Notes</span>
+          <span>{notesCount > 0 ? `Notes(${notesCount})` : 'Notes'}</span>
         </button>
 
         <button
@@ -556,7 +574,7 @@ export const Header: React.FC = () => {
           }`}
         >
           <CheckSquare className="w-3.5 h-3.5" />
-          <span>Tasks</span>
+          <span>{tasksCount > 0 ? `Tasks(${tasksCount})` : 'Tasks'}</span>
         </button>
 
         <button

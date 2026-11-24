@@ -49,6 +49,14 @@ export const UnsavedSessionsSection: React.FC<UnsavedSessionsSectionProps> = ({
             </span>
           )}
           <button
+            type="button"
+            onClick={() => chrome.windows.create({ type: 'normal', focused: true })}
+            className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
+            title="Open a New window (Ctrl+N)"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </button>
+          <button
             onClick={onCreateNewUnsavedSession}
             className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200 transition"
             title="New unsaved browsing session (+)"
