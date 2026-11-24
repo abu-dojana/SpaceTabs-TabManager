@@ -13,7 +13,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { SOCIAL_CONTACT_LINKS, type SocialContactLink } from '../data/contactLinks';
-import { ProductHuntBadge } from '../ui/ProductHuntBadge';
+import { ProductHuntBadge, PRODUCT_HUNT_URL } from '../ui/ProductHuntBadge';
 
 interface ContactTabProps {
   isLight: boolean;
@@ -75,23 +75,33 @@ export const ContactTab: React.FC<ContactTabProps> = ({ isLight, onCopyBkash }) 
 
       {/* Product Hunt Launch Callout */}
       <div
-        className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
+        className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${
           isLight
             ? 'bg-orange-50/70 border-orange-200 text-slate-800 shadow-sm'
             : 'bg-orange-950/20 border-orange-900/50 text-slate-200'
         }`}
       >
-        <div className="space-y-1 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2">
+        <div className="space-y-1.5 text-center sm:text-left min-w-0 flex-1">
+          <div className="flex items-center justify-center sm:justify-start gap-1.5 flex-wrap">
             <span className="w-5 h-5 rounded-full bg-[#ff6154] text-white font-extrabold text-[11px] inline-flex items-center justify-center flex-shrink-0 shadow-sm">
               P
             </span>
-            <span className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
-              Support SpaceTabs on Product Hunt!
+            <span
+              className={`font-bold text-xs whitespace-nowrap ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}
+            >
+              Support Us on Product Hunt!
             </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ff6154]/15 text-[#ff6154] border border-[#ff6154]/30">
-              Free Upvote ▲
-            </span>
+            <a
+              href={PRODUCT_HUNT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ff6154]/15 hover:bg-[#ff6154]/25 text-[#ff6154] border border-[#ff6154]/30 whitespace-nowrap flex-shrink-0 transition"
+            >
+              <span>Free Upvote</span>
+              <span className="text-[9px]">▲</span>
+            </a>
           </div>
           <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
             Leaving an upvote, comment, or review on our Product Hunt launch page is one of the best free ways to help more people discover SpaceTabs!
@@ -131,13 +141,13 @@ export const ContactTab: React.FC<ContactTabProps> = ({ isLight, onCopyBkash }) 
             }`}
           >
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 font-bold text-xs text-rose-500">
-                  <HeartHandshake className="w-4 h-4" />
-                  <span>SupportKori (Bangladesh)</span>
+              <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-xs text-rose-500 whitespace-nowrap">
+                  <HeartHandshake className="w-4 h-4 flex-shrink-0" />
+                  <span>SupportKori (BD)</span>
                 </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 border border-rose-500/20">
-                  bKash / Nagad / Rocket / Card
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 border border-rose-500/20 whitespace-nowrap flex-shrink-0">
+                  bKash / Nagad / Card
                 </span>
               </div>
               <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
