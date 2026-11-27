@@ -12,6 +12,22 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.5.1',
+    title: 'Version 1.5.1 — Google Drive Auto-Sync & Unsaved Session Tab Move Fix',
+    items: [
+      {
+        lead: 'Saved Space ↔ Unsaved Session Sync Protection:',
+        description:
+          'Fixed a cloud sync bug where dragging or moving tabs from a synced Saved Space into an Unsaved session could allow background Google Drive Auto-Sync to pull those tabs back into the Saved Space.',
+      },
+      {
+        lead: 'Self-Healing Unsaved Isolation & Duplicate Tab Guard:',
+        description:
+          'Hardened Google Drive merge and Force Pull to re-key and tombstone any local Unsaved items whose IDs still exist in remote Saved Spaces, and prevented space switching from pruning duplicate dormant tabs in a Saved Space.',
+      },
+    ],
+  },
+  {
     version: '1.5.0',
     title: 'Version 1.5.0 — Close from Tab Strip (Keep in Space), "Open Here" Batch Restore & Multi-Window Protection',
     items: [

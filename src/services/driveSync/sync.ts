@@ -203,6 +203,17 @@ export async function forcePullFromDrive(): Promise<{ success: boolean; message:
               await db.tabs.bulkDelete(savedTabIdsToDelete);
             }
 
+            // Re-key any surviving local Unsaved tabs whose IDs collide with incoming remote tabs
+            // so bulkPut below can never overwrite or pull a tab out of a local Unsaved session.
+            const incomingRemoteTabIds = new Set((remoteData?.tabs || []).map((t) => t.id));
+            const survivingUnsavedTabs = currentTabs.filter(
+              (t) => isLocalOnlySpace(t.spaceId) && incomingRemoteTabIds.has(t.id)
+            );
+            for (const ut of survivingUnsavedTabs) {
+              await db.tabs.delete(ut.id);
+              await db.tabs.add({ ...ut, id: crypto.randomUUID() });
+            }
+
             const currentSections = await db.resourceSections.toArray();
             const localOnlySectionIds = new Set(
               currentSections.filter((s) => isLocalOnlySpace(s.spaceId)).map((s) => s.id)

@@ -220,9 +220,8 @@ export async function switchWindowToSpace(
           continue;
         }
 
-        const rRealUrl = decodeRealUrl(r.url);
         if (r.windowId === windowId || (r.chromeTabId && !otherWindowOpenTabs.has(r.chromeTabId))) {
-          if (currentSpace?.isUnsaved || claimedUrls.has(rRealUrl)) {
+          if (currentSpace?.isUnsaved) {
             await db.tabs.delete(r.id);
           } else {
             await db.tabs.update(r.id, {

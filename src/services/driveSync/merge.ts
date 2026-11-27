@@ -94,6 +94,8 @@ export async function mergeRemoteAndLocal(
   remote: DriveDataExport,
   local: DriveDataExport
 ): Promise<DriveDataExport> {
+  const now = Date.now();
+
   // 1. Merge & Deduplicate Tombstones
   const tombstoneMap = new Map<string, Tombstone>();
   for (const t of local.deletedIds || []) {
@@ -106,7 +108,84 @@ export async function mergeRemoteAndLocal(
     }
   }
 
-  const thirtyDaysAgo = Date.now() - TOMBSTONE_RETENTION_MS;
+  // 1b. Self-heal & protect any local-only Unsaved items whose IDs still exist in remote Saved Spaces
+  // (e.g. tabs moved from a Saved Space into an Unsaved session before re-keying):
+  const remoteTabIds = new Set((remote.tabs || []).map((t) => t.id));
+  const remoteSectionIds = new Set((remote.resourceSections || []).map((s) => s.id));
+  const remoteItemIds = new Set((remote.resourceItems || []).map((i) => i.id));
+  const remoteNoteIds = new Set((remote.notes || []).map((n) => n.id));
+  const remoteTaskIds = new Set((remote.tasks || []).map((t) => t.id));
+
+  await db.transaction(
+    'rw',
+    [db.spaces, db.tabs, db.resourceSections, db.resourceItems, db.notes, db.tasks],
+    async () => {
+      const allLocalSpaces = await db.spaces.toArray();
+      const localOnlySpaceIds = new Set<string>([
+        UNSAVED_SPACE_ID,
+        ...allLocalSpaces.filter((s) => !!s.isUnsaved).map((s) => s.id),
+      ]);
+      const isLocalOnly = (spaceId: string) => localOnlySpaceIds.has(spaceId);
+
+      const allLocalTabs = await db.tabs.toArray();
+      for (const ut of allLocalTabs) {
+        if (isLocalOnly(ut.spaceId) && remoteTabIds.has(ut.id)) {
+          tombstoneMap.set(ut.id, { id: ut.id, table: 'tabs', deletedAt: now });
+          await db.tabs.delete(ut.id);
+          await db.tabs.add({ ...ut, id: crypto.randomUUID(), updatedAt: now });
+        }
+      }
+
+      const allLocalSections = await db.resourceSections.toArray();
+      const localOnlySecIds = new Set<string>();
+      for (const us of allLocalSections) {
+        if (isLocalOnly(us.spaceId)) {
+          if (remoteSectionIds.has(us.id)) {
+            const newSecId = crypto.randomUUID();
+            tombstoneMap.set(us.id, { id: us.id, table: 'resource_sections', deletedAt: now });
+            await db.resourceSections.delete(us.id);
+            await db.resourceSections.add({ ...us, id: newSecId, updatedAt: now });
+            await db.resourceItems
+              .where('sectionId')
+              .equals(us.id)
+              .modify({ sectionId: newSecId, updatedAt: now });
+            localOnlySecIds.add(newSecId);
+          } else {
+            localOnlySecIds.add(us.id);
+          }
+        }
+      }
+
+      const allLocalItems = await db.resourceItems.toArray();
+      for (const ui of allLocalItems) {
+        if (localOnlySecIds.has(ui.sectionId) && remoteItemIds.has(ui.id)) {
+          tombstoneMap.set(ui.id, { id: ui.id, table: 'resource_items', deletedAt: now });
+          await db.resourceItems.delete(ui.id);
+          await db.resourceItems.add({ ...ui, id: crypto.randomUUID(), updatedAt: now });
+        }
+      }
+
+      const allLocalNotes = await db.notes.toArray();
+      for (const un of allLocalNotes) {
+        if (isLocalOnly(un.spaceId) && remoteNoteIds.has(un.id)) {
+          tombstoneMap.set(un.id, { id: un.id, table: 'notes', deletedAt: now });
+          await db.notes.delete(un.id);
+          await db.notes.add({ ...un, id: crypto.randomUUID(), updatedAt: now });
+        }
+      }
+
+      const allLocalTasks = await db.tasks.toArray();
+      for (const utk of allLocalTasks) {
+        if (isLocalOnly(utk.spaceId) && remoteTaskIds.has(utk.id)) {
+          tombstoneMap.set(utk.id, { id: utk.id, table: 'tasks', deletedAt: now });
+          await db.tasks.delete(utk.id);
+          await db.tasks.add({ ...utk, id: crypto.randomUUID(), updatedAt: now });
+        }
+      }
+    }
+  );
+
+  const thirtyDaysAgo = now - TOMBSTONE_RETENTION_MS;
   const mergedTombstones = Array.from(tombstoneMap.values()).filter(
     (t) => t.deletedAt > thirtyDaysAgo
   );
@@ -195,6 +274,9 @@ export async function mergeRemoteAndLocal(
 
       // Saved Tabs: re-attach local live chromeTabId/windowId bindings before bulkPut
       const currentTabs = await db.tabs.toArray();
+      const unsavedTabIds = new Set(
+        currentTabs.filter((ct) => isLocalOnlySpace(ct.spaceId)).map((ct) => ct.id)
+      );
       const localTabBindings = new Map<string, { chromeTabId?: number; windowId?: number }>();
       for (const ct of currentTabs) {
         if (ct.chromeTabId !== undefined || ct.windowId !== undefined) {
@@ -204,10 +286,12 @@ export async function mergeRemoteAndLocal(
           });
         }
       }
-      const tabsToWrite = mergedTabs.map((mt) => {
-        const binding = localTabBindings.get(mt.id);
-        return binding ? { ...mt, ...binding } : stripRuntimeTabFields(mt);
-      });
+      const tabsToWrite = mergedTabs
+        .filter((mt) => !unsavedTabIds.has(mt.id))
+        .map((mt) => {
+          const binding = localTabBindings.get(mt.id);
+          return binding ? { ...mt, ...binding } : stripRuntimeTabFields(mt);
+        });
       if (tabsToWrite.length > 0) await db.tabs.bulkPut(tabsToWrite);
 
       const afterTabs = await db.tabs.toArray();

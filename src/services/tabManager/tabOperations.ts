@@ -396,10 +396,16 @@ export async function moveTabsToSpace(
     }
   }
 
-  const targetTabs = await db.tabs
-    .where('spaceId')
-    .equals(normalizedTarget)
-    .sortBy('order');
+  const [targetTabs, allSpaces] = await Promise.all([
+    db.tabs.where('spaceId').equals(normalizedTarget).sortBy('order'),
+    db.spaces.toArray(),
+  ]);
+  const unsavedSpaceIds = new Set<string>([
+    UNSAVED_SPACE_ID,
+    ...allSpaces.filter((s) => !!s.isUnsaved).map((s) => s.id),
+  ]);
+  const targetIsUnsaved = unsavedSpaceIds.has(normalizedTarget);
+  const tombstonesToRecord: { id: string; table: 'tabs' }[] = [];
   let nextOrder = targetTabs.length > 0 ? targetTabs[targetTabs.length - 1].order + 1 : 0;
 
   for (const id of tabIds) {
@@ -408,14 +414,49 @@ export async function moveTabsToSpace(
     if (tab.spaceId === normalizedTarget) continue;
 
     const oldChromeTabId = tab.chromeTabId;
+    const sourceIsUnsaved = !tab.spaceId || unsavedSpaceIds.has(tab.spaceId);
 
-    await db.tabs.update(id, {
-      spaceId: normalizedTarget,
-      chromeTabId: undefined,
-      windowId: undefined,
-      order: nextOrder++,
-      updatedAt: now,
-    });
+    if (!sourceIsUnsaved && targetIsUnsaved) {
+      // Moving from a cloud-synced Saved Space into a local-only Unsaved session:
+      // Tombstone the old Saved Space tab ID and re-key the tab in the Unsaved session
+      // so Drive Sync deletes it from the Saved Space and never pulls it back out of Unsaved.
+      tombstonesToRecord.push({ id: tab.id, table: 'tabs' });
+      await db.transaction('rw', db.tabs, async () => {
+        await db.tabs.delete(tab.id);
+        await db.tabs.add({
+          ...tab,
+          id: crypto.randomUUID(),
+          spaceId: normalizedTarget!,
+          chromeTabId: undefined,
+          windowId: undefined,
+          order: nextOrder++,
+          updatedAt: now,
+        });
+      });
+    } else if (sourceIsUnsaved && !targetIsUnsaved) {
+      // Moving from a local-only Unsaved session into a Saved Space:
+      // Re-key with a fresh UUID so it enters cloud sync with a clean, untombstoned ID.
+      await db.transaction('rw', db.tabs, async () => {
+        await db.tabs.delete(tab.id);
+        await db.tabs.add({
+          ...tab,
+          id: crypto.randomUUID(),
+          spaceId: normalizedTarget!,
+          chromeTabId: undefined,
+          windowId: undefined,
+          order: nextOrder++,
+          updatedAt: now,
+        });
+      });
+    } else {
+      await db.tabs.update(id, {
+        spaceId: normalizedTarget,
+        chromeTabId: undefined,
+        windowId: undefined,
+        order: nextOrder++,
+        updatedAt: now,
+      });
+    }
 
     if (oldChromeTabId) {
       try {
@@ -424,6 +465,10 @@ export async function moveTabsToSpace(
         // Tab might already be closed
       }
     }
+  }
+
+  if (tombstonesToRecord.length > 0) {
+    await recordTombstones(tombstonesToRecord);
   }
 }
 
