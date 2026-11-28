@@ -19,7 +19,7 @@ import {
   isTransitioning,
   migrateLegacyUnsavedTabs,
 } from '@/services/tabManager';
-import { hexToRgba, adjustBrightness } from '@/utils/color';
+import { hexToRgba, adjustBrightness, getContrastTextColor } from '@/utils/color';
 import { getHostWindowId } from '@/utils/chromeWindow';
 import { getAppVersion } from '@/utils/appVersion';
 import { useHydrateUiFromSettings } from '@/hooks/useHydrateUiFromSettings';
@@ -152,11 +152,16 @@ export default function App() {
 
   const dynamicStyles = React.useMemo(() => {
     const validAccent = accentColor || '#2563eb';
+    const accentFg = getContrastTextColor(validAccent);
+    const encodedStroke = encodeURIComponent(accentFg);
     return {
       '--accent-color': validAccent,
-      '--accent-hover': adjustBrightness(validAccent, -12),
-      '--accent-light': hexToRgba(validAccent, 0.15),
-      '--accent-border': hexToRgba(validAccent, 0.38),
+      '--accent-fg': accentFg,
+      '--accent-hover': adjustBrightness(validAccent, accentFg === '#18130d' ? -8 : -12),
+      '--accent-light': hexToRgba(validAccent, 0.14),
+      '--accent-border': hexToRgba(validAccent, 0.36),
+      '--accent-check-svg': `url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='none' stroke='${encodedStroke}' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3e%3cpolyline points='3.5 8.5 6.5 11.5 12.5 4.5'/%3e%3c/svg%3e")`,
+      '--accent-indeterminate-svg': `url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='none' stroke='${encodedStroke}' stroke-width='2.5' stroke-linecap='round' xmlns='http://www.w3.org/2000/svg'%3e%3cline x1='4' y1='8' x2='12' y2='8'/%3e%3c/svg%3e")`,
     } as React.CSSProperties;
   }, [accentColor]);
 

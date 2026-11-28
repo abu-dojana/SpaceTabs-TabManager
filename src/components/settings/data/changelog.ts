@@ -12,6 +12,38 @@ export interface ChangelogRelease {
 
 export const CHANGELOG_RELEASES: ChangelogRelease[] = [
   {
+    version: '1.6.0',
+    title:
+      'Version 1.6.0 — In-Canvas Tab Groups, 1-Click "Group by Domain" & Upgraded Dark Themes',
+    items: [
+      {
+        lead: 'In-Canvas Tab Groups & 1-Click "Group by Domain":',
+        description:
+          'Organize tabs into collapsible, color-coded groups inside any Space or Unsaved session (+ Group in the Tabs header, Group in the batch selection bar, or per-tab 3-dot menu). Use "Group by domain" in the Tabs 3-dot menu to automatically cluster multi-tab domains into colored groups while keeping single-tab domains in the Ungrouped tray—complete with full-bar click-to-collapse, double-click rename, color swatches, drag-and-drop reordering, and 1-click Open Group / Close from Strip.',
+      },
+      {
+        lead: '"Keep Grouped Tabs on Top" Preference & Live Tab Strip Sync:',
+        description:
+          'Added a "Keep Grouped Tabs on Top" toggle in Settings → General so you can choose whether grouped tabs or ungrouped tabs appear first, automatically syncing the live browser tab strip order to match.',
+      },
+      {
+        lead: 'Tab Groups Across Global Search, Cloud Sync & Backups:',
+        description:
+          'Tab groups sync across devices via Google Drive (with tombstone protection and self-healing fallback), export and import cleanly in JSON and HTML (as nested bookmark folders), and display colored group badges in Global Search (Ctrl+K).',
+      },
+      {
+        lead: 'Overflow-Proof Contextual Batch Selection Bar:',
+        description:
+          'Refined the Tabs header when selecting tabs with an in-place "{N} selected" swap, concise action labels, and automatic compact icon mode when the Right Floating Panel narrows the canvas so the 3-dot menu always stays pinned inside the card.',
+      },
+      {
+        lead: 'Upgraded 4-Tier Dark Themes & "Warm Peach" Accent:',
+        description:
+          'Redesigned Obsidian Charcoal (4-tier neutral Carbon Graphite), Midnight OLED (true #000000 backdrop with crisp carbon card depth and zero blue bleed), and Deep Slate, and added the Warm Peach (#f5be86) accent color with automatic high-contrast foreground text and checkmarks.',
+      },
+    ],
+  },
+  {
     version: '1.5.1',
     title: 'Version 1.5.1 — Google Drive Auto-Sync & Unsaved Session Tab Move Fix',
     items: [

@@ -1,4 +1,5 @@
 import { type DriveDataExport } from '@/db/schema';
+import { getAppVersion } from '@/utils/appVersion';
 import { decodeRealUrl } from '@/utils/urlFilter';
 import { type SpaceExportPayload } from './spaceExport';
 
@@ -61,7 +62,7 @@ export function parseImportFileContent(fileText: string, fileName?: string): Par
           kind: 'single_space',
           data: {
             app: 'SpaceTabs',
-            version: '1.5.1',
+            version: getAppVersion(),
             exportedAt: new Date().toISOString(),
             space: { name: deriveSpaceNameFromFilename(fileName), icon: '📁' },
             tabGroups: Array.isArray(parsed.tabGroups) ? parsed.tabGroups : undefined,
@@ -132,7 +133,7 @@ export function parseImportFileContent(fileText: string, fileName?: string): Par
     kind: 'single_space',
     data: {
       app: 'SpaceTabs',
-      version: '1.5.1',
+      version: getAppVersion(),
       exportedAt: new Date().toISOString(),
       space: {
         name: headingText || 'Imported Bookmarks',

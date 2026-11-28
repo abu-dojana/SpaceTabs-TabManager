@@ -23,7 +23,7 @@
   <a href="https://chromewebstore.google.com/detail/aiajlcdplbpcfohgekcgafcpghgjojhh?utm_source=item-share-cb">
     <img src="https://img.shields.io/badge/Chrome%20Web%20Store-SpaceTabs-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
   </a>
-  <img src="https://img.shields.io/badge/Version-1.5.1-blue?style=for-the-badge" alt="Version 1.5.1" />
+  <img src="https://img.shields.io/badge/Version-1.6.0-blue?style=for-the-badge" alt="Version 1.6.0" />
   <img src="https://img.shields.io/badge/Manifest-V3-success?style=for-the-badge" alt="Manifest V3" />
   <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="GPL-3.0 License" />
   <img src="https://img.shields.io/badge/Sync-Google%20Drive-34A853?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive Sync" />
@@ -94,7 +94,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 * **Local JSON Export/Import:** Instant offline backup and restore of your complete workspace.
 
 ### 📋 Space Canvas Tools
-* **Tabs View:** Search, filter, domain grouping, multi-select checkboxes, and bulk move/delete/copy URLs.
+* **Tabs View & In-Canvas Tab Groups:** Search, filter, collapsible color-coded tab groups, 1-click **Group by domain**, multi-select checkboxes, and bulk move/delete/copy URLs.
 * **Distraction-Free Mode:** Toggle web favicons on or off in Settings for a clean, minimalist reading layout.
 * **Resources Hub:** Organize recurring documentation, links, and assets into categorized sections.
 * **Notes:** Built-in markdown notes scratchpad per space with auto-saving, live split-pane preview, and formatting toolbar.
@@ -105,11 +105,11 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
 * **Independent Sidebar & Canvas Modes:** Choose between **Split Mode** (Dark sidebar + Light canvas), **All Dark**, or **All Light**.
 * **14 Curated Surface Palettes:**
   * **7 Dark Mode Palettes:**
-    * **Midnight OLED:** True `#000000` pitch black across sidebar, canvas, header, and cards for maximum OLED battery savings.
-    * **Obsidian Charcoal:** Minimalist matte neutral charcoal (`#16181d` sidebar / `#20242c` cards).
+    * **Midnight OLED:** True `#000000` pitch black backdrop & sidebar with crisp 4-tier carbon card elevation (`#0a0a0c` / `#16161a`).
+    * **Obsidian Charcoal:** Minimalist 4-tier matte Carbon Graphite (`#0a0a0c` canvas / `#131316` cards / `#26262b` borders).
     * **Space Indigo:** Cosmic galaxy violet-indigo night sky (`#13102d` / `#1c183f` with `#362e6e` borders).
     * **Purple Space:** Deep interstellar violet space with vivid ultraviolet borders (`#1f0430` / `#310047` / `#660094`).
-    * **Deep Slate:** Classic maritime navy blue (`#0b1329` / `#0f172a` with `#1e293b` borders).
+    * **Deep Slate:** Modern dark slate (`#090d16` canvas / `#111726` cards / `#243047` borders).
     * **Forest Dark:** Rich pine charcoal and calming deep emerald tones (`#0b1a13` / `#112a1f`).
     * **Warm Espresso:** Rich cocoa coffee tones (`#1c1511` / `#281e19`).
   * **7 Light Mode Palettes:**
@@ -121,7 +121,7 @@ Modern workflows involve dozens or hundreds of tabs across projects, research se
     * **Warm Paper:** Cozy cream and warm book texture (`#f7f5ef`).
     * **Cool Zinc:** Modern architectural silver (`#f4f4f5`).
 * **Full-Frame Theme Consistency:** Synchronized palette coloring across Sidebar, Header, Canvas, and Footer. In all light themes, cards maintain pure white (`#ffffff`) with themed borders and shadows for maximum contrast and readability.
-* **9 Accent Color Presets + Custom Picker:** Sakura Blossom, Ocean Blue, Royal Indigo, Violet Purple, Emerald Green, Crimson Rose, Amber Gold, Ocean Cyan, and Sunset Orange, plus custom hex color picker.
+* **10 Accent Color Presets + Custom Picker:** Sakura Blossom, Warm Peach, Ocean Blue, Royal Indigo, Violet Purple, Emerald Green, Crimson Rose, Amber Gold, Ocean Cyan, and Sunset Orange, plus custom hex color picker with automatic contrast-aware foreground text.
 * **Adjustable Sidebar Width:** Default (260px), Medium (320px), and Wide (380px) for long space titles.
 * **Direct Changelog Access:** Clickable dynamic version badge in the footer linking directly to release notes and what's new.
 * **Auto-Pinned Index Dashboard:** Always accessible at Tab 0 or via shortcut `Alt + Shift + W`.

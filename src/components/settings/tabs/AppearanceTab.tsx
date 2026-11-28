@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ThemeOptionCard } from '../ui/ThemeOptionCard';
 import { ToggleRow } from '../ui/ToggleRow';
+import { getContrastTextColor } from '@/utils/color';
 import type { DarkPalette, LightPalette } from '@/services/settings';
 
 interface AppearanceTabProps {
@@ -38,6 +39,7 @@ interface AppearanceTabProps {
 }
 
 const ACCENT_PRESETS = [
+  { name: 'Warm Peach', hex: '#f5be86' },
   { name: 'Ocean Blue', hex: '#2563eb' },
   { name: 'Royal Indigo', hex: '#6366f1' },
   { name: 'Violet Purple', hex: '#8b5cf6' },
@@ -50,9 +52,9 @@ const ACCENT_PRESETS = [
 ];
 
 const DARK_PALETTES = [
-  { id: 'slate', name: 'Deep Slate', bg: '#0b1329', card: '#0f172a', desc: 'Classic navy' },
-  { id: 'midnight', name: 'Midnight OLED', bg: '#000000', card: '#08080a', desc: 'True #000000 OLED' },
-  { id: 'obsidian', name: 'Obsidian Charcoal', bg: '#16181d', card: '#20242c', desc: 'Matte charcoal' },
+  { id: 'obsidian', name: 'Obsidian Charcoal', bg: '#0a0a0c', card: '#131316', desc: 'Carbon graphite' },
+  { id: 'midnight', name: 'Midnight OLED', bg: '#000000', card: '#0a0a0c', desc: 'True #000000 OLED' },
+  { id: 'slate', name: 'Deep Slate', bg: '#090d16', card: '#111726', desc: 'Refined dark slate' },
   { id: 'indigo', name: 'Space Indigo', bg: '#13102d', card: '#1c183f', desc: 'Cosmic galaxy' },
   { id: 'forest', name: 'Forest Dark', bg: '#0b1a13', card: '#112a1f', desc: 'Pine charcoal' },
   { id: 'espresso', name: 'Warm Espresso', bg: '#1c1511', card: '#281e19', desc: 'Rich cocoa' },
@@ -428,9 +430,9 @@ export const AppearanceTab: React.FC<AppearanceTabProps> = ({
                 >
                   <span
                     className="w-4 h-4 rounded-full flex items-center justify-center shadow-inner flex-shrink-0"
-                    style={{ backgroundColor: item.hex }}
+                    style={{ backgroundColor: item.hex, color: getContrastTextColor(item.hex) }}
                   >
-                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                    {isSelected && <Check className="w-2.5 h-2.5" />}
                   </span>
                   <span className={isLight ? 'text-slate-800' : 'text-slate-200'}>{item.name}</span>
                 </button>
