@@ -16,10 +16,17 @@ export interface SpaceExportPayload {
     description?: string;
     section?: string;
   };
+  tabGroups?: {
+    id: string;
+    title: string;
+    color: string;
+    order: number;
+  }[];
   tabs: {
     title: string;
     url: string;
     favIconUrl?: string;
+    groupId?: string;
     order: number;
   }[];
   notes: {
@@ -159,13 +166,15 @@ export async function buildSpaceExport(
   const space = spaceId ? await db.spaces.get(spaceId) : undefined;
   const spaceName = space?.name || fallbackName;
 
-  const [spaceTabs, notes, tasks, sections] = await Promise.all([
+  const [spaceTabs, tabGroups, notes, tasks, sections] = await Promise.all([
     db.tabs.where('spaceId').equals(targetId).sortBy('order'),
+    db.tabGroups.where('spaceId').equals(targetId).sortBy('order'),
     db.notes.where('spaceId').equals(targetId).toArray(),
     db.tasks.where('spaceId').equals(targetId).sortBy('order'),
     db.resourceSections.where('spaceId').equals(targetId).sortBy('order'),
   ]);
 
+  const validGroupIds = new Set(tabGroups.map((g) => g.id));
   const resourcesData = [];
   for (const sec of sections) {
     const items = await db.resourceItems.where('sectionId').equals(sec.id).toArray();
@@ -190,10 +199,17 @@ export async function buildSpaceExport(
       description: space?.description,
       section: space?.section,
     },
+    tabGroups: tabGroups.map((g) => ({
+      id: g.id,
+      title: g.title,
+      color: g.color,
+      order: g.order,
+    })),
     tabs: spaceTabs.map((t) => ({
       title: t.title,
       url: decodeRealUrl(t.url),
       favIconUrl: t.favIconUrl,
+      groupId: t.groupId && validGroupIds.has(t.groupId) ? t.groupId : undefined,
       order: t.order,
     })),
     notes: notes.map((n) => ({
@@ -219,14 +235,29 @@ export function buildSpaceHtml(payload: SpaceExportPayload): string {
   const title = escapeHtml(payload.space.name);
   const desc = payload.space.description ? `<div class="st-desc">${escapeHtml(payload.space.description)}</div>` : '';
 
-  const tabLinks = payload.tabs
-    .map((t) => {
-      const href = escapeHtml(decodeRealUrl(t.url));
-      const label = escapeHtml(t.title || t.url);
-      const fav = t.favIconUrl ? ` ICON="${escapeHtml(t.favIconUrl)}"` : '';
-      return `      <DT><A HREF="${href}" ADD_DATE="${addDateSec}"${fav}>${label}</A>`;
+  const renderTabAnchor = (t: SpaceExportPayload['tabs'][number]) => {
+    const href = escapeHtml(decodeRealUrl(t.url));
+    const label = escapeHtml(t.title || t.url);
+    const fav = t.favIconUrl ? ` ICON="${escapeHtml(t.favIconUrl)}"` : '';
+    return `      <DT><A HREF="${href}" ADD_DATE="${addDateSec}"${fav}>${label}</A>`;
+  };
+
+  const groups = payload.tabGroups || [];
+  const validGroupIds = new Set(groups.map((g) => g.id));
+  const groupedHtml = groups
+    .map((g) => {
+      const gTabs = payload.tabs.filter((t) => t.groupId === g.id);
+      if (gTabs.length === 0) return '';
+      return `    <DT><H3 ADD_DATE="${addDateSec}">${escapeHtml(g.title)}</H3>\n    <DL><p>\n${gTabs.map(renderTabAnchor).join('\n')}\n    </DL><p>`;
     })
+    .filter(Boolean)
     .join('\n');
+
+  const ungroupedLinks = payload.tabs
+    .filter((t) => !t.groupId || !validGroupIds.has(t.groupId))
+    .map(renderTabAnchor)
+    .join('\n');
+  const tabLinks = [groupedHtml, ungroupedLinks].filter(Boolean).join('\n');
 
   const resourceFolders = payload.resources
     .filter((r) => r.items && r.items.length > 0)

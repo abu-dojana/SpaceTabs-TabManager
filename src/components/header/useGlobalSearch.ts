@@ -4,6 +4,7 @@ import { db } from '@/db';
 import {
   type Space,
   type Tab,
+  type TabGroup,
   type Note,
   type Task,
   type ResourceItem,
@@ -55,6 +56,8 @@ export interface TabSearchResultItem extends BaseSearchResultItem {
   tab: Tab;
   realUrl: string;
   domain: string;
+  tabGroupTitle?: string;
+  tabGroupColor?: string;
 }
 
 export interface NoteSearchResultItem extends BaseSearchResultItem {
@@ -130,6 +133,10 @@ export function useGlobalSearch(
     async () => (shouldLoadData ? db.tabs.orderBy('order').toArray() : []),
     [shouldLoadData]
   );
+  const allTabGroups = useLiveQuery(
+    async () => (shouldLoadData ? db.tabGroups.toArray() : []),
+    [shouldLoadData]
+  );
   const allNotes = useLiveQuery(
     async () => (shouldLoadData ? db.notes.toArray() : []),
     [shouldLoadData]
@@ -172,6 +179,8 @@ export function useGlobalSearch(
 
     const spaceMap = new Map<string, Space>();
     for (const s of allSpaces) spaceMap.set(s.id, s);
+    const tabGroupMap = new Map<string, TabGroup>();
+    for (const g of allTabGroups || []) tabGroupMap.set(g.id, g);
     const currentTargetSpaceId = activeSpaceId || UNSAVED_SPACE_ID;
 
     const getSpaceMeta = (rawSpaceId: string) => {
@@ -204,12 +213,15 @@ export function useGlobalSearch(
         const meta = getSpaceMeta(tab.spaceId);
         if (meta.isArchived) continue;
         const realUrl = decodeRealUrl(tab.url);
+        const grp = tab.groupId ? tabGroupMap.get(tab.groupId) : undefined;
         candidates.push({
           id: tab.id,
           type: 'tab',
           tab,
           realUrl,
           domain: extractDomain(realUrl),
+          tabGroupTitle: grp?.title,
+          tabGroupColor: grp?.color,
           ...meta,
           score: 0,
           updatedAt: ts,
@@ -308,10 +320,12 @@ export function useGlobalSearch(
       const meta = getSpaceMeta(tab.spaceId);
       const realUrl = decodeRealUrl(tab.url);
       const domain = extractDomain(realUrl);
+      const grp = tab.groupId ? tabGroupMap.get(tab.groupId) : undefined;
       const res = scoreSearchCandidate(
         searchWords,
         [
           { text: tab.title, weight: 1.0 },
+          { text: grp?.title || '', weight: 0.75 },
           { text: domain, weight: 0.75 },
           { text: getSemanticAliases(realUrl, tab.title), weight: 0.55 },
           { text: realUrl, weight: 0.35 },
@@ -328,6 +342,8 @@ export function useGlobalSearch(
           tab,
           realUrl,
           domain,
+          tabGroupTitle: grp?.title,
+          tabGroupColor: grp?.color,
           ...meta,
           score: res.score,
           updatedAt: tab.updatedAt || tab.createdAt || 0,
@@ -507,6 +523,7 @@ export function useGlobalSearch(
     searchWords,
     allSpaces,
     allTabs,
+    allTabGroups,
     allNotes,
     allTasks,
     allResourceSections,

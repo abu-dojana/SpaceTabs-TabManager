@@ -2,11 +2,11 @@ import { db } from '@/db';
 import {
   type Space,
   type Tab,
+  type TabGroup,
   type ResourceSection,
   type ResourceItem,
   type Note,
   type Task,
-  type DriveDataExport,
   UNSAVED_SPACE_ID,
 } from '@/db/schema';
 import { decodeRealUrl } from '@/utils/urlFilter';
@@ -19,7 +19,13 @@ import {
   syncNow,
 } from '@/services/driveSync';
 import { getNextSpaceOrder } from './spaceActions';
-import { type SpaceExportPayload } from './spaceExport';
+import {
+  parseImportFileContent,
+  isSafeImportUrl,
+  deriveSpaceNameFromFilename,
+} from './spaceImportParser';
+
+export { parseImportFileContent } from './spaceImportParser';
 
 export interface ImportResult {
   success: boolean;
@@ -29,147 +35,8 @@ export interface ImportResult {
   message: string;
 }
 
-type ParsedImportFile =
-  | { kind: 'workspace'; data: Partial<DriveDataExport> }
-  | { kind: 'single_space'; data: SpaceExportPayload };
-
-function isSafeImportUrl(url: string): boolean {
-  const trimmed = (url || '').trim();
-  if (!trimmed) return false;
-  const lower = trimmed.toLowerCase();
-  if (lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:')) {
-    return false;
-  }
-  return true;
-}
-
-function deriveSpaceNameFromFilename(fileName?: string): string {
-  if (!fileName) return 'Imported Space';
-  return (
-    fileName
-      .replace(/\.(json|html|htm)$/i, '')
-      .replace(/-space$/i, '')
-      .replace(/[_-]+/g, ' ')
-      .trim() || 'Imported Space'
-  );
-}
-
 /**
- * Parses either a JSON or HTML export/bookmark file into a normalized import structure.
- */
-export function parseImportFileContent(fileText: string, fileName?: string): ParsedImportFile {
-  const trimmed = (fileText || '').trim();
-  if (!trimmed) {
-    throw new Error('The selected file is empty.');
-  }
-
-  // 1. Try JSON first if it starts with '{' or '['
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    let parsed: any;
-    try {
-      parsed = JSON.parse(trimmed);
-    } catch {
-      throw new Error('Invalid JSON file format.');
-    }
-
-    if (parsed && typeof parsed === 'object') {
-      if (Array.isArray(parsed.spaces)) {
-        return { kind: 'workspace', data: parsed as Partial<DriveDataExport> };
-      }
-      if (parsed.space && typeof parsed.space === 'object' && Array.isArray(parsed.tabs)) {
-        return { kind: 'single_space', data: parsed as SpaceExportPayload };
-      }
-      if (Array.isArray(parsed.tabs)) {
-        return {
-          kind: 'single_space',
-          data: {
-            app: 'SpaceTabs',
-            version: '1.4.0',
-            exportedAt: new Date().toISOString(),
-            space: { name: deriveSpaceNameFromFilename(fileName), icon: '📁' },
-            tabs: parsed.tabs,
-            notes: Array.isArray(parsed.notes) ? parsed.notes : [],
-            tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
-            resources: Array.isArray(parsed.resources) ? parsed.resources : [],
-          },
-        };
-      }
-    }
-    throw new Error('Unrecognized JSON backup structure.');
-  }
-
-  // 2. Parse HTML (SpaceTabs HTML with embedded JSON or generic Netscape Bookmark HTML)
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(trimmed, 'text/html');
-
-  const workspaceScript = doc.getElementById('spacetabs-workspace-data');
-  if (workspaceScript?.textContent) {
-    try {
-      const workspaceData = JSON.parse(workspaceScript.textContent);
-      if (workspaceData && Array.isArray(workspaceData.spaces)) {
-        return { kind: 'workspace', data: workspaceData };
-      }
-    } catch {}
-  }
-
-  const spaceScript = doc.getElementById('spacetabs-space-data');
-  if (spaceScript?.textContent) {
-    try {
-      const spaceData = JSON.parse(spaceScript.textContent);
-      if (spaceData && spaceData.space && Array.isArray(spaceData.tabs)) {
-        return { kind: 'single_space', data: spaceData as SpaceExportPayload };
-      }
-    } catch {}
-  }
-
-  // 3. Fallback: Standard Browser Bookmark / Generic HTML link extraction
-  const anchorNodes = Array.from(doc.querySelectorAll('a[href]'));
-  const extractedTabs: SpaceExportPayload['tabs'] = [];
-
-  for (const a of anchorNodes) {
-    const rawHref = a.getAttribute('href') || '';
-    const cleanUrl = decodeRealUrl(rawHref).trim();
-    if (!isSafeImportUrl(cleanUrl)) continue;
-    const title = (a.textContent || '').trim() || cleanUrl;
-    const iconAttr = a.getAttribute('icon') || undefined;
-    extractedTabs.push({
-      title,
-      url: cleanUrl,
-      favIconUrl: iconAttr && iconAttr.startsWith('http') ? iconAttr : undefined,
-      order: extractedTabs.length,
-    });
-  }
-
-  if (extractedTabs.length === 0) {
-    throw new Error('No valid links or SpaceTabs data found in the HTML file.');
-  }
-
-  const headingText =
-    doc.querySelector('dl dt h3')?.textContent?.trim() ||
-    doc.querySelector('h1')?.textContent?.trim() ||
-    doc.querySelector('title')?.textContent?.replace(/—\s*SpaceTabs$/i, '').trim() ||
-    deriveSpaceNameFromFilename(fileName);
-
-  return {
-    kind: 'single_space',
-    data: {
-      app: 'SpaceTabs',
-      version: '1.4.0',
-      exportedAt: new Date().toISOString(),
-      space: {
-        name: headingText || 'Imported Bookmarks',
-        icon: '📁',
-      },
-      tabs: extractedTabs,
-      notes: [],
-      tasks: [],
-      resources: [],
-    },
-  };
-}
-
-/**
- * Merges tabs, notes, tasks, and resources from a JSON or HTML file into an existing Space.
+ * Merges tabs, tab groups, notes, tasks, and resources from a JSON or HTML file into an existing Space.
  */
 export async function importIntoSpace(
   targetSpaceId: string | null,
@@ -181,19 +48,23 @@ export async function importIntoSpace(
     const spaceId = targetSpaceId || UNSAVED_SPACE_ID;
     const now = Date.now();
 
-    const [existingTabs, existingTasks, existingSections] = await Promise.all([
+    const [existingTabs, existingGroups, existingTasks, existingSections] = await Promise.all([
       db.tabs.where('spaceId').equals(spaceId).toArray(),
+      db.tabGroups.where('spaceId').equals(spaceId).toArray(),
       db.tasks.where('spaceId').equals(spaceId).toArray(),
       db.resourceSections.where('spaceId').equals(spaceId).toArray(),
     ]);
 
     let nextTabOrder =
       existingTabs.length > 0 ? Math.max(...existingTabs.map((t) => t.order)) + 1 : 0;
+    let nextGroupOrder =
+      existingGroups.length > 0 ? Math.max(...existingGroups.map((g) => g.order)) + 1 : 0;
     let nextTaskOrder =
       existingTasks.length > 0 ? Math.max(...existingTasks.map((t) => t.order)) + 1 : 0;
     let nextSecOrder =
       existingSections.length > 0 ? Math.max(...existingSections.map((s) => s.order)) + 1 : 0;
 
+    const groupsToAdd: TabGroup[] = [];
     const tabsToAdd: Tab[] = [];
     const notesToAdd: Note[] = [];
     const tasksToAdd: Task[] = [];
@@ -202,11 +73,26 @@ export async function importIntoSpace(
 
     if (parsed.kind === 'single_space') {
       const p = parsed.data;
+      const groupIdMap = new Map<string, string>();
+      for (const g of p.tabGroups || []) {
+        const newGrpId = crypto.randomUUID();
+        if (g.id) groupIdMap.set(g.id, newGrpId);
+        groupsToAdd.push({
+          id: newGrpId,
+          spaceId,
+          title: g.title || 'Imported Group',
+          color: g.color || '#2563eb',
+          order: nextGroupOrder++,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
       for (const t of p.tabs || []) {
         if (!isSafeImportUrl(t.url)) continue;
         tabsToAdd.push({
           id: crypto.randomUUID(),
           spaceId,
+          groupId: t.groupId ? groupIdMap.get(t.groupId) : undefined,
           title: t.title || t.url,
           url: decodeRealUrl(t.url),
           favIconUrl: t.favIconUrl,
@@ -263,11 +149,26 @@ export async function importIntoSpace(
       }
     } else {
       const w = parsed.data;
+      const groupIdMap = new Map<string, string>();
+      for (const g of w.tabGroups || []) {
+        const newGrpId = crypto.randomUUID();
+        if (g.id) groupIdMap.set(g.id, newGrpId);
+        groupsToAdd.push({
+          id: newGrpId,
+          spaceId,
+          title: g.title || 'Imported Group',
+          color: g.color || '#2563eb',
+          order: nextGroupOrder++,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
       for (const t of w.tabs || []) {
         if (!isSafeImportUrl(t.url)) continue;
         tabsToAdd.push({
           id: crypto.randomUUID(),
           spaceId,
+          groupId: t.groupId ? groupIdMap.get(t.groupId) : undefined,
           title: t.title || t.url,
           url: decodeRealUrl(t.url),
           favIconUrl: t.favIconUrl,
@@ -280,8 +181,9 @@ export async function importIntoSpace(
 
     await db.transaction(
       'rw',
-      [db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
+      [db.tabs, db.tabGroups, db.notes, db.tasks, db.resourceSections, db.resourceItems],
       async () => {
+        if (groupsToAdd.length > 0) await db.tabGroups.bulkAdd(groupsToAdd);
         if (tabsToAdd.length > 0) await db.tabs.bulkAdd(tabsToAdd);
         if (notesToAdd.length > 0) await db.notes.bulkAdd(notesToAdd);
         if (tasksToAdd.length > 0) await db.tasks.bulkAdd(tasksToAdd);
@@ -340,13 +242,30 @@ export async function importSpacesFromFile(
         const p = parsed.data;
         const newSpaceId = crypto.randomUUID();
         const nextOrder = await getNextSpaceOrder();
-        const spaceName = (p.space?.name || deriveSpaceNameFromFilename(fileName)).trim() || 'Imported Space';
+        const spaceName =
+          (p.space?.name || deriveSpaceNameFromFilename(fileName)).trim() || 'Imported Space';
+
+        const groupIdMap = new Map<string, string>();
+        const groupsToAdd: TabGroup[] = (p.tabGroups || []).map((g, idx) => {
+          const newGrpId = crypto.randomUUID();
+          if (g.id) groupIdMap.set(g.id, newGrpId);
+          return {
+            id: newGrpId,
+            spaceId: newSpaceId,
+            title: g.title || 'Imported Group',
+            color: g.color || '#2563eb',
+            order: typeof g.order === 'number' ? g.order : idx,
+            createdAt: now,
+            updatedAt: now,
+          };
+        });
 
         const tabsToAdd: Tab[] = (p.tabs || [])
           .filter((t) => isSafeImportUrl(t.url))
           .map((t, idx) => ({
             id: crypto.randomUUID(),
             spaceId: newSpaceId,
+            groupId: t.groupId ? groupIdMap.get(t.groupId) : undefined,
             title: t.title || t.url,
             url: decodeRealUrl(t.url),
             favIconUrl: t.favIconUrl,
@@ -403,7 +322,7 @@ export async function importSpacesFromFile(
 
         await db.transaction(
           'rw',
-          [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
+          [db.spaces, db.tabs, db.tabGroups, db.notes, db.tasks, db.resourceSections, db.resourceItems],
           async () => {
             await db.spaces.add({
               id: newSpaceId,
@@ -416,6 +335,7 @@ export async function importSpacesFromFile(
               updatedAt: now,
               isArchived: false,
             });
+            if (groupsToAdd.length) await db.tabGroups.bulkAdd(groupsToAdd);
             if (tabsToAdd.length) await db.tabs.bulkAdd(tabsToAdd);
             if (notesToAdd.length) await db.notes.bulkAdd(notesToAdd);
             if (tasksToAdd.length) await db.tasks.bulkAdd(tasksToAdd);
@@ -437,6 +357,7 @@ export async function importSpacesFromFile(
       const data = parsed.data;
       const rawSpaces = validateEntityArray<Space>(data.spaces, 'spaces');
       const rawTabs = validateEntityArray<Tab>(data.tabs, 'tabs');
+      const rawGroups = validateEntityArray<TabGroup>(data.tabGroups, 'tabGroups');
       const rawSections = validateEntityArray<ResourceSection>(data.resourceSections, 'resourceSections');
       const rawItems = validateEntityArray<ResourceItem>(data.resourceItems, 'resourceItems');
       const rawNotes = validateEntityArray<Note>(data.notes, 'notes');
@@ -470,6 +391,25 @@ export async function importSpacesFromFile(
         }
         return sp;
       });
+
+      const groupIdMap = new Map<string, string>();
+      const validGroupOriginIds = new Set(
+        rawGroups.filter((g) => !ignoredSpaceIds.has(g.spaceId)).map((g) => g.id)
+      );
+      const groupsToImport: TabGroup[] = rawGroups
+        .filter((g) => !ignoredSpaceIds.has(g.spaceId))
+        .map((g) => {
+          const mappedSpaceId = spaceIdMap.get(g.spaceId) ?? g.spaceId;
+          const needsNewId = tombstoneIds.has(g.id) || spaceIdMap.has(g.spaceId);
+          const newId = needsNewId ? crypto.randomUUID() : g.id;
+          if (newId !== g.id) groupIdMap.set(g.id, newId);
+          return {
+            ...g,
+            id: newId,
+            spaceId: mappedSpaceId,
+            updatedAt: needsNewId ? Math.max(g.updatedAt || 0, now) : g.updatedAt,
+          };
+        });
 
       const sectionIdMap = new Map<string, string>();
       const sectionsToImport: ResourceSection[] = rawSections
@@ -509,10 +449,15 @@ export async function importSpacesFromFile(
         .map((t) => {
           const mappedSpaceId = spaceIdMap.get(t.spaceId) ?? t.spaceId;
           const needsNewId = tombstoneIds.has(t.id) || spaceIdMap.has(t.spaceId);
+          const mappedGroupId =
+            t.groupId && validGroupOriginIds.has(t.groupId)
+              ? (groupIdMap.get(t.groupId) ?? t.groupId)
+              : undefined;
           return stripRuntimeTabFields({
             ...t,
             id: needsNewId ? crypto.randomUUID() : t.id,
             spaceId: mappedSpaceId,
+            groupId: mappedGroupId,
             updatedAt: needsNewId ? Math.max(t.updatedAt || 0, now) : t.updatedAt,
           });
         });
@@ -545,9 +490,10 @@ export async function importSpacesFromFile(
 
       await db.transaction(
         'rw',
-        [db.spaces, db.tabs, db.resourceSections, db.resourceItems, db.notes, db.tasks],
+        [db.spaces, db.tabs, db.tabGroups, db.resourceSections, db.resourceItems, db.notes, db.tasks],
         async () => {
           if (spacesToImport.length) await db.spaces.bulkPut(spacesToImport);
+          if (groupsToImport.length) await db.tabGroups.bulkPut(groupsToImport);
           if (tabsToImport.length) await db.tabs.bulkPut(tabsToImport);
           if (sectionsToImport.length) await db.resourceSections.bulkPut(sectionsToImport);
           if (itemsToImport.length) await db.resourceItems.bulkPut(itemsToImport);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { type Tab, type Space } from '@/db/schema';
+import { type Tab, type Space, type TabGroup } from '@/db/schema';
 import { useFixedPopover } from '@/hooks/useFixedPopover';
 import {
   GripVertical,
@@ -24,6 +24,7 @@ interface TabItemProps {
   isOpenInOtherWindow: boolean;
   copiedId: string | null;
   spaces?: Space[];
+  tabGroups?: TabGroup[];
   activeSpaceId: string | null;
   dropdownRef: React.RefObject<HTMLDivElement>;
   newSpaceInputRef: React.RefObject<HTMLInputElement>;
@@ -38,6 +39,7 @@ interface TabItemProps {
   onCloseTab: () => void;
   onToggleDropdown: (e: React.MouseEvent) => void;
   onMoveToSpace: (targetSpaceId: string | null) => void;
+  onAssignToGroup?: (groupId: string | undefined) => void;
   onStartCreateNewSpace: () => void;
   onCancelCreateNewSpace: () => void;
   onSetNewSpaceName: (name: string) => void;
@@ -60,6 +62,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   isOpenInOtherWindow,
   copiedId,
   spaces,
+  tabGroups,
   activeSpaceId,
   dropdownRef,
   newSpaceInputRef,
@@ -74,6 +77,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   onCloseTab,
   onToggleDropdown,
   onMoveToSpace,
+  onAssignToGroup,
   onStartCreateNewSpace,
   onCancelCreateNewSpace,
   onSetNewSpaceName,
@@ -231,6 +235,40 @@ export const TabItem: React.FC<TabItemProps> = ({
               ref={movePopoverRef}
               className="fixed z-50 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 overflow-hidden"
             >
+              {onAssignToGroup && tabGroups && tabGroups.length > 0 && (
+                <div className="border-b border-slate-800 pb-1">
+                  <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800/70">
+                    Group in this space
+                  </div>
+                  <div className="max-h-32 overflow-y-auto py-1">
+                    {tab.groupId && (
+                      <button
+                        onClick={() => onAssignToGroup(undefined)}
+                        className="w-full text-left px-3 py-1 text-xs text-amber-300 hover:bg-slate-800 flex items-center gap-2 transition"
+                      >
+                        <X className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                        <span>Remove from group</span>
+                      </button>
+                    )}
+                    {tabGroups
+                      .filter((g) => g.id !== tab.groupId)
+                      .map((g) => (
+                        <button
+                          key={g.id}
+                          onClick={() => onAssignToGroup(g.id)}
+                          className="w-full text-left px-3 py-1 text-xs text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 transition"
+                        >
+                          <span
+                            style={{ backgroundColor: g.color }}
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          />
+                          <span className="truncate">{g.title}</span>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+
               <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-800">
                 Move tab to
               </div>

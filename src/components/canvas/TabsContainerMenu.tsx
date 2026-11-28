@@ -19,6 +19,7 @@ import {
   PanelTopClose,
   RotateCw,
   Layers,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ interface TabsContainerMenuProps {
   menuRef: React.RefObject<HTMLDivElement>;
   isCopiedAll: boolean;
   allSelected: boolean;
+  hasGroups: boolean;
   spaces?: Space[];
   activeSpaceId: string | null;
   showMoveAllSubmenu: boolean;
@@ -35,6 +37,8 @@ interface TabsContainerMenuProps {
   onCopyAllLinks: () => void;
   onSortAlphabetically: () => void;
   onSortByDomain: () => void;
+  onGroupByDomain: () => void;
+  onUngroupAll: () => void;
   onExportSpace: (format: ExportFormat) => void;
   onImportIntoSpace: () => void;
   onSelectAllToggle: () => void;
@@ -51,6 +55,7 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
   menuRef,
   isCopiedAll,
   allSelected,
+  hasGroups,
   spaces,
   activeSpaceId,
   showMoveAllSubmenu,
@@ -59,6 +64,8 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
   onCopyAllLinks,
   onSortAlphabetically,
   onSortByDomain,
+  onGroupByDomain,
+  onUngroupAll,
   onExportSpace,
   onImportIntoSpace,
   onSelectAllToggle,
@@ -135,6 +142,26 @@ export const TabsContainerMenu: React.FC<TabsContainerMenuProps> = ({
             <Globe className="w-3.5 h-3.5 text-slate-400" />
             <span>Sort by domain</span>
           </button>
+
+          {/* 3b. Group by domain */}
+          <button
+            onClick={onGroupByDomain}
+            className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+            title="Cluster domains with 2+ tabs into colored tab groups"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+            <span>Group by domain</span>
+          </button>
+
+          {hasGroups && (
+            <button
+              onClick={onUngroupAll}
+              className="w-full text-left px-3 py-2 text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition"
+            >
+              <Layers className="w-3.5 h-3.5 text-amber-400" />
+              <span>Ungroup all tabs</span>
+            </button>
+          )}
 
           {/* 4. Export this space (JSON / HTML submenu) */}
           <div className="relative">

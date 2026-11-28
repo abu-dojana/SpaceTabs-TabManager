@@ -163,12 +163,30 @@ export const SearchResultRow: React.FC<SearchResultRowProps> = ({
 
             {/* Secondary detail: URL or Note Snippet or Due Date */}
             {item.type === 'tab' && (
-              <span className="truncate font-mono text-[10px]">
-                <HighlightText
-                  text={item.realUrl}
-                  words={highlightTokens}
-                  isLight={isLight}
-                />
+              <span className="truncate flex items-center gap-1.5 text-[10px]">
+                {item.tabGroupTitle && (
+                  <span className="inline-flex items-center gap-1 font-semibold flex-shrink-0">
+                    <span
+                      style={{ backgroundColor: item.tabGroupColor || '#2563eb' }}
+                      className="w-2 h-2 rounded-full inline-block flex-shrink-0"
+                    />
+                    <span>
+                      <HighlightText
+                        text={item.tabGroupTitle}
+                        words={highlightTokens}
+                        isLight={isLight}
+                      />
+                    </span>
+                    <span className="text-slate-500">·</span>
+                  </span>
+                )}
+                <span className="truncate font-mono">
+                  <HighlightText
+                    text={item.realUrl}
+                    words={highlightTokens}
+                    isLight={isLight}
+                  />
+                </span>
               </span>
             )}
             {item.type === 'note' && (

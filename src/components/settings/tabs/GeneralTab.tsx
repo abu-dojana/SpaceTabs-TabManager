@@ -106,6 +106,14 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
             onToggle={() => onToggle('showTabFavicons')}
             isLight={isLight}
           />
+
+          <ToggleRow
+            title="Keep Grouped Tabs on Top"
+            description="Display colored tab groups above ungrouped tabs inside spaces (turn off to show ungrouped tabs at the top)."
+            checked={settings.groupedTabsOnTop !== false}
+            onToggle={() => onToggle('groupedTabsOnTop')}
+            isLight={isLight}
+          />
         </div>
       </div>
     </div>

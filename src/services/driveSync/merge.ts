@@ -2,6 +2,7 @@ import { db } from '@/db';
 import {
   type Space,
   type Tab,
+  type TabGroup,
   type ResourceSection,
   type ResourceItem,
   type Note,
@@ -46,10 +47,11 @@ export function mergeCollection<T extends { id: string; updatedAt: number }>(
 }
 
 export async function buildLocalExport(): Promise<DriveDataExport> {
-  const [spaces, tabs, resourceSections, resourceItems, notes, tasks, deletedIds] =
+  const [spaces, tabs, tabGroups, resourceSections, resourceItems, notes, tasks, deletedIds] =
     await Promise.all([
       db.spaces.toArray(),
       db.tabs.where('spaceId').notEqual(UNSAVED_SPACE_ID).toArray(),
+      db.tabGroups.toArray(),
       db.resourceSections.toArray(),
       db.resourceItems.toArray(),
       db.notes.toArray(),
@@ -64,9 +66,18 @@ export async function buildLocalExport(): Promise<DriveDataExport> {
   const isSyncableSpace = (spaceId: string) => !localOnlySpaceIds.has(spaceId);
 
   const syncableSpaces = spaces.filter((s) => !s.isUnsaved);
+  const syncableTabGroups = tabGroups.filter((g) => isSyncableSpace(g.spaceId));
+  const validGroupIds = new Set(syncableTabGroups.map((g) => g.id));
   const syncableTabs = tabs
     .filter((t) => isSyncableSpace(t.spaceId))
-    .map(stripRuntimeTabFields);
+    .map((t) => {
+      const clean = stripRuntimeTabFields(t);
+      if (clean.groupId && !validGroupIds.has(clean.groupId)) {
+        const { groupId: _, ...rest } = clean;
+        return rest;
+      }
+      return clean;
+    });
   const syncableSections = resourceSections.filter((s) => isSyncableSpace(s.spaceId));
   const syncableSectionIds = new Set(syncableSections.map((s) => s.id));
   const syncableItems = resourceItems.filter((i) => syncableSectionIds.has(i.sectionId));
@@ -77,6 +88,7 @@ export async function buildLocalExport(): Promise<DriveDataExport> {
     exportedAt: Date.now(),
     spaces: syncableSpaces,
     tabs: syncableTabs,
+    tabGroups: syncableTabGroups,
     resourceSections: syncableSections,
     resourceItems: syncableItems,
     notes: syncableNotes,
@@ -111,6 +123,7 @@ export async function mergeRemoteAndLocal(
   // 1b. Self-heal & protect any local-only Unsaved items whose IDs still exist in remote Saved Spaces
   // (e.g. tabs moved from a Saved Space into an Unsaved session before re-keying):
   const remoteTabIds = new Set((remote.tabs || []).map((t) => t.id));
+  const remoteGroupIds = new Set((remote.tabGroups || []).map((g) => g.id));
   const remoteSectionIds = new Set((remote.resourceSections || []).map((s) => s.id));
   const remoteItemIds = new Set((remote.resourceItems || []).map((i) => i.id));
   const remoteNoteIds = new Set((remote.notes || []).map((n) => n.id));
@@ -118,7 +131,7 @@ export async function mergeRemoteAndLocal(
 
   await db.transaction(
     'rw',
-    [db.spaces, db.tabs, db.resourceSections, db.resourceItems, db.notes, db.tasks],
+    [db.spaces, db.tabs, db.tabGroups, db.resourceSections, db.resourceItems, db.notes, db.tasks],
     async () => {
       const allLocalSpaces = await db.spaces.toArray();
       const localOnlySpaceIds = new Set<string>([
@@ -126,6 +139,17 @@ export async function mergeRemoteAndLocal(
         ...allLocalSpaces.filter((s) => !!s.isUnsaved).map((s) => s.id),
       ]);
       const isLocalOnly = (spaceId: string) => localOnlySpaceIds.has(spaceId);
+
+      const allLocalGroups = await db.tabGroups.toArray();
+      for (const ug of allLocalGroups) {
+        if (isLocalOnly(ug.spaceId) && remoteGroupIds.has(ug.id)) {
+          const newGroupId = crypto.randomUUID();
+          tombstoneMap.set(ug.id, { id: ug.id, table: 'tab_groups', deletedAt: now });
+          await db.tabGroups.delete(ug.id);
+          await db.tabGroups.add({ ...ug, id: newGroupId, updatedAt: now });
+          await db.tabs.where('groupId').equals(ug.id).modify({ groupId: newGroupId, updatedAt: now });
+        }
+      }
 
       const allLocalTabs = await db.tabs.toArray();
       for (const ut of allLocalTabs) {
@@ -200,13 +224,29 @@ export async function mergeRemoteAndLocal(
   );
   const validSpaceIds = new Set(mergedSpaces.map((s) => s.id));
 
-  // 3. Merge Saved Tabs (strip runtime chromeTabId/windowId so cloud payload stays portable)
+  // 2b. Merge Tab Groups
+  const mergedTabGroups = mergeCollection<TabGroup>(
+    local.tabGroups,
+    remote.tabGroups,
+    deletedSet,
+    (g) => validSpaceIds.has(g.spaceId)
+  );
+  const validGroupIds = new Set(mergedTabGroups.map((g) => g.id));
+
+  // 3. Merge Saved Tabs (strip runtime fields & self-heal any dangling groupId)
   const mergedTabs = mergeCollection<Tab>(
     local.tabs,
     remote.tabs,
     deletedSet,
     (t) => t.spaceId !== UNSAVED_SPACE_ID && validSpaceIds.has(t.spaceId),
-    stripRuntimeTabFields
+    (rawTab) => {
+      const clean = stripRuntimeTabFields(rawTab);
+      if (clean.groupId && !validGroupIds.has(clean.groupId)) {
+        const { groupId: _, ...rest } = clean;
+        return rest;
+      }
+      return clean;
+    }
   );
 
   // 4. Merge Resource Sections
@@ -248,6 +288,7 @@ export async function mergeRemoteAndLocal(
     [
       db.spaces,
       db.tabs,
+      db.tabGroups,
       db.resourceSections,
       db.resourceItems,
       db.notes,
@@ -271,6 +312,18 @@ export async function mergeRemoteAndLocal(
       const liveSpaceIds = new Set(
         (await db.spaces.toCollection().primaryKeys()).map(String)
       );
+
+      // Tab Groups: preserve local-only Unsaved groups and prune deleted/orphaned saved groups
+      if (mergedTabGroups.length > 0) await db.tabGroups.bulkPut(mergedTabGroups);
+      const currentGroups = await db.tabGroups.toArray();
+      const groupsToDelete = currentGroups
+        .filter(
+          (g) =>
+            !isLocalOnlySpace(g.spaceId) &&
+            (deletedSet.has(g.id) || !liveSpaceIds.has(g.spaceId))
+        )
+        .map((g) => g.id);
+      if (groupsToDelete.length > 0) await db.tabGroups.bulkDelete(groupsToDelete);
 
       // Saved Tabs: re-attach local live chromeTabId/windowId bindings before bulkPut
       const currentTabs = await db.tabs.toArray();
@@ -365,6 +418,7 @@ export async function mergeRemoteAndLocal(
     exportedAt: Date.now(),
     spaces: mergedSpaces,
     tabs: mergedTabs,
+    tabGroups: mergedTabGroups,
     resourceSections: mergedSections,
     resourceItems: mergedItems,
     notes: mergedNotes,

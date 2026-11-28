@@ -165,6 +165,7 @@ export async function forcePullFromDrive(): Promise<{ success: boolean; message:
           [
             db.spaces,
             db.tabs,
+            db.tabGroups,
             db.resourceSections,
             db.resourceItems,
             db.notes,
@@ -201,6 +202,14 @@ export async function forcePullFromDrive(): Promise<{ success: boolean; message:
               .map((t) => t.id);
             if (savedTabIdsToDelete.length > 0) {
               await db.tabs.bulkDelete(savedTabIdsToDelete);
+            }
+
+            const currentGroups = await db.tabGroups.toArray();
+            const savedGroupIdsToDelete = currentGroups
+              .filter((g) => !isLocalOnlySpace(g.spaceId))
+              .map((g) => g.id);
+            if (savedGroupIdsToDelete.length > 0) {
+              await db.tabGroups.bulkDelete(savedGroupIdsToDelete);
             }
 
             // Re-key any surviving local Unsaved tabs whose IDs collide with incoming remote tabs
@@ -252,6 +261,15 @@ export async function forcePullFromDrive(): Promise<{ success: boolean; message:
             if (remoteSavedSpaces.length > 0) {
               await db.spaces.bulkPut(remoteSavedSpaces);
             }
+
+            const validRemoteGroups = (remoteData?.tabGroups || []).filter(
+              (g) => !localOnlySpaceIds.has(g.spaceId) && remoteSavedSpaceIds.has(g.spaceId)
+            );
+            const validRemoteGroupIds = new Set(validRemoteGroups.map((g) => g.id));
+            if (validRemoteGroups.length > 0) {
+              await db.tabGroups.bulkPut(validRemoteGroups);
+            }
+
             if (remoteData?.tabs?.length) {
               const savedTabs = remoteData.tabs
                 .filter(
@@ -262,8 +280,12 @@ export async function forcePullFromDrive(): Promise<{ success: boolean; message:
                 )
                 .map((t) => {
                   const clean = stripRuntimeTabFields(t);
-                  const binding = localTabBindings.get(clean.id);
-                  return binding ? { ...clean, ...binding } : clean;
+                  const sanitized =
+                    clean.groupId && !validRemoteGroupIds.has(clean.groupId)
+                      ? { ...clean, groupId: undefined }
+                      : clean;
+                  const binding = localTabBindings.get(sanitized.id);
+                  return binding ? { ...sanitized, ...binding } : sanitized;
                 });
               if (savedTabs.length > 0) await db.tabs.bulkPut(savedTabs);
             }

@@ -16,6 +16,7 @@ export interface UserSettings {
   defaultOpenInNewWindow: boolean;
   discardOnSpaceSwitch: boolean;
   showTabFavicons: boolean;
+  groupedTabsOnTop: boolean;
   sidebarTheme: 'dark' | 'light';
   dashboardTheme: 'dark' | 'light';
   accentColor: string;
@@ -35,6 +36,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   defaultOpenInNewWindow: false,
   discardOnSpaceSwitch: true,
   showTabFavicons: true,
+  groupedTabsOnTop: true,
   sidebarTheme: 'dark',
   dashboardTheme: 'dark',
   accentColor: '#2563eb',
@@ -69,6 +71,9 @@ export async function getUserSettings(): Promise<UserSettings> {
       if (typeof merged.showSectionActiveDot !== 'boolean') {
         merged.showSectionActiveDot = true;
       }
+      if (typeof merged.groupedTabsOnTop !== 'boolean') {
+        merged.groupedTabsOnTop = true;
+      }
       return merged;
     }
   } catch (err) {
@@ -97,14 +102,16 @@ export async function updateUserSettings(partial: Partial<UserSettings>): Promis
 export async function exportAllSpacesBackup(
   format: ExportFormat = 'json'
 ): Promise<DriveDataExport> {
-  const [allSpaces, allTabs, allSections, allItems, allNotes, allTasks] = await Promise.all([
-    db.spaces.toArray(),
-    db.tabs.toArray(),
-    db.resourceSections.toArray(),
-    db.resourceItems.toArray(),
-    db.notes.toArray(),
-    db.tasks.toArray(),
-  ]);
+  const [allSpaces, allTabs, allGroups, allSections, allItems, allNotes, allTasks] =
+    await Promise.all([
+      db.spaces.toArray(),
+      db.tabs.toArray(),
+      db.tabGroups.toArray(),
+      db.resourceSections.toArray(),
+      db.resourceItems.toArray(),
+      db.notes.toArray(),
+      db.tasks.toArray(),
+    ]);
 
   const spaces = allSpaces.filter((s) => !s.isUnsaved && s.id !== UNSAVED_SPACE_ID);
   const localOnlySpaceIds = new Set<string>([
@@ -112,9 +119,18 @@ export async function exportAllSpacesBackup(
     ...allSpaces.filter((s) => s.isUnsaved).map((s) => s.id),
   ]);
 
+  const tabGroups = allGroups.filter((g) => !localOnlySpaceIds.has(g.spaceId));
+  const validGroupIds = new Set(tabGroups.map((g) => g.id));
   const tabs = allTabs
     .filter((t) => !localOnlySpaceIds.has(t.spaceId))
-    .map(stripRuntimeTabFields);
+    .map((t) => {
+      const clean = stripRuntimeTabFields(t);
+      if (clean.groupId && !validGroupIds.has(clean.groupId)) {
+        const { groupId: _, ...rest } = clean;
+        return rest;
+      }
+      return clean;
+    });
   const resourceSections = allSections.filter((rs) => !localOnlySpaceIds.has(rs.spaceId));
   const exportedSectionIds = new Set(resourceSections.map((rs) => rs.id));
   const resourceItems = allItems.filter((ri) => exportedSectionIds.has(ri.sectionId));
@@ -125,6 +141,7 @@ export async function exportAllSpacesBackup(
     exportedAt: Date.now(),
     spaces,
     tabs,
+    tabGroups,
     resourceSections,
     resourceItems,
     notes,

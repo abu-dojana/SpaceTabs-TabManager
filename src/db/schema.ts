@@ -25,11 +25,22 @@ export interface Tab {
   id: string;                     // UUID (primary key)
   chromeTabId?: number;           // Runtime: Chrome's native integer tabId for O(1) event lookups
   spaceId: string;                // FK -> spaces.id, or UNSAVED_SPACE_ID ('__unsaved__')
+  groupId?: string;               // Optional FK -> tab_groups.id (undefined = Ungrouped)
   windowId?: number;              // Runtime: which Chrome window this tab is currently in
   url: string;
   title: string;
   favIconUrl?: string;
   order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface TabGroup {
+  id: string;                     // UUID (primary key)
+  spaceId: string;                // FK -> spaces.id, or UNSAVED_SPACE_ID ('__unsaved__')
+  title: string;                  // e.g. "Frontend Docs", "github.com"
+  color: string;                  // Hex color from SpaceTabs 9 accent presets
+  order: number;                  // Display order among groups in this space
   createdAt: number;
   updatedAt: number;
 }
@@ -106,7 +117,14 @@ export interface SyncState {
 
 export interface Tombstone {
   id: string;                     // ID of deleted entity
-  table: 'spaces' | 'tabs' | 'resource_sections' | 'resource_items' | 'notes' | 'tasks';
+  table:
+    | 'spaces'
+    | 'tabs'
+    | 'tab_groups'
+    | 'resource_sections'
+    | 'resource_items'
+    | 'notes'
+    | 'tasks';
   deletedAt: number;              // Unix timestamp ms
 }
 
@@ -121,6 +139,7 @@ export interface DriveDataExport {
   exportedAt: number;
   spaces: Space[];
   tabs: Tab[];                    // Only saved tabs (spaceId !== null)
+  tabGroups?: TabGroup[];         // Optional on read for v1.5.x compatibility, populated on write
   resourceSections: ResourceSection[];
   resourceItems: ResourceItem[];
   notes: Note[];

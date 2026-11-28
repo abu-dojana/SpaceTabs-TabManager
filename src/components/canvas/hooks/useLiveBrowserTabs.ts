@@ -1,10 +1,12 @@
 import React from 'react';
+import { type Tab } from '@/db/schema';
 import { getHostWindowId } from '@/utils/chromeWindow';
+import { decodeRealUrl, isSystemOrExtensionUrl } from '@/utils/urlFilter';
 
 /**
  * Tracks all open Chrome tabs across windows and resolves the host window ID of this dashboard.
  */
-export function useLiveBrowserTabs() {
+export function useLiveBrowserTabs(allSpaceTabs?: Tab[]) {
   const [currentWindowId, setCurrentWindowId] = React.useState<number | null>(null);
   const [liveTabsMap, setLiveTabsMap] = React.useState<Map<number, number>>(new Map());
   const [allLiveTabsList, setAllLiveTabsList] = React.useState<chrome.tabs.Tab[]>([]);
@@ -65,5 +67,49 @@ export function useLiveBrowserTabs() {
     };
   }, []);
 
-  return { currentWindowId, liveTabsMap, allLiveTabsList };
+  const claimedChromeTabIds = React.useMemo(
+    () =>
+      new Set(
+        (allSpaceTabs || [])
+          .map((t) => t.chromeTabId)
+          .filter((id): id is number => typeof id === 'number')
+      ),
+    [allSpaceTabs]
+  );
+
+  const resolveTabLiveState = React.useCallback(
+    (tab: Tab) => {
+      let resolvedChromeTabId = tab.chromeTabId;
+      let liveWindowId = tab.chromeTabId ? liveTabsMap.get(tab.chromeTabId) : undefined;
+
+      if (
+        liveWindowId === undefined &&
+        tab.chromeTabId !== undefined &&
+        allLiveTabsList.length > 0
+      ) {
+        const realUrl = decodeRealUrl(tab.url);
+        const match = allLiveTabsList.find((bt) => {
+          if (bt.pinned || (bt.id && claimedChromeTabIds.has(bt.id))) return false;
+          const raw = bt.url || bt.pendingUrl || '';
+          if (!raw || isSystemOrExtensionUrl(raw)) return false;
+          return (
+            decodeRealUrl(bt.url || '') === realUrl ||
+            decodeRealUrl(bt.pendingUrl || '') === realUrl
+          );
+        });
+        if (match && match.windowId) {
+          liveWindowId = match.windowId;
+          resolvedChromeTabId = match.id;
+        }
+      }
+      return {
+        resolvedChromeTabId,
+        isOpenInThisWindow: liveWindowId !== undefined && liveWindowId === currentWindowId,
+        isOpenInOtherWindow: liveWindowId !== undefined && liveWindowId !== currentWindowId,
+      };
+    },
+    [liveTabsMap, allLiveTabsList, claimedChromeTabIds, currentWindowId]
+  );
+
+  return { currentWindowId, liveTabsMap, allLiveTabsList, resolveTabLiveState };
 }

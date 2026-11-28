@@ -183,6 +183,27 @@ body {
 }
 
 /* Tab Cards & Workspace Panels (Fixes muddy gray box in TabsView) */
+.tab-group-card {
+  border-left: 3px solid var(--tab-group-color, #2563eb) !important;
+}
+
+[data-dashboard-theme="light"] .tab-group-card {
+  background-color: #f8fafc !important;
+  border-top-color: #e2e8f0 !important;
+  border-right-color: #e2e8f0 !important;
+  border-bottom-color: #e2e8f0 !important;
+  border-left: 3px solid var(--tab-group-color, #2563eb) !important;
+}
+
+[data-dashboard-theme="light"] .tab-group-header {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+[data-dashboard-theme="light"] .tab-group-header:hover {
+  background-color: #e2e8f0 !important;
+}
+
 [data-dashboard-theme="light"] .tab-manager-card,
 [data-dashboard-theme="light"] .group.bg-slate-900,
 [data-dashboard-theme="light"] .p-3.bg-slate-900,

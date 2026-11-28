@@ -87,8 +87,9 @@ export function getEffectiveTabTitle(t: chrome.tabs.Tab, realUrl: string): strin
  */
 export async function migrateLegacyUnsavedTabs(): Promise<void> {
   try {
-    const [legacyTabs, legacyNotes, legacyTasks, legacySections] = await Promise.all([
+    const [legacyTabs, legacyGroups, legacyNotes, legacyTasks, legacySections] = await Promise.all([
       db.tabs.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
+      db.tabGroups.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
       db.notes.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
       db.tasks.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
       db.resourceSections.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
@@ -96,6 +97,7 @@ export async function migrateLegacyUnsavedTabs(): Promise<void> {
 
     if (
       legacyTabs.length > 0 ||
+      legacyGroups.length > 0 ||
       legacyNotes.length > 0 ||
       legacyTasks.length > 0 ||
       legacySections.length > 0
@@ -163,6 +165,11 @@ export async function migrateLegacyUnsavedTabs(): Promise<void> {
           legacySections.map((s) =>
             db.resourceSections.update(s.id, { spaceId: targetSpace!.id, updatedAt: now })
           )
+        );
+      }
+      if (legacyGroups.length > 0) {
+        await Promise.all(
+          legacyGroups.map((g) => db.tabGroups.update(g.id, { spaceId: targetSpace!.id, updatedAt: now }))
         );
       }
     }

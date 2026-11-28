@@ -22,7 +22,7 @@ export async function duplicateSpace(space: Space): Promise<string> {
 
   await db.transaction(
     'rw',
-    [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
+    [db.spaces, db.tabs, db.tabGroups, db.notes, db.tasks, db.resourceSections, db.resourceItems],
     async () => {
       const nextOrder = await getNextSpaceOrder();
       await db.spaces.add({
@@ -38,12 +38,33 @@ export async function duplicateSpace(space: Space): Promise<string> {
         isArchived: false,
       });
 
+      const spaceGroups = await db.tabGroups.where('spaceId').equals(space.id).toArray();
+      const groupIdMap = new Map<string, string>();
+      if (spaceGroups.length > 0) {
+        await db.tabGroups.bulkAdd(
+          spaceGroups.map((g) => {
+            const newGroupId = crypto.randomUUID();
+            groupIdMap.set(g.id, newGroupId);
+            return {
+              id: newGroupId,
+              spaceId: newSpaceId,
+              title: g.title,
+              color: g.color,
+              order: g.order,
+              createdAt: now,
+              updatedAt: now,
+            };
+          })
+        );
+      }
+
       const spaceTabs = await db.tabs.where('spaceId').equals(space.id).toArray();
       if (spaceTabs.length > 0) {
         await db.tabs.bulkAdd(
           spaceTabs.map((t) => ({
             id: crypto.randomUUID(),
             spaceId: newSpaceId,
+            groupId: t.groupId ? groupIdMap.get(t.groupId) : undefined,
             url: t.url,
             title: t.title,
             favIconUrl: t.favIconUrl,
@@ -123,6 +144,7 @@ export async function duplicateSpace(space: Space): Promise<string> {
 export async function deleteSpacePermanently(spaceId: string): Promise<void> {
   try {
     const childTabs = await db.tabs.where('spaceId').equals(spaceId).toArray();
+    const childGroups = await db.tabGroups.where('spaceId').equals(spaceId).toArray();
     const childNotes = await db.notes.where('spaceId').equals(spaceId).toArray();
     const childTasks = await db.tasks.where('spaceId').equals(spaceId).toArray();
     const childSections = await db.resourceSections.where('spaceId').equals(spaceId).toArray();
@@ -135,6 +157,7 @@ export async function deleteSpacePermanently(spaceId: string): Promise<void> {
     await recordTombstones([
       { id: spaceId, table: 'spaces' },
       ...childTabs.map((t) => ({ id: t.id, table: 'tabs' as const })),
+      ...childGroups.map((g) => ({ id: g.id, table: 'tab_groups' as const })),
       ...childNotes.map((n) => ({ id: n.id, table: 'notes' as const })),
       ...childTasks.map((t) => ({ id: t.id, table: 'tasks' as const })),
       ...childSections.map((s) => ({ id: s.id, table: 'resource_sections' as const })),
@@ -146,9 +169,10 @@ export async function deleteSpacePermanently(spaceId: string): Promise<void> {
 
   await db.transaction(
     'rw',
-    [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
+    [db.spaces, db.tabs, db.tabGroups, db.notes, db.tasks, db.resourceSections, db.resourceItems],
     async () => {
       await db.tabs.where('spaceId').equals(spaceId).delete();
+      await db.tabGroups.where('spaceId').equals(spaceId).delete();
       await db.notes.where('spaceId').equals(spaceId).delete();
       await db.tasks.where('spaceId').equals(spaceId).delete();
       const secs = await db.resourceSections.where('spaceId').equals(spaceId).toArray();

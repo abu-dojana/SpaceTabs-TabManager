@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type {
   Space,
   Tab,
+  TabGroup,
   ResourceSection,
   ResourceItem,
   Note,
@@ -11,6 +12,7 @@ import type {
 export class TabManagerDB extends Dexie {
   spaces!: Table<Space, string>;
   tabs!: Table<Tab, string>;
+  tabGroups!: Table<TabGroup, string>;
   resourceSections!: Table<ResourceSection, string>;
   resourceItems!: Table<ResourceItem, string>;
   notes!: Table<Note, string>;
@@ -37,6 +39,11 @@ export class TabManagerDB extends Dexie {
 
     this.version(4).stores({
       notes: 'id, spaceId, order, updatedAt',
+    });
+
+    this.version(5).stores({
+      tabGroups: 'id, spaceId, order, updatedAt',
+      tabs: 'id, chromeTabId, spaceId, groupId, windowId, order, updatedAt',
     });
   }
 }

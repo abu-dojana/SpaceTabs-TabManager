@@ -12,13 +12,14 @@ import { isBlankOrNewTabUrl } from '@/utils/urlFilter';
 export async function isSessionEmpty(spaceId: string): Promise<boolean> {
   if (!spaceId) return true;
   try {
-    const [tabs, noteCount, taskCount, sectionCount] = await Promise.all([
+    const [tabs, groupCount, noteCount, taskCount, sectionCount] = await Promise.all([
       db.tabs.where('spaceId').equals(spaceId).toArray(),
+      db.tabGroups.where('spaceId').equals(spaceId).count(),
       db.notes.where('spaceId').equals(spaceId).count(),
       db.tasks.where('spaceId').equals(spaceId).count(),
       db.resourceSections.where('spaceId').equals(spaceId).count(),
     ]);
-    if (noteCount > 0 || taskCount > 0 || sectionCount > 0) return false;
+    if (groupCount > 0 || noteCount > 0 || taskCount > 0 || sectionCount > 0) return false;
     const realTabs = tabs.filter((t) => !isBlankOrNewTabUrl(t.url));
     return realTabs.length === 0;
   } catch (err) {
@@ -28,19 +29,20 @@ export async function isSessionEmpty(spaceId: string): Promise<boolean> {
 }
 
 /**
- * Returns the count of non-tab workspace items (notes + tasks + resource sections)
+ * Returns the count of non-tab workspace items (tab groups + notes + tasks + resource sections)
  * inside a space. Used when matching windows to Unsaved sessions on startup so
- * sessions holding user notes, tasks, or resources are prioritized.
+ * sessions holding user notes, tasks, groups, or resources are prioritized.
  */
 export async function getUnsavedContentCount(spaceId: string): Promise<number> {
   if (!spaceId) return 0;
   try {
-    const [noteCount, taskCount, sectionCount] = await Promise.all([
+    const [groupCount, noteCount, taskCount, sectionCount] = await Promise.all([
+      db.tabGroups.where('spaceId').equals(spaceId).count(),
       db.notes.where('spaceId').equals(spaceId).count(),
       db.tasks.where('spaceId').equals(spaceId).count(),
       db.resourceSections.where('spaceId').equals(spaceId).count(),
     ]);
-    return noteCount + taskCount + sectionCount;
+    return groupCount + noteCount + taskCount + sectionCount;
   } catch {
     return 0;
   }
@@ -48,13 +50,13 @@ export async function getUnsavedContentCount(spaceId: string): Promise<number> {
 
 /**
  * Deletes an Unsaved session and cascades deletion to all its child tabs,
- * notes, tasks, resource sections, and resource items in a single transaction.
+ * tab groups, notes, tasks, resource sections, and resource items in a single transaction.
  */
 export async function deleteUnsavedSession(spaceId: string): Promise<void> {
   if (!spaceId || spaceId === UNSAVED_SPACE_ID) return;
   await db.transaction(
     'rw',
-    [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections, db.resourceItems],
+    [db.spaces, db.tabs, db.tabGroups, db.notes, db.tasks, db.resourceSections, db.resourceItems],
     async () => {
       const sections = await db.resourceSections.where('spaceId').equals(spaceId).toArray();
       if (sections.length > 0) {
@@ -64,6 +66,7 @@ export async function deleteUnsavedSession(spaceId: string): Promise<void> {
       await db.resourceSections.where('spaceId').equals(spaceId).delete();
       await db.notes.where('spaceId').equals(spaceId).delete();
       await db.tasks.where('spaceId').equals(spaceId).delete();
+      await db.tabGroups.where('spaceId').equals(spaceId).delete();
       await db.tabs.where('spaceId').equals(spaceId).delete();
       await db.spaces.delete(spaceId);
     }
@@ -82,15 +85,16 @@ export async function recoverOrphanedContent(): Promise<void> {
   try {
     await db.transaction(
       'rw',
-      [db.spaces, db.tabs, db.notes, db.tasks, db.resourceSections],
+      [db.spaces, db.tabs, db.tabGroups, db.notes, db.tasks, db.resourceSections],
       async () => {
         const allSpaces = await db.spaces.toArray();
         const validSpaceIds = new Set(allSpaces.map((s) => s.id));
 
-        const [allNotes, allTasks, allSections, legacyTabs] = await Promise.all([
+        const [allNotes, allTasks, allSections, allGroups, legacyTabs] = await Promise.all([
           db.notes.toArray(),
           db.tasks.toArray(),
           db.resourceSections.toArray(),
+          db.tabGroups.toArray(),
           db.tabs.where('spaceId').equals(UNSAVED_SPACE_ID).toArray(),
         ]);
 
@@ -103,11 +107,15 @@ export async function recoverOrphanedContent(): Promise<void> {
         const orphanedSections = allSections.filter(
           (s) => s.spaceId === UNSAVED_SPACE_ID || !validSpaceIds.has(s.spaceId)
         );
+        const orphanedGroups = allGroups.filter(
+          (g) => g.spaceId === UNSAVED_SPACE_ID || !validSpaceIds.has(g.spaceId)
+        );
 
         if (
           orphanedNotes.length === 0 &&
           orphanedTasks.length === 0 &&
           orphanedSections.length === 0 &&
+          orphanedGroups.length === 0 &&
           legacyTabs.length === 0
         ) {
           return;
@@ -155,6 +163,14 @@ export async function recoverOrphanedContent(): Promise<void> {
           await Promise.all(
             orphanedSections.map((s) =>
               db.resourceSections.update(s.id, { spaceId: targetSpace.id, updatedAt: now })
+            )
+          );
+        }
+
+        if (orphanedGroups.length > 0) {
+          await Promise.all(
+            orphanedGroups.map((g) =>
+              db.tabGroups.update(g.id, { spaceId: targetSpace.id, updatedAt: now })
             )
           );
         }

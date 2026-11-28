@@ -10,6 +10,7 @@ export * from './tabManager/tabSync';
 export * from './tabManager/spaceSwitcher';
 export * from './tabManager/tabOperations';
 export * from './tabManager/tabBulkActions';
+export * from './tabManager/tabGroups';
 export * from './spaces/unsavedSessions';
 export * from './spaces/spaceActions';
 export * from './spaces/spaceExport';

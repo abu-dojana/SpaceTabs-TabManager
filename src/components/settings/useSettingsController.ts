@@ -28,6 +28,7 @@ import {
   setupDriveSyncAlarm,
   type DriveSyncInfo,
 } from '@/services/driveSync';
+import { syncSpaceVisualTabOrder } from '@/services/tabManager';
 import { type SettingsTabId, type ToastMessage } from './settingsTabs';
 
 export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId = 'general') {
@@ -186,8 +187,8 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
 
   const handleToggle = async (key: keyof UserSettings) => {
     const currentVal =
-      key === 'showSectionActiveDot'
-        ? settings.showSectionActiveDot !== false
+      key === 'showSectionActiveDot' || key === 'groupedTabsOnTop'
+        ? settings[key] !== false
         : Boolean(settings[key]);
     const nextVal = !currentVal;
     if (key === 'rightFloatingPanel') {
@@ -197,6 +198,9 @@ export function useSettingsController(isOpen: boolean, initialTab: SettingsTabId
     }
     const updated = await updateUserSettings({ [key]: nextVal });
     setSettings(updated);
+    if (key === 'groupedTabsOnTop') {
+      await syncSpaceVisualTabOrder(useUIStore.getState().activeSpaceId || UNSAVED_SPACE_ID);
+    }
     showToast('Setting saved');
   };
 

@@ -427,6 +427,7 @@ export async function moveTabsToSpace(
           ...tab,
           id: crypto.randomUUID(),
           spaceId: normalizedTarget!,
+          groupId: undefined,
           chromeTabId: undefined,
           windowId: undefined,
           order: nextOrder++,
@@ -442,6 +443,7 @@ export async function moveTabsToSpace(
           ...tab,
           id: crypto.randomUUID(),
           spaceId: normalizedTarget!,
+          groupId: undefined,
           chromeTabId: undefined,
           windowId: undefined,
           order: nextOrder++,
@@ -449,13 +451,17 @@ export async function moveTabsToSpace(
         });
       });
     } else {
-      await db.tabs.update(id, {
-        spaceId: normalizedTarget,
-        chromeTabId: undefined,
-        windowId: undefined,
-        order: nextOrder++,
-        updatedAt: now,
-      });
+      await db.tabs
+        .where('id')
+        .equals(id)
+        .modify((rec) => {
+          rec.spaceId = normalizedTarget!;
+          delete rec.groupId;
+          delete rec.chromeTabId;
+          delete rec.windowId;
+          rec.order = nextOrder++;
+          rec.updatedAt = now;
+        });
     }
 
     if (oldChromeTabId) {
